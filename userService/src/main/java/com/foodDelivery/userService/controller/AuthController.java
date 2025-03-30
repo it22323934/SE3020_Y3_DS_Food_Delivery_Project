@@ -134,6 +134,7 @@ public class AuthController {
                 savedUser.getFirstName(),
                 savedUser.getLastName(),
                 "USER_REGISTERED",
+                savedUser.getPhoneNumber() != null ? savedUser.getPhoneNumber() : "",
                 confirmationUrl,
                 System.currentTimeMillis()
         );

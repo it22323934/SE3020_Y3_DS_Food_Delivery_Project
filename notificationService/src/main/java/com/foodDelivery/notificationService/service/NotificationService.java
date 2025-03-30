@@ -45,6 +45,18 @@ public class NotificationService {
     public void handleUserRegistration(UserRegistrationEvent event) {
         logger.info("Received user registration event: {}", event);
 
+        // Send email notification
+        sendEmailNotification(event);
+
+        // Send SMS notification if phone number exists
+        if (event.getPhoneNumber() != null && !event.getPhoneNumber().isEmpty()) {
+            sendSmsNotification(event);
+        }
+    }
+
+    public void sendEmailNotification(UserRegistrationEvent event) {
+        logger.info("Received user registration event: {}", event);
+
         // Create notification record
         Notification notification = new Notification();
         notification.setUserId(String.valueOf(event.getUserId()));
@@ -106,6 +118,66 @@ public class NotificationService {
         }
 
         notificationRepository.save(notification);
+    }
+
+    private void sendSmsNotification(UserRegistrationEvent event) {
+        try {
+            // Validate phone number first
+            if (event.getPhoneNumber() == null || event.getPhoneNumber().trim().isEmpty()) {
+                logger.warn("Cannot send SMS: Phone number is empty");
+                return;
+            }
+
+            // Format phone number properly (ensure it starts with +)
+            String phoneNumber = event.getPhoneNumber().trim();
+            if (!phoneNumber.startsWith("+")) {
+                phoneNumber = "+" + phoneNumber;
+            }
+
+            Notification notification = new Notification();
+            notification.setUserId(String.valueOf(event.getUserId()));
+            notification.setType(NotificationType.SMS);
+            notification.setReferenceType("USER");
+            notification.setReferenceId(String.valueOf(event.getUserId()));
+
+            Optional<NotificationTemplate> template = templateRepository
+                    .findByTypeAndEventTypeAndIsActiveTrue(NotificationType.SMS, EventType.USER_REGISTRATION);
+
+            String content;
+            if (template.isPresent()) {
+                content = template.get().getContent()
+                        .replace("{{firstName}}", event.getFirstName())
+                        .replace("{{lastName}}", event.getLastName());
+                notification.setTemplateId(template.get().getTemplateId());
+            } else {
+                // Default SMS message
+                content = String.format("Welcome to Food Delivery, %s! Please check your email for a confirmation link.",
+                        event.getFirstName());
+            }
+
+            notification.setContent(content);
+            smsService.sendSMS(phoneNumber, content);
+
+            notification.setStatus(NotificationStatus.SENT);
+            notification.setSentAt(LocalDateTime.now());
+            logger.info("Registration SMS sent to {}", phoneNumber);
+
+            notificationRepository.save(notification);
+        } catch (Exception e) {
+            logger.error("Failed to send registration SMS: {}", e.getMessage(), e);
+
+            // Create a failed notification record
+            Notification failedNotification = new Notification();
+            failedNotification.setUserId(String.valueOf(event.getUserId()));
+            failedNotification.setType(NotificationType.SMS);
+            failedNotification.setReferenceType("USER");
+            failedNotification.setReferenceId(String.valueOf(event.getUserId()));
+            failedNotification.setContent("Failed to send SMS: " + e.getMessage());
+            failedNotification.setStatus(NotificationStatus.FAILED);
+            failedNotification.setSentAt(LocalDateTime.now());
+
+            notificationRepository.save(failedNotification);
+        }
     }
 
     @KafkaListener(topics = "order-status-change", groupId = "notification-service")

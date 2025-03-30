@@ -14,6 +14,7 @@ public class UserRegistrationEvent {
     private String firstName;
     private String lastName;
     private String eventType;
+    private String phoneNumber;
     private String confirmationUrl;
     private long timestamp;
 }

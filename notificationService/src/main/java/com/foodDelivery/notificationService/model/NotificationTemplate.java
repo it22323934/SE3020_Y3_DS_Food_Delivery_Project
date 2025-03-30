@@ -16,13 +16,4 @@ public class NotificationTemplate {
     private String content;
     private String variables;
     private boolean isActive;
-
-    public enum NotificationType {
-        EMAIL, SMS, PUSH, IN_APP
-    }
-
-    public enum EventType {
-        USER_REGISTRATION, ORDER_PLACED, ORDER_CONFIRMED, ORDER_READY,
-        ORDER_PICKED_UP, ORDER_DELIVERED, PAYMENT_RECEIVED
-    }
 }
