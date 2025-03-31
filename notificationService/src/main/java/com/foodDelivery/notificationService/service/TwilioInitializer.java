@@ -3,9 +3,10 @@ package com.foodDelivery.notificationService.service;
 import com.twilio.Twilio;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
+
+import jakarta.annotation.PostConstruct;
 
 @Configuration
 public class TwilioInitializer {
@@ -21,10 +22,9 @@ public class TwilioInitializer {
     @Value("${twilio.phone.number}")
     private String fromPhoneNumber;
 
-    @Autowired
-    public TwilioInitializer(){
-            Twilio.init("AC47d0f30d5a7597657f50a20654825987", "56b178d120f6bad38b60632db0b991f7");
-            logger.info("Twilio initialized with Account SID: {}", "AC47d0f30d5a7597657f50a20654825987");
+    @PostConstruct
+    public void init() {
+        Twilio.init(accountSid, authToken);
+        logger.info("Twilio initialized with Account SID: {}", accountSid.substring(0, 8) + "...");
     }
-
 }
