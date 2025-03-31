@@ -1,9 +1,11 @@
-CREATE TABLE confirmation_token (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    token VARCHAR(255) NOT NULL,
-    created_date TIMESTAMP NOT NULL,
-    user_id BIGINT NOT NULL,
-    FOREIGN KEY (user_id) REFERENCES users(id)
+CREATE TABLE IF NOT EXISTS confirmation_token (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  token VARCHAR(255) NOT NULL,
+  user_id BIGINT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  confirmed_at TIMESTAMP NULL,
+  expiry_date TIMESTAMP NOT NULL,
+  CONSTRAINT fk_confirmation_token_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
-CREATE INDEX idx_token ON confirmation_token(token);
+CREATE INDEX idx_confirmation_token ON confirmation_token(token);

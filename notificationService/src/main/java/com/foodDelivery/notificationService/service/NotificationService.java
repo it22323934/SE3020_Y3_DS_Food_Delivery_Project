@@ -2,6 +2,7 @@
 package com.foodDelivery.notificationService.service;
 
 import com.foodDelivery.notificationService.event.OrderStatusEvent;
+import com.foodDelivery.userService.event.PasswordResetEvent;
 import com.foodDelivery.userService.event.UserRegistrationEvent;
 import com.foodDelivery.notificationService.model.*;
 import com.foodDelivery.notificationService.repository.NotificationRepository;
@@ -178,6 +179,71 @@ public class NotificationService {
 
             notificationRepository.save(failedNotification);
         }
+    }
+
+    @KafkaListener(topics = "user-notifications", groupId = "notification-service")
+    public void handlePasswordReset(PasswordResetEvent event) {
+        logger.info("Received password reset event for user: {}", event.getEmail());
+
+        // Create notification record
+        Notification notification = new Notification();
+        notification.setUserId(String.valueOf(event.getUserId()));
+        notification.setType(NotificationType.EMAIL);
+        notification.setReferenceType("USER");
+        notification.setReferenceId(String.valueOf(event.getUserId()));
+
+        Optional<NotificationTemplate> template = templateRepository
+                .findByTypeAndEventTypeAndIsActiveTrue(NotificationType.EMAIL, EventType.PASSWORD_RESET_REQUESTED);
+
+        if (template.isPresent()) {
+            notification.setTemplateId(template.get().getTemplateId());
+
+            Map<String, String> variables = new HashMap<>();
+            variables.put("firstName", event.getFirstName());
+            variables.put("resetUrl", event.getResetUrl());
+
+            String content = processTemplate(template.get().getContent(), variables);
+            notification.setContent(content);
+
+            sendEmailNotification(event.getEmail(), template.get().getSubject(), content);
+
+            notification.setStatus(NotificationStatus.SENT);
+            notification.setSentAt(LocalDateTime.now());
+        } else {
+            // Use default template if none found
+            MimeMessagePreparator messagePreparatory = mimeMessage -> {
+                MimeMessageHelper messageHelper = new MimeMessageHelper(mimeMessage);
+                messageHelper.setFrom("fooddelivery@email.com");
+                messageHelper.setTo(event.getEmail());
+                messageHelper.setSubject("Reset Your Password");
+                messageHelper.setText(String.format("""
+                Dear %s,
+                
+                You have requested to reset your password. Please click the link below to set a new password:
+                
+                %s
+                
+                This link will expire in 24 hours. If you didn't request this, please ignore this email.
+                
+                Best Regards,
+                Food Delivery Team
+                """,
+                        event.getFirstName(),
+                        event.getResetUrl()), true);
+            };
+
+            try {
+                javaMailSender.send(messagePreparatory);
+                notification.setStatus(NotificationStatus.SENT);
+                notification.setSentAt(LocalDateTime.now());
+                logger.info("Password reset email sent to {}", event.getEmail());
+            } catch (MailException e) {
+                notification.setStatus(NotificationStatus.FAILED);
+                logger.error("Failed to send password reset email", e);
+            }
+        }
+
+        notificationRepository.save(notification);
     }
 
     @KafkaListener(topics = "order-status-change", groupId = "notification-service")

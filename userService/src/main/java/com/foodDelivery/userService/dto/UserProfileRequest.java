@@ -4,9 +4,12 @@ import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 @Data
-public class LoginRequest {
+public class UserProfileRequest {
     @NotBlank
-    private String username;
+    private String firstName;
+
     @NotBlank
-    private String password;
+    private String lastName;
+
+    private String phoneNumber;
 }
