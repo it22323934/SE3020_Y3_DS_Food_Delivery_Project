@@ -23,7 +23,7 @@ The system is composed of multiple microservices:
 
 ## Prerequisites
 
-- Java 17 or higher
+- Java 21 or higher
 - Docker and Docker Compose
 - Maven
 - MySQL 8.3

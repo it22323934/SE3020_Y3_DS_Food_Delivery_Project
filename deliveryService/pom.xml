@@ -9,10 +9,10 @@
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.foodDelivery</groupId>
-	<artifactId>restaurantService</artifactId>
+	<artifactId>deliveryService</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>restaurantService</name>
-	<description>Primary Service Module for the Restaurant Management Service</description>
+	<name>deliveryService</name>
+	<description>Primary Component of the Delivery Service</description>
 	<url/>
 	<licenses>
 		<license/>
@@ -48,6 +48,7 @@
 			<artifactId>spring-kafka</artifactId>
 		</dependency>
 
+		<!-- Lombok -->
 		<dependency>
 			<groupId>org.projectlombok</groupId>
 			<artifactId>lombok</artifactId>
@@ -60,13 +61,6 @@
 			<artifactId>lombok</artifactId>
 			<optional>true</optional>
 		</dependency>
-
-		<!-- MongoDB -->
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-data-mongodb</artifactId>
-		</dependency>
-
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-test</artifactId>
