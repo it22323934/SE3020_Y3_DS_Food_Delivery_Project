@@ -1,3 +1,4 @@
+// src/pages/SignIn.jsx
 import { Alert, Button, Label, Spinner, TextInput } from "flowbite-react";
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
@@ -9,14 +10,18 @@ import {
 } from "../redux/user/userSlice";
 import { ToastContainer, toast } from "react-toastify";
 import OAuth from "../components/OAuth";
+import { authService } from "../service/authService";
+
 export default function SignIn() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const [formData, setFormData] = useState({});
   const { loading, error: errorMessage } = useSelector((state) => state.user);
+
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.id]: e.target.value });
   };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.email || !formData.password) {
@@ -25,12 +30,9 @@ export default function SignIn() {
     }
     try {
       dispatch(signInStart());
-      const res = await fetch("api/auth/signin", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
-      const data = await res.json();
+    // Use authService instead of fetch
+    const response = await authService.login(formData.email, formData.password);
+    const data = await res.json();
       if (data.success === false) {
         toast.error(data.message);
         setFormData({});
@@ -44,6 +46,7 @@ export default function SignIn() {
       dispatch(signInFailure(error.message));
     }
   };
+  
   return (
     <div className="min-h-screen mt-20">
       <ToastContainer />
@@ -84,6 +87,11 @@ export default function SignIn() {
                 onChange={handleChange}
               />
             </div>
+            <div className="flex justify-end">
+              <Link to="/forgot-password" className="text-sm text-blue-500 hover:underline">
+                Forgot password?
+              </Link>
+            </div>
             <Button
               gradientDuoTone="purpleToPink"
               type="submit"
@@ -100,9 +108,9 @@ export default function SignIn() {
             </Button>
             <OAuth />
           </form>
-          <div className=" flex gap-2 text-sm mt-5">
+          <div className="flex gap-2 text-sm mt-5">
             <span>Dont Have an account?</span>
-            <Link to="/sign-up" className=" text-blue-500">
+            <Link to="/sign-up" className="text-blue-500">
               Sign Up
             </Link>
           </div>
