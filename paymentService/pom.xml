@@ -9,9 +9,9 @@
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.foodDelivery</groupId>
-	<artifactId>restaurantService</artifactId>
+	<artifactId>paymentService</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>restaurantService</name>
+	<name>paymentService</name>
 	<description>Primary Service Module for the Restaurant Management Service</description>
 	<url/>
 	<licenses>
@@ -48,6 +48,7 @@
 			<artifactId>spring-kafka</artifactId>
 		</dependency>
 
+		<!-- Lombok -->
 		<dependency>
 			<groupId>org.projectlombok</groupId>
 			<artifactId>lombok</artifactId>

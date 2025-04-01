@@ -15,10 +15,11 @@
         <processorPath useClasspath="false">
           <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.30/lombok-1.18.30.jar" />
         </processorPath>
+        <module name="apiGateway" />
         <module name="userService" />
         <module name="notificationService" />
       </profile>
-      <profile name="Annotation profile for apiGateway" enabled="true">
+      <profile name="Annotation profile for restaurantService" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
@@ -26,7 +27,7 @@
           <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.36/lombok-1.18.36.jar" />
           <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.30/lombok-1.18.30.jar" />
         </processorPath>
-        <module name="apiGateway" />
+        <module name="restaurantService" />
       </profile>
     </annotationProcessing>
   </component>
@@ -34,6 +35,7 @@
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
       <module name="apiGateway" options="-parameters" />
       <module name="notificationService" options="-parameters" />
+      <module name="restaurantService" options="-parameters" />
       <module name="userService" options="-parameters" />
     </option>
   </component>
