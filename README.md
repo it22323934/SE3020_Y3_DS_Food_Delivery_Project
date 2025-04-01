@@ -32,6 +32,11 @@ This document outlines the comprehensive architecture for a distributed microser
 
 ### 1.2 Key Technical Goals
 
+- Java 21 or higher
+- Docker and Docker Compose
+- Maven
+- MySQL 8.3
+- Kafka
 - Implement decoupled microservices for independent scaling and maintenance
 - Ensure high availability and fault tolerance
 - Support real-time notifications and updates

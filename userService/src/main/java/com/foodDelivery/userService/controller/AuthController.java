@@ -1,21 +1,22 @@
 package com.foodDelivery.userService.controller;
 
 import com.foodDelivery.userService.config.JwtUtils;
-import com.foodDelivery.userService.dto.JwtResponse;
-import com.foodDelivery.userService.dto.LoginRequest;
-import com.foodDelivery.userService.dto.MessageResponse;
-import com.foodDelivery.userService.dto.SignupRequest;
+import com.foodDelivery.userService.dto.*;
 import com.foodDelivery.userService.event.UserRegistrationEvent;
 import com.foodDelivery.userService.model.ConfirmationToken;
+import com.foodDelivery.userService.model.PasswordResetToken;
 import com.foodDelivery.userService.model.Role;
 import com.foodDelivery.userService.model.User;
 import com.foodDelivery.userService.repository.ConfirmationTokenRepository;
+import com.foodDelivery.userService.repository.PasswordResetTokenRepository;
 import com.foodDelivery.userService.repository.RoleRepository;
 import com.foodDelivery.userService.repository.UserRepository;
 import com.foodDelivery.userService.service.KafkaProducerService;
 import com.foodDelivery.userService.service.UserDetailsImpl;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -25,26 +26,29 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
+import java.time.LocalDateTime;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
+@Slf4j
 public class AuthController {
 
     private final AuthenticationManager authenticationManager;
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final ConfirmationTokenRepository confirmationTokenRepository;
+    private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final PasswordEncoder encoder;
     private final JwtUtils jwtUtils;
     private final KafkaProducerService kafkaProducerService;
 
+    private static final String AUTHENTICATION_SERVICE = "authenticationService";
+
     @PostMapping("/signin")
+    @CircuitBreaker(name = AUTHENTICATION_SERVICE, fallbackMethod = "signInFallback")
     public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword()));
@@ -65,7 +69,14 @@ public class AuthController {
                 roles));
     }
 
+    public ResponseEntity<?> signInFallback(LoginRequest loginRequest, Exception e) {
+        log.error("Authentication service is down or not responding: {}", e.getMessage());
+        return ResponseEntity.status(503)
+                .body(new MessageResponse("Authentication service is currently unavailable. Please try again later."));
+    }
+
     @PostMapping("/signup")
+    @CircuitBreaker(name = AUTHENTICATION_SERVICE, fallbackMethod = "signUpFallback")
     public ResponseEntity<?> registerUser(@Valid @RequestBody SignupRequest signUpRequest) {
         if (userRepository.existsByUsername(signUpRequest.getUsername())) {
             return ResponseEntity.badRequest().body(new MessageResponse("Error: Username is already taken!"));
@@ -134,6 +145,7 @@ public class AuthController {
                 savedUser.getFirstName(),
                 savedUser.getLastName(),
                 "USER_REGISTERED",
+                savedUser.getPhoneNumber() != null ? savedUser.getPhoneNumber() : "",
                 confirmationUrl,
                 System.currentTimeMillis()
         );
@@ -143,7 +155,14 @@ public class AuthController {
         return ResponseEntity.ok(new MessageResponse("User registered successfully!"));
     }
 
+    public ResponseEntity<?> signUpFallback(SignupRequest signUpRequest, Exception e) {
+        log.error("Registration service is down or not responding: {}", e.getMessage());
+        return ResponseEntity.status(503)
+                .body(new MessageResponse("Registration service is currently unavailable. Please try again later."));
+    }
+
     @GetMapping("/confirm")
+    @CircuitBreaker(name = AUTHENTICATION_SERVICE, fallbackMethod = "confirmFallback")
     public ResponseEntity<?> confirmUserAccount(@RequestParam("token") String confirmationToken) {
         Optional<ConfirmationToken> token = confirmationTokenRepository.findByToken(confirmationToken);
 
@@ -155,5 +174,85 @@ public class AuthController {
         } else {
             return ResponseEntity.badRequest().body(new MessageResponse("Error: Invalid token!"));
         }
+    }
+
+    public ResponseEntity<?> confirmFallback(String token, Exception e) {
+        log.error("Confirmation service is down or not responding: {}", e.getMessage());
+        return ResponseEntity.status(503)
+                .body(new MessageResponse("Account confirmation service is currently unavailable. Please try again later."));
+    }
+
+    @PostMapping("/forgot-password")
+    @CircuitBreaker(name = AUTHENTICATION_SERVICE, fallbackMethod = "forgotPasswordFallback")
+    public ResponseEntity<?> forgotPassword(@RequestParam String email) {
+        Optional<User> userOptional = userRepository.findByEmail(email);
+
+        if (userOptional.isPresent()) {
+            User user = userOptional.get();
+
+            // Generate password reset token
+            String token = UUID.randomUUID().toString();
+            PasswordResetToken passwordResetToken = new PasswordResetToken();
+            passwordResetToken.setToken(token);
+            passwordResetToken.setUser(user);
+            passwordResetToken.setExpiryDate(LocalDateTime.now().plusHours(24));
+            passwordResetTokenRepository.save(passwordResetToken);
+
+            // Create reset URL
+            String resetUrl = "http://localhost:8081/api/auth/reset-password?token=" + token;
+
+            // Send password reset event through Kafka
+            kafkaProducerService.sendPasswordResetEvent(
+                    user.getId(),
+                    user.getEmail(),
+                    user.getFirstName(),
+                    "PASSWORD_RESET_REQUESTED",
+                    resetUrl
+            );
+        }
+
+        // Always return success for security reasons
+        return ResponseEntity.ok(new MessageResponse(
+                "If the email exists in our system, password reset instructions have been sent."));
+    }
+
+    public ResponseEntity<?> forgotPasswordFallback(String email, Exception e) {
+        log.error("Password reset service is down or not responding: {}", e.getMessage());
+        return ResponseEntity.status(503)
+                .body(new MessageResponse("Password reset service is currently unavailable. Please try again later."));
+    }
+
+    @PostMapping("/reset-password")
+    @CircuitBreaker(name = AUTHENTICATION_SERVICE, fallbackMethod = "resetPasswordFallback")
+    public ResponseEntity<?> resetPassword(@Valid @RequestBody PasswordResetRequest resetRequest) {
+        Optional<PasswordResetToken> tokenOptional =
+                passwordResetTokenRepository.findByToken(resetRequest.getToken());
+
+        if (tokenOptional.isPresent()) {
+            PasswordResetToken resetToken = tokenOptional.get();
+
+            if (resetToken.isExpired()) {
+                return ResponseEntity.badRequest()
+                        .body(new MessageResponse("Error: Token has expired!"));
+            }
+
+            User user = resetToken.getUser();
+            user.setPassword(encoder.encode(resetRequest.getNewPassword()));
+            userRepository.save(user);
+
+            // Delete used token
+            passwordResetTokenRepository.delete(resetToken);
+
+            return ResponseEntity.ok(new MessageResponse("Password has been reset successfully!"));
+        }
+
+        return ResponseEntity.badRequest()
+                .body(new MessageResponse("Error: Invalid token!"));
+    }
+
+    public ResponseEntity<?> resetPasswordFallback(PasswordResetRequest resetRequest, Exception e) {
+        log.error("Password reset service is down or not responding: {}", e.getMessage());
+        return ResponseEntity.status(503)
+                .body(new MessageResponse("Password reset service is currently unavailable. Please try again later."));
     }
 }
