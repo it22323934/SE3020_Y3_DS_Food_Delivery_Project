@@ -6,6 +6,8 @@
     <file url="file://$PROJECT_DIR$/deliveryService/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/deliveryService/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/notificationService/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/orderService/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/orderService/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/paymentService/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/paymentService/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/restaurantService/src/main/java" charset="UTF-8" />
