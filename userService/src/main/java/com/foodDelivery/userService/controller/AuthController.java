@@ -44,29 +44,30 @@ public class AuthController {
     private final PasswordEncoder encoder;
     private final JwtUtils jwtUtils;
     private final KafkaProducerService kafkaProducerService;
-
     private static final String AUTHENTICATION_SERVICE = "authenticationService";
 
     @PostMapping("/signin")
     @CircuitBreaker(name = AUTHENTICATION_SERVICE, fallbackMethod = "signInFallback")
     public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
+        // Use either username or email directly
+        String loginIdentifier = loginRequest.getUsername();
+        if (loginRequest.getEmail() != null && !loginRequest.getEmail().isEmpty()) {
+            loginIdentifier = loginRequest.getEmail();
+        }
+
         Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword()));
+                new UsernamePasswordAuthenticationToken(loginIdentifier, loginRequest.getPassword()));
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
         String jwt = jwtUtils.generateJwtToken(authentication);
-
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+
         List<String> roles = userDetails.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .collect(Collectors.toList());
 
-        return ResponseEntity.ok(new JwtResponse(
-                jwt,
-                userDetails.getId(),
-                userDetails.getUsername(),
-                userDetails.getEmail(),
-                roles));
+        return ResponseEntity.ok(new JwtResponse(jwt, userDetails.getId(),
+                userDetails.getUsername(), userDetails.getEmail(), roles));
     }
 
     public ResponseEntity<?> signInFallback(LoginRequest loginRequest, Exception e) {

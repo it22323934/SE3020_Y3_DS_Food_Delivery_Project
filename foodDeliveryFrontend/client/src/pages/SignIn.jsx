@@ -30,9 +30,14 @@ export default function SignIn() {
     }
     try {
       dispatch(signInStart());
-    // Use authService instead of fetch
-    const response = await authService.login(formData.email, formData.password);
-    const data = await res.json();
+      const res = await fetch("http://localhost:8089/api/auth/signin", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      });
+      const data = await res.json();
       if (data.success === false) {
         toast.error(data.message);
         setFormData({});
