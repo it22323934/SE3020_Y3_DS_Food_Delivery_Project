@@ -70,6 +70,15 @@ public class Routes {
     public RouterFunction<ServerResponse> restaurantServiceRoutes() {
         return GatewayRouterFunctions.route("restaurant_service")
                 .route(RequestPredicates.path("/api/restaurants/**"), HandlerFunctions.http(restaurantServiceUrl))
+                .filter((request, next) -> {
+                    HttpServletRequest httpRequest = request.servletRequest();
+                    boolean authenticated = jwtAuthFilter.isAuthenticated(httpRequest);
+                    if (!authenticated) {
+                        return ServerResponse.status(HttpStatus.UNAUTHORIZED)
+                                .body("Access denied: Authentication required");
+                    }
+                    return next.handle(request);
+                })
                 .filter(CircuitBreakerFilterFunctions.circuitBreaker("restaurantServiceCircuitBreaker",
                         URI.create("forward:/fallbackRoute")))
                 .build();

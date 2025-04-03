@@ -1,42 +1,57 @@
 package com.foodDelivery.restaurantService.dto;
 
-import com.foodDelivery.restaurantService.model.Restaurant;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.*;
 import lombok.Data;
-import lombok.NoArgsConstructor;
-
 import java.util.ArrayList;
 import java.util.List;
 
 @Data
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
 public class RestaurantRequest {
+    @NotBlank(message = "Restaurant name is required")
+    @Size(max = 100, message = "Name cannot exceed 100 characters")
     private String name;
+
+    @Size(max = 1000, message = "Description cannot exceed 1000 characters")
     private String description;
+
+    @NotBlank(message = "Address is required")
+    @Size(max = 200, message = "Address cannot exceed 200 characters")
     private String address;
+
+    private List<String> imageUrls = new ArrayList<>();
+
+    @Pattern(regexp = "^\\+?[0-9]{10,15}$", message = "Phone number must be valid")
     private String phoneNumber;
+
+    @Email(message = "Email must be valid")
     private String email;
 
-    // Location fields
+    @DecimalMin(value = "-90.0", message = "Latitude must be between -90 and 90")
+    @DecimalMax(value = "90.0", message = "Latitude must be between -90 and 90")
     private Double latitude;
-    private Double longitude;
-    private String formattedAddress;
 
-    // Opening hours
-    private List<OpeningHourInfo> openingHours = new ArrayList<>();
+    @DecimalMin(value = "-180.0", message = "Longitude must be between -180 and 180")
+    @DecimalMax(value = "180.0", message = "Longitude must be between -180 and 180")
+    private Double longitude;
+
+    @Valid
+    private List<OpeningHourDto> openingHours = new ArrayList<>();
 
     private List<String> cuisineTypes = new ArrayList<>();
 
     @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class OpeningHourInfo {
-        private int dayOfWeek; // 1-7 (Monday-Sunday)
-        private String openTime; // HH:mm format
-        private String closeTime; // HH:mm format
+    public static class OpeningHourDto {
+        @Min(value = 0, message = "Day of week must be between 0 and 6")
+        @Max(value = 6, message = "Day of week must be between 0 and 6")
+        private int dayOfWeek;
+
+        @Pattern(regexp = "^([01]?[0-9]|2[0-3]):[0-5][0-9]$", message = "Open time must be in format HH:MM")
+        private String openTime;
+
+        @Pattern(regexp = "^([01]?[0-9]|2[0-3]):[0-5][0-9]$", message = "Close time must be in format HH:MM")
+        private String closeTime;
+
         private boolean closed;
     }
 }

@@ -32,7 +32,7 @@ public class UserController {
         String username = authentication.getName();
 
         return userService.getUserProfile(username)
-                .map(profile -> ResponseEntity.ok(profile))
+                .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 

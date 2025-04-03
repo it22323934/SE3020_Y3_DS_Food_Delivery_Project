@@ -4,7 +4,9 @@ import com.foodDelivery.restaurantService.model.Restaurant;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+
 @Repository
 public interface RestaurantRepository extends MongoRepository<Restaurant, String> {
-    // Additional query methods can be defined here if needed
+    List<Restaurant> findByOwnerId(String ownerId);
 }
