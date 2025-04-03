@@ -1,5 +1,6 @@
 package com.foodDelivery.userService.controller;
 
+import com.foodDelivery.userService.config.JwtUtils;
 import com.foodDelivery.userService.dto.MessageResponse;
 import com.foodDelivery.userService.dto.PasswordChangeRequest;
 import com.foodDelivery.userService.dto.UserProfileRequest;
@@ -13,6 +14,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+import static org.apache.kafka.common.requests.FetchMetadata.log;
+
 @RestController
 @RequestMapping("/api/users")
 @RequiredArgsConstructor
@@ -20,6 +23,7 @@ public class UserController {
 
     private final UserService userService;
     private final UserRepository userRepository;
+    private final JwtUtils jwtUtils;
 
     @GetMapping("/profile")
     @PreAuthorize("isAuthenticated()")
@@ -52,5 +56,22 @@ public class UserController {
         return userService.changePassword(username, passwordRequest)
                 ? ResponseEntity.ok(new MessageResponse("Password changed successfully"))
                 : ResponseEntity.badRequest().body(new MessageResponse("Current password is incorrect"));
+    }
+
+    @PostMapping("/signout")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<?> logoutUser(@RequestHeader(value = "Authorization", required = false) String authHeader) {
+        // Log the logout attempt
+        log.info("User logout requested");
+
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String jwt = authHeader.substring(7);
+            if (jwtUtils.validateJwtToken(jwt)) {
+                String username = jwtUtils.getUserNameFromJwtToken(jwt);
+                log.info("User {} successfully logged out", username);
+            }
+        }
+
+        return ResponseEntity.ok(new MessageResponse("Logged out successfully"));
     }
 }

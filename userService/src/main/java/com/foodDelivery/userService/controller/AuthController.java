@@ -52,23 +52,35 @@ public class AuthController {
     @CircuitBreaker(name = AUTHENTICATION_SERVICE, fallbackMethod = "signInFallback")
     public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
         try {
-            // Use either username or email directly
+            // Determine login identifier (username or email)
             String loginIdentifier = loginRequest.getUsername();
-            if (loginRequest.getEmail() != null && !loginRequest.getEmail().isEmpty()) {
+            if ((loginIdentifier == null || loginIdentifier.isEmpty()) &&
+                    loginRequest.getEmail() != null && !loginRequest.getEmail().isEmpty()) {
                 loginIdentifier = loginRequest.getEmail();
             }
 
-            // First authenticate credentials
+            log.info("Attempting authentication with identifier: {}", loginIdentifier);
+
+            // Authenticate credentials
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(loginIdentifier, loginRequest.getPassword()));
 
+            log.info("Authentication successful for: {}", loginIdentifier);
+
             UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
 
-            // Explicitly check enabled status from database
+            // Check if user exists and is enabled
             Optional<User> userOptional = userRepository.findById(userDetails.getId());
-            if (userOptional.isEmpty() || !userOptional.get().isEnabled()) {
-                return ResponseEntity
-                        .status(403)
+            if (userOptional.isEmpty()) {
+                log.error("User not found in database after authentication: {}", userDetails.getId());
+                return ResponseEntity.status(401)
+                        .body(new MessageResponse("Error: User account not found."));
+            }
+
+            User user = userOptional.get();
+            if (!user.isEnabled()) {
+                log.info("User account not verified: {}", loginIdentifier);
+                return ResponseEntity.status(403)
                         .body(new MessageResponse("Error: Account is not verified. Please check your email to verify your account."));
             }
 
@@ -83,8 +95,8 @@ public class AuthController {
             return ResponseEntity.ok(new JwtResponse(jwt, userDetails.getId(),
                     userDetails.getUsername(), userDetails.getEmail(), roles));
         } catch (Exception e) {
-            return ResponseEntity
-                    .status(401)
+            log.error("Authentication failed: {}", e.getMessage(), e);
+            return ResponseEntity.status(401)
                     .body(new MessageResponse("Error: Invalid credentials. Please check your email/username and password."));
         }
     }
@@ -112,6 +124,11 @@ public class AuthController {
         if (userRepository.existsByEmail(signUpRequest.getEmail())) {
             return ResponseEntity.badRequest()
                     .body(new MessageResponse("Error: Email is already in use!"));
+        }
+
+        if (signUpRequest.getPhoneNumber() != null && !signUpRequest.getPhoneNumber().isEmpty() &&
+                userRepository.existsByPhoneNumber(signUpRequest.getPhoneNumber())) {
+            return ResponseEntity.badRequest().body(new MessageResponse("Error: Phone number is already registered!"));
         }
 
         // Create new user's account with defaults for missing fields

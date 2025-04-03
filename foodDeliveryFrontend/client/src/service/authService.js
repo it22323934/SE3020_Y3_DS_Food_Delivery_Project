@@ -1,6 +1,6 @@
 // src/services/authService.js
 
-const API_URL = 'http://localhost:8089/api';
+const API_URL = "http://localhost:8089/api";
 
 export const authService = {
   // Sign up new user
@@ -52,12 +52,26 @@ export const authService = {
 
   // Validate reset token
   validateToken: async (token) => {
-    const res = await fetch(`${API_URL}/auth/password/validate?token=${token}`, {
-      method: "GET",
+    const res = await fetch(
+      `${API_URL}/auth/password/validate?token=${token}`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
+    );
+    return res;
+  },
+
+  logout: async (token) => {
+    const res = await fetch(`${API_URL}/users/signout`, {
+      method: "POST",
       headers: {
         "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
       },
     });
     return res;
-  }
+  },
 };

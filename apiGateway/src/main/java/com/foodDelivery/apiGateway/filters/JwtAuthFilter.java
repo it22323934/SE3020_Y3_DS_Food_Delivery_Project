@@ -2,21 +2,30 @@ package com.foodDelivery.apiGateway.filters;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.io.Decoders;
-import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import java.security.Key;
+import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
+import io.jsonwebtoken.security.Keys;
 
 @Component
 @Slf4j
 public class JwtAuthFilter {
 
-    @Value("${jwt.secret}")
-    private String secretKey;
+    @Value("${foodDelivery.app.jwt.secret}")
+    private String jwtSecret;
+
+    private SecretKey key;
+
+    @PostConstruct
+    public void init() {
+        this.key = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
+        log.info("JWT validation key initialized");
+    }
 
     public boolean isAuthenticated(HttpServletRequest request) {
         String token = extractTokenFromRequest(request);
@@ -26,7 +35,7 @@ public class JwtAuthFilter {
 
         try {
             Claims claims = Jwts.parser()
-                    .setSigningKey(getSigningKey())
+                    .setSigningKey(key)
                     .build()
                     .parseClaimsJws(token)
                     .getBody();
@@ -45,10 +54,5 @@ public class JwtAuthFilter {
             return bearerToken.substring(7);
         }
         return null;
-    }
-
-    private Key getSigningKey() {
-        byte[] keyBytes = Decoders.BASE64.decode(secretKey);
-        return Keys.hmacShaKeyFor(keyBytes);
     }
 }

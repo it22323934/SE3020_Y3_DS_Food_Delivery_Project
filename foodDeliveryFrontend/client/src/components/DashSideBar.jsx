@@ -21,6 +21,7 @@ import {
 import { GiRecycle } from "react-icons/gi";
 import { RiGovernmentLine } from "react-icons/ri";
 import { MdLocalShipping } from "react-icons/md";
+import { authService } from "../service/authService";
 export default function DashSideBar() {
   const dispatch = useDispatch();
   const location = useLocation();
@@ -36,14 +37,11 @@ export default function DashSideBar() {
 
   const handleSignout = async () => {
     try {
-      const res = await fetch("/api/user/signout", {
-        method: "POST",
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        console.log(data.message);
-      } else {
+      const response = await authService.logout(currentUser.token);
+      if (response.status === 200) {
         dispatch(signOutSuccess());
+      } else {
+        console.error("Failed to sign out");
       }
     } catch (error) {
       console.log(error.message);
@@ -53,7 +51,7 @@ export default function DashSideBar() {
     <Sidebar className="w-full md:w-56">
       <Sidebar.Items>
         <Sidebar.ItemGroup className="flex flex-col gap-1">
-          {currentUser && currentUser.isAdmin && (
+          {currentUser && currentUser.roles[0] === 'ROLE_CUSTOMER' && (
             <Link to="/dashboard?tab=waste-management-dashboard">
               <Sidebar.Item
                 active={tab === "dash" || !tab}
@@ -82,7 +80,7 @@ export default function DashSideBar() {
               Profile
             </Sidebar.Item>
           </Link>
-          {currentUser.isDriver && (
+          {/* {currentUser.isDriver && (
             <Link to="/dashboard?tab=driver-requests">
               <Sidebar.Item
                 active={tab === "driver-requests"}
@@ -190,7 +188,7 @@ export default function DashSideBar() {
                 </Sidebar.Item>
               </Link>
             </>
-          )}
+          )} */}
           <Sidebar.Item
             icon={HiArrowSmRight}
             className="cursor-pointer"
