@@ -1,11 +1,15 @@
 package com.foodDelivery.restaurantService.controller;
 
+import com.foodDelivery.restaurantService.client.UserServiceClient;
 import com.foodDelivery.restaurantService.dto.RestaurantRequest;
 import com.foodDelivery.restaurantService.dto.RestaurantResponse;
 import com.foodDelivery.restaurantService.model.Restaurant;
 import com.foodDelivery.restaurantService.service.RestaurantService;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -23,12 +27,24 @@ import java.util.stream.Collectors;
 public class RestaurantController {
 
     private final RestaurantService restaurantService;
+    private final UserServiceClient userServiceClient;
 
     @PostMapping
     @PreAuthorize("hasRole('ROLE_RESTAURANT_ADMIN') or hasRole('ROLE_ADMIN')")
-    public ResponseEntity<RestaurantResponse> createRestaurant(@RequestBody RestaurantRequest request) {
+    public ResponseEntity<RestaurantResponse> createRestaurant(
+            @Valid @RequestBody RestaurantRequest request,
+            HttpServletRequest httpRequest) {
+
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String userId = authentication.getName();
+        String userId = request.getOwnerId();
+        String token = httpRequest.getHeader(HttpHeaders.AUTHORIZATION);
+
+        // Verify user role with User Service
+        boolean isValidRole = userServiceClient.validateUserRole(userId, "ROLE_RESTAURANT_ADMIN", token);
+        if (!isValidRole) {
+            log.warn("User {} attempted to create restaurant without valid role verification", userId);
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
 
         // Map request to entity
         Restaurant restaurant = mapToEntity(request);

@@ -18,6 +18,7 @@ public class RestaurantResponse {
     private String formattedAddress;
     private List<OpeningHourDto> openingHours = new ArrayList<>();
     private List<String> cuisineTypes = new ArrayList<>();
+    private String ownerId;
     private boolean enabled;
     private double avgRating;
     private int totalRatings;

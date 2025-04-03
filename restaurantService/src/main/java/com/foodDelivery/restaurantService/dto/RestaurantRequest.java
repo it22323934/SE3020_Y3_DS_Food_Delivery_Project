@@ -40,6 +40,9 @@ public class RestaurantRequest {
 
     private List<String> cuisineTypes = new ArrayList<>();
 
+    // Optional owner ID - only used by admins
+    private String ownerId;
+
     @Data
     public static class OpeningHourDto {
         @Min(value = 0, message = "Day of week must be between 0 and 6")

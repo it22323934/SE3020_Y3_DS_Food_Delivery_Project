@@ -5,6 +5,7 @@ import com.foodDelivery.userService.dto.MessageResponse;
 import com.foodDelivery.userService.dto.PasswordChangeRequest;
 import com.foodDelivery.userService.dto.UserProfileRequest;
 import com.foodDelivery.userService.dto.UserProfileResponse;
+import com.foodDelivery.userService.model.User;
 import com.foodDelivery.userService.repository.UserRepository;
 import com.foodDelivery.userService.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -13,6 +14,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Optional;
 
 import static org.apache.kafka.common.requests.FetchMetadata.log;
 
@@ -74,4 +77,36 @@ public class UserController {
 
         return ResponseEntity.ok(new MessageResponse("Logged out successfully"));
     }
+
+    @GetMapping("/validate")
+    public ResponseEntity<Boolean> validateUserRole(
+            @RequestParam String userId,
+            @RequestParam String role) {
+        // Use proper logging with @Slf4j annotation at the class level
+        org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(UserController.class);
+        log.info("Validating role {} for user {}", role, userId);
+
+        try {
+            // Get user from repository - adjust ID type if needed
+            Optional<User> userOpt = userRepository.findById(Long.valueOf(userId));
+            if (userOpt.isEmpty()) {
+                log.warn("User not found: {}", userId);
+                return ResponseEntity.ok(false);
+            }
+
+            User user = userOpt.get();
+            boolean hasRole = user.getRoles().stream()
+                    .anyMatch(userRole -> {
+                        return userRole.getName().equals(role);
+                    });
+
+            log.info("User {} has role {}: {}", userId, role, hasRole);
+            return ResponseEntity.ok(hasRole);
+        } catch (Exception e) {
+            log.error("Error validating role: {}", e.getMessage());
+            return ResponseEntity.ok(false);
+        }
+    }
+
+
 }
