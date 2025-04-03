@@ -56,7 +56,15 @@ export default function ResetPassword() {
     setLoading(true);
     try {
       const response = await authService.resetPassword(token, formData.password);
-      toast.success(response.data.message || "Password reset successful");
+      if (response.status === 200) {
+        toast.success("Password reset successfully. Redirecting to sign in...");
+        setFormData({ password: "", confirmPassword: "" });
+        setTimeout(() => navigate("/sign-in"), 3000);
+      } else if (response.status === 400) {
+        toast.error("Invalid token or password");
+      } else {
+        toast.error("An error occurred. Please try again later.");
+      }
       setTimeout(() => navigate("/sign-in"), 3000);
     } catch (error) {
       toast.error(error.response?.data?.message || "Failed to reset password");

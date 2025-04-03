@@ -87,7 +87,7 @@ public class NotificationService {
             // Use default template if none found
             MimeMessagePreparator messagePreparatory = mimeMessage -> {
                 MimeMessageHelper messageHelper = new MimeMessageHelper(mimeMessage);
-                messageHelper.setFrom("fooddelivery@email.com");
+                messageHelper.setFrom("asirijayawardena920@gmail.com");
                 messageHelper.setTo(event.getEmail());
                 messageHelper.setSubject("Welcome to Food Delivery - Confirm Your Registration");
                 messageHelper.setText(String.format("""
@@ -181,7 +181,7 @@ public class NotificationService {
         }
     }
 
-    @KafkaListener(topics = "user-notifications", groupId = "notification-service")
+    @KafkaListener(topics = "user-password-reset", groupId = "notification-service")
     public void handlePasswordReset(PasswordResetEvent event) {
         logger.info("Received password reset event for user: {}", event.getEmail());
 
@@ -213,7 +213,7 @@ public class NotificationService {
             // Use default template if none found
             MimeMessagePreparator messagePreparatory = mimeMessage -> {
                 MimeMessageHelper messageHelper = new MimeMessageHelper(mimeMessage);
-                messageHelper.setFrom("fooddelivery@email.com");
+                messageHelper.setFrom("asirijayawardena920@gmail.com");
                 messageHelper.setTo(event.getEmail());
                 messageHelper.setSubject("Reset Your Password");
                 messageHelper.setText(String.format("""

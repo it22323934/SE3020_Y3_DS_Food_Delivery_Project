@@ -1,31 +1,63 @@
 // src/services/authService.js
-import axios from 'axios';
 
-const API_URL = 'http://localhost:8081/api';
+const API_URL = 'http://localhost:8089/api';
 
 export const authService = {
   // Sign up new user
-  register: (userData) => {
-    return axios.post(`${API_URL}/auth/signup`, userData);
+  register: async (userData) => {
+    const res = await fetch(`${API_URL}/auth/signup`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(userData),
+    });
+    return res;
   },
 
   // Sign in user
-  login: (username, password) => {
-    return axios.post(`${API_URL}/auth/signin`, { username, password });
+  login: async (username, password) => {
+    const res = await fetch(`${API_URL}/auth/signin`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ username, password }),
+    });
+    return res;
   },
 
   // Request password reset
-  requestPasswordReset: (email) => {
-    return axios.post(`${API_URL}/password/forgot?email=${email}`);
+  requestPasswordReset: async (email) => {
+    const res = await fetch(`${API_URL}/auth/forgot-password?email=${email}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+    return res;
   },
 
   // Reset password with token
-  resetPassword: (token, newPassword) => {
-    return axios.post(`${API_URL}/password/reset`, { token, newPassword });
+  resetPassword: async (token, newPassword) => {
+    const res = await fetch(`${API_URL}/auth/reset-password`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ token, newPassword }),
+    });
+    return res;
   },
 
   // Validate reset token
-  validateToken: (token) => {
-    return axios.get(`${API_URL}/password/validate?token=${token}`);
+  validateToken: async (token) => {
+    const res = await fetch(`${API_URL}/auth/password/validate?token=${token}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+    return res;
   }
 };

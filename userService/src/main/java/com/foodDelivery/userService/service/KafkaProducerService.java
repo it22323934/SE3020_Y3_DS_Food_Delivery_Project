@@ -1,14 +1,13 @@
 package com.foodDelivery.userService.service;
 
+import com.foodDelivery.userService.event.PasswordResetEvent;
 import com.foodDelivery.userService.event.UserRegistrationEvent;
-import com.foodDelivery.userService.model.PasswordResetEvent;
 import com.foodDelivery.userService.model.UserNotificationEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
-import java.util.HashMap;
 import java.util.Map;
 
 @Service
@@ -17,7 +16,7 @@ import java.util.Map;
 public class KafkaProducerService {
     private final KafkaTemplate<String, Object> kafkaTemplate;
     private static final String REGISTRATION_TOPIC = "user-registration";
-    private static final String NOTIFICATION_TOPIC = "user-notifications";
+    private static final String PASSWORD_RESET_TOPIC = "user-password-reset";
 
     public void sendUserRegistrationEvent(UserRegistrationEvent event) {
         try {
@@ -49,11 +48,11 @@ public class KafkaProducerService {
                     System.currentTimeMillis()
             );
 
-            kafkaTemplate.send(NOTIFICATION_TOPIC, email, event)
+            kafkaTemplate.send(PASSWORD_RESET_TOPIC, email, event)
                     .whenComplete((result, ex) -> {
                         if (ex == null) {
                             log.info("Password reset event sent successfully to topic: {}, partition: {}, offset: {}",
-                                    NOTIFICATION_TOPIC, result.getRecordMetadata().partition(),
+                                    PASSWORD_RESET_TOPIC, result.getRecordMetadata().partition(),
                                     result.getRecordMetadata().offset());
                         } else {
                             log.error("Failed to send password reset event to Kafka: {}", ex.getMessage());
@@ -73,11 +72,11 @@ public class KafkaProducerService {
             event.setData(data);
             event.setTimestamp(System.currentTimeMillis());
 
-            kafkaTemplate.send(NOTIFICATION_TOPIC, email, event)
+            kafkaTemplate.send(PASSWORD_RESET_TOPIC, email, event)
                     .whenComplete((result, ex) -> {
                         if (ex == null) {
                             log.info("Notification sent successfully to topic: {}, partition: {}, offset: {}",
-                                    NOTIFICATION_TOPIC, result.getRecordMetadata().partition(),
+                                    PASSWORD_RESET_TOPIC, result.getRecordMetadata().partition(),
                                     result.getRecordMetadata().offset());
                         } else {
                             log.error("Failed to send notification to Kafka: {}", ex.getMessage());

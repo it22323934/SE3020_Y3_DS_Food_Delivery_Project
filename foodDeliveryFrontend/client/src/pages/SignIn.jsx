@@ -11,12 +11,14 @@ import {
 import { ToastContainer, toast } from "react-toastify";
 import OAuth from "../components/OAuth";
 import { authService } from "../service/authService";
+import { set } from "mongoose";
 
 export default function SignIn() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const [formData, setFormData] = useState({});
-  const { loading, error: errorMessage } = useSelector((state) => state.user);
+  const [loading, setLoading] = useState(false);
+  const { error: errorMessage } = useSelector((state) => state.user);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.id]: e.target.value });
@@ -24,24 +26,30 @@ export default function SignIn() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
     if (!formData.email || !formData.password) {
       toast.error("Please fill in all fields");
+      setLoading(false);
       return;
     }
     try {
       dispatch(signInStart());
-      const res = await fetch("http://localhost:8089/api/auth/signin", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
-      });
+      const res = await authService.login(formData.email, formData.password);
       const data = await res.json();
-      if (data.success === false) {
-        toast.error(data.message);
-        setFormData({});
-        dispatch(signInFailure(data.message));
+      if (res.status === 500) {
+        toast.error(data.message || "Internal server error");
+        setLoading(false);
+        return;
+      }
+      if (res.status === 401) {
+        toast.error(data.message || "Invalid credentials");
+        setLoading(false);
+        return;
+      }
+      if(res.status === 403){
+        toast.error(data.message || "Please verify your email first");
+        setLoading(false);
+        return;
       }
       if (res.ok) {
         dispatch(signInSuccess(data));
@@ -51,7 +59,7 @@ export default function SignIn() {
       dispatch(signInFailure(error.message));
     }
   };
-  
+
   return (
     <div className="min-h-screen mt-20">
       <ToastContainer />
@@ -93,7 +101,10 @@ export default function SignIn() {
               />
             </div>
             <div className="flex justify-end">
-              <Link to="/forgot-password" className="text-sm text-blue-500 hover:underline">
+              <Link
+                to="/forgot-password"
+                className="text-sm text-blue-500 hover:underline"
+              >
                 Forgot password?
               </Link>
             </div>

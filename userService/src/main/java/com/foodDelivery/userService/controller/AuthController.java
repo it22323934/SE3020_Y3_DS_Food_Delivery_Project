@@ -45,29 +45,47 @@ public class AuthController {
     private final JwtUtils jwtUtils;
     private final KafkaProducerService kafkaProducerService;
     private static final String AUTHENTICATION_SERVICE = "authenticationService";
+    private static final String RESET_PASSWORD_URL="http://localhost:5173/reset-password?token=";
 
     @PostMapping("/signin")
     @CircuitBreaker(name = AUTHENTICATION_SERVICE, fallbackMethod = "signInFallback")
     public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
-        // Use either username or email directly
-        String loginIdentifier = loginRequest.getUsername();
-        if (loginRequest.getEmail() != null && !loginRequest.getEmail().isEmpty()) {
-            loginIdentifier = loginRequest.getEmail();
+        try {
+            // Use either username or email directly
+            String loginIdentifier = loginRequest.getUsername();
+            if (loginRequest.getEmail() != null && !loginRequest.getEmail().isEmpty()) {
+                loginIdentifier = loginRequest.getEmail();
+            }
+
+            // First authenticate credentials
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(loginIdentifier, loginRequest.getPassword()));
+
+            UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+
+            // Explicitly check enabled status from database
+            Optional<User> userOptional = userRepository.findById(userDetails.getId());
+            if (userOptional.isEmpty() || !userOptional.get().isEnabled()) {
+                return ResponseEntity
+                        .status(403)
+                        .body(new MessageResponse("Error: Account is not verified. Please check your email to verify your account."));
+            }
+
+            // Continue with successful authentication
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+            String jwt = jwtUtils.generateJwtToken(authentication);
+
+            List<String> roles = userDetails.getAuthorities().stream()
+                    .map(GrantedAuthority::getAuthority)
+                    .collect(Collectors.toList());
+
+            return ResponseEntity.ok(new JwtResponse(jwt, userDetails.getId(),
+                    userDetails.getUsername(), userDetails.getEmail(), roles));
+        } catch (Exception e) {
+            return ResponseEntity
+                    .status(401)
+                    .body(new MessageResponse("Error: Invalid credentials. Please check your email/username and password."));
         }
-
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(loginIdentifier, loginRequest.getPassword()));
-
-        SecurityContextHolder.getContext().setAuthentication(authentication);
-        String jwt = jwtUtils.generateJwtToken(authentication);
-        UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
-
-        List<String> roles = userDetails.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority)
-                .collect(Collectors.toList());
-
-        return ResponseEntity.ok(new JwtResponse(jwt, userDetails.getId(),
-                userDetails.getUsername(), userDetails.getEmail(), roles));
     }
 
     public ResponseEntity<?> signInFallback(LoginRequest loginRequest, Exception e) {
@@ -184,7 +202,7 @@ public class AuthController {
     }
 
     @PostMapping("/forgot-password")
-    @CircuitBreaker(name = AUTHENTICATION_SERVICE, fallbackMethod = "forgotPasswordFallback")
+    @CircuitBreaker(name = AUTHENTICATION_SERVICE, fallbackMethod = "555555555555555")
     public ResponseEntity<?> forgotPassword(@RequestParam String email) {
         Optional<User> userOptional = userRepository.findByEmail(email);
 
@@ -200,7 +218,7 @@ public class AuthController {
             passwordResetTokenRepository.save(passwordResetToken);
 
             // Create reset URL
-            String resetUrl = "http://localhost:8081/api/auth/reset-password?token=" + token;
+            String resetUrl = RESET_PASSWORD_URL + token;
 
             // Send password reset event through Kafka
             kafkaProducerService.sendPasswordResetEvent(
@@ -223,12 +241,40 @@ public class AuthController {
                 .body(new MessageResponse("Password reset service is currently unavailable. Please try again later."));
     }
 
+    @GetMapping("/password/validate")
+    @CircuitBreaker(name = AUTHENTICATION_SERVICE, fallbackMethod = "validateTokenFallback")
+    public ResponseEntity<?> validateResetToken(@RequestParam("token") String token) {
+        Optional<PasswordResetToken> tokenOptional = passwordResetTokenRepository.findByToken(token);
+
+        if (tokenOptional.isPresent()) {
+            PasswordResetToken resetToken = tokenOptional.get();
+
+            if (resetToken.isExpired()) {
+                return ResponseEntity.badRequest()
+                        .body(new MessageResponse("Error: Token has expired!"));
+            }
+
+            return ResponseEntity.ok(new MessageResponse("Token is valid"));
+        }
+
+        return ResponseEntity.badRequest()
+                .body(new MessageResponse("Error: Invalid token!"));
+    }
+
+    public ResponseEntity<?> validateTokenFallback(String token, Exception e) {
+        log.error("Token validation service is down or not responding: {}", e.getMessage());
+        return ResponseEntity.status(503)
+                .body(new MessageResponse("Token validation service is currently unavailable. Please try again later."));
+    }
+
     @PostMapping("/reset-password")
     @CircuitBreaker(name = AUTHENTICATION_SERVICE, fallbackMethod = "resetPasswordFallback")
     public ResponseEntity<?> resetPassword(@Valid @RequestBody PasswordResetRequest resetRequest) {
-        Optional<PasswordResetToken> tokenOptional =
-                passwordResetTokenRepository.findByToken(resetRequest.getToken());
-
+        // Add proper logging
+        log.info("Password reset requested with token: '{}'", resetRequest.getToken());
+        String cleanToken = resetRequest.getToken().trim();
+        Optional<PasswordResetToken> tokenOptional = passwordResetTokenRepository.findByToken(cleanToken);
+        log.info("Token found in database: {}", tokenOptional.isPresent());
         if (tokenOptional.isPresent()) {
             PasswordResetToken resetToken = tokenOptional.get();
 

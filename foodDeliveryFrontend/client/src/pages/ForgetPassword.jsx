@@ -18,10 +18,21 @@ export default function ForgotPassword() {
     setLoading(true);
     try {
       const response = await authService.requestPasswordReset(email);
-      toast.success(response.data.message || "Reset link sent to your email");
-      setEmail("");
+      console.log(response.status);
+      if (response.status === 200) {
+        toast.success("Password reset link sent to your email");
+        setEmail("");
+      } else if (response.status === 400) {
+        toast.error("Invalid email address");
+      } else {
+        toast.error("An error occurred. Please try again later.");
+      }
     } catch (error) {
-      toast.error(error.response?.data?.message || "Failed to send reset link");
+      if (error.response && error.response.status === 400) {
+        toast.error(error.response.data.message || "Invalid email address");
+      } else {
+        toast.error("An error occurred. Please try again later.");
+      }
     } finally {
       setLoading(false);
     }
