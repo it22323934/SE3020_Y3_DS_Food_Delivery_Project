@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
 import { Alert, Button, Label, Spinner, TextInput } from "flowbite-react";
+import { authService } from "../service/authService";
 import OAuth from "../components/OAuth";
 
 export default function SignUp() {
@@ -26,16 +27,9 @@ export default function SignUp() {
     try {
       setLoading(true);
       setErrorMessage(null);
-      const res = await fetch("api/auth/signup", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
-      });
-      const data = await res.json();
-      if (data.success === false) {
-        toast.error(data.message);
+      const res = await authService.register(formData);
+      if(res.status === 400) {
+        toast.error(res.data.message || "Bad Request");
         setLoading(false);
         return;
       }

@@ -46,6 +46,7 @@ public class AuthController {
     private final KafkaProducerService kafkaProducerService;
     private static final String AUTHENTICATION_SERVICE = "authenticationService";
     private static final String RESET_PASSWORD_URL="http://localhost:5173/reset-password?token=";
+    private static final String CONFIRMATION_URL = "http://localhost:8081/api/auth/confirm?token=";
 
     @PostMapping("/signin")
     @CircuitBreaker(name = AUTHENTICATION_SERVICE, fallbackMethod = "signInFallback")
@@ -97,52 +98,59 @@ public class AuthController {
     @PostMapping("/signup")
     @CircuitBreaker(name = AUTHENTICATION_SERVICE, fallbackMethod = "signUpFallback")
     public ResponseEntity<?> registerUser(@Valid @RequestBody SignupRequest signUpRequest) {
+        // Validate required fields
+        if (signUpRequest.getUsername() == null || signUpRequest.getEmail() == null || signUpRequest.getPassword() == null) {
+            return ResponseEntity.badRequest()
+                    .body(new MessageResponse("Error: Username, email and password are required!"));
+        }
+
         if (userRepository.existsByUsername(signUpRequest.getUsername())) {
-            return ResponseEntity.badRequest().body(new MessageResponse("Error: Username is already taken!"));
+            return ResponseEntity.badRequest()
+                    .body(new MessageResponse("Error: Username is already taken!"));
         }
 
         if (userRepository.existsByEmail(signUpRequest.getEmail())) {
-            return ResponseEntity.badRequest().body(new MessageResponse("Error: Email is already in use!"));
+            return ResponseEntity.badRequest()
+                    .body(new MessageResponse("Error: Email is already in use!"));
         }
 
-        // Create new user's account
+        // Create new user's account with defaults for missing fields
         User user = new User();
         user.setUsername(signUpRequest.getUsername());
         user.setEmail(signUpRequest.getEmail());
         user.setPassword(encoder.encode(signUpRequest.getPassword()));
-        user.setFirstName(signUpRequest.getFirstName());
-        user.setLastName(signUpRequest.getLastName());
-        user.setPhoneNumber(signUpRequest.getPhoneNumber());
 
-        Set<String> strRoles = signUpRequest.getRoles();
+        // Handle optional fields with defaults
+        user.setFirstName(signUpRequest.getFirstName() != null ? signUpRequest.getFirstName() : "");
+        user.setLastName(signUpRequest.getLastName() != null ? signUpRequest.getLastName() : "");
+        user.setPhoneNumber(signUpRequest.getPhoneNumber() != null ? signUpRequest.getPhoneNumber() : "");
+
+        // Set default role to CUSTOMER
         Set<Role> roles = new HashSet<>();
+        Role customerRole = roleRepository.findByName("ROLE_CUSTOMER")
+                .orElseThrow(() -> new RuntimeException("Error: Default customer role not found."));
+        roles.add(customerRole);
 
-        if (strRoles == null) {
-            Role userRole = roleRepository.findByName("ROLE_CUSTOMER")
-                    .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
-            roles.add(userRole);
-        } else {
+        // Add additional roles if specified
+        Set<String> strRoles = signUpRequest.getRoles();
+        if (strRoles != null) {
             strRoles.forEach(role -> {
                 switch (role) {
                     case "admin":
                         Role adminRole = roleRepository.findByName("ROLE_ADMIN")
-                                .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
+                                .orElseThrow(() -> new RuntimeException("Error: Admin role not found."));
                         roles.add(adminRole);
                         break;
                     case "restaurant":
                         Role restaurantRole = roleRepository.findByName("ROLE_RESTAURANT_ADMIN")
-                                .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
+                                .orElseThrow(() -> new RuntimeException("Error: Restaurant role not found."));
                         roles.add(restaurantRole);
                         break;
                     case "delivery":
                         Role deliveryRole = roleRepository.findByName("ROLE_DELIVERY_PERSONNEL")
-                                .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
+                                .orElseThrow(() -> new RuntimeException("Error: Delivery role not found."));
                         roles.add(deliveryRole);
                         break;
-                    default:
-                        Role userRole = roleRepository.findByName("ROLE_CUSTOMER")
-                                .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
-                        roles.add(userRole);
                 }
             });
         }
@@ -150,13 +158,12 @@ public class AuthController {
         user.setRoles(roles);
         User savedUser = userRepository.save(user);
 
-        // Generate confirmation token
+        // Rest of the code for token generation and event publishing remains the same...
         ConfirmationToken confirmationToken = new ConfirmationToken(savedUser);
         confirmationTokenRepository.save(confirmationToken);
 
-        String confirmationUrl = "http://localhost:8081/api/auth/confirm?token=" + confirmationToken.getToken();
+        String confirmationUrl = CONFIRMATION_URL + confirmationToken.getToken();
 
-        // Create and send registration event
         UserRegistrationEvent event = new UserRegistrationEvent(
                 savedUser.getId(),
                 savedUser.getUsername(),
@@ -164,7 +171,7 @@ public class AuthController {
                 savedUser.getFirstName(),
                 savedUser.getLastName(),
                 "USER_REGISTERED",
-                savedUser.getPhoneNumber() != null ? savedUser.getPhoneNumber() : "",
+                savedUser.getPhoneNumber(),
                 confirmationUrl,
                 System.currentTimeMillis()
         );
