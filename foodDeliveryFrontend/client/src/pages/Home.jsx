@@ -5,6 +5,7 @@ import { Button } from 'flowbite-react';
 
 // You'll need to replace these with actual Lottie animation JSON files
 import recyclingAnimation from '../assets/recycle.json';
+import { useSelector } from 'react-redux';
 
 export default function Home() {
   const [isClient, setIsClient] = useState(false);

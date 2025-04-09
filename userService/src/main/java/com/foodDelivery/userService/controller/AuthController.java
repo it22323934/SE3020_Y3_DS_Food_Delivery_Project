@@ -44,29 +44,61 @@ public class AuthController {
     private final PasswordEncoder encoder;
     private final JwtUtils jwtUtils;
     private final KafkaProducerService kafkaProducerService;
-
     private static final String AUTHENTICATION_SERVICE = "authenticationService";
+    private static final String RESET_PASSWORD_URL="http://localhost:5173/reset-password?token=";
+    private static final String CONFIRMATION_URL = "http://localhost:8081/api/auth/confirm?token=";
 
     @PostMapping("/signin")
     @CircuitBreaker(name = AUTHENTICATION_SERVICE, fallbackMethod = "signInFallback")
     public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword()));
+        try {
+            // Determine login identifier (username or email)
+            String loginIdentifier = loginRequest.getUsername();
+            if ((loginIdentifier == null || loginIdentifier.isEmpty()) &&
+                    loginRequest.getEmail() != null && !loginRequest.getEmail().isEmpty()) {
+                loginIdentifier = loginRequest.getEmail();
+            }
 
-        SecurityContextHolder.getContext().setAuthentication(authentication);
-        String jwt = jwtUtils.generateJwtToken(authentication);
+            log.info("Attempting authentication with identifier: {}", loginIdentifier);
 
-        UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
-        List<String> roles = userDetails.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority)
-                .collect(Collectors.toList());
+            // Authenticate credentials
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(loginIdentifier, loginRequest.getPassword()));
 
-        return ResponseEntity.ok(new JwtResponse(
-                jwt,
-                userDetails.getId(),
-                userDetails.getUsername(),
-                userDetails.getEmail(),
-                roles));
+            log.info("Authentication successful for: {}", loginIdentifier);
+
+            UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+
+            // Check if user exists and is enabled
+            Optional<User> userOptional = userRepository.findById(userDetails.getId());
+            if (userOptional.isEmpty()) {
+                log.error("User not found in database after authentication: {}", userDetails.getId());
+                return ResponseEntity.status(401)
+                        .body(new MessageResponse("Error: User account not found."));
+            }
+
+            User user = userOptional.get();
+            if (!user.isEnabled()) {
+                log.info("User account not verified: {}", loginIdentifier);
+                return ResponseEntity.status(403)
+                        .body(new MessageResponse("Error: Account is not verified. Please check your email to verify your account."));
+            }
+
+            // Continue with successful authentication
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+            String jwt = jwtUtils.generateJwtToken(authentication);
+
+            List<String> roles = userDetails.getAuthorities().stream()
+                    .map(GrantedAuthority::getAuthority)
+                    .collect(Collectors.toList());
+
+            return ResponseEntity.ok(new JwtResponse(jwt, userDetails.getId(),
+                    userDetails.getUsername(), userDetails.getEmail(), roles));
+        } catch (Exception e) {
+            log.error("Authentication failed: {}", e.getMessage(), e);
+            return ResponseEntity.status(401)
+                    .body(new MessageResponse("Error: Invalid credentials. Please check your email/username and password."));
+        }
     }
 
     public ResponseEntity<?> signInFallback(LoginRequest loginRequest, Exception e) {
@@ -78,52 +110,64 @@ public class AuthController {
     @PostMapping("/signup")
     @CircuitBreaker(name = AUTHENTICATION_SERVICE, fallbackMethod = "signUpFallback")
     public ResponseEntity<?> registerUser(@Valid @RequestBody SignupRequest signUpRequest) {
+        // Validate required fields
+        if (signUpRequest.getUsername() == null || signUpRequest.getEmail() == null || signUpRequest.getPassword() == null) {
+            return ResponseEntity.badRequest()
+                    .body(new MessageResponse("Error: Username, email and password are required!"));
+        }
+
         if (userRepository.existsByUsername(signUpRequest.getUsername())) {
-            return ResponseEntity.badRequest().body(new MessageResponse("Error: Username is already taken!"));
+            return ResponseEntity.badRequest()
+                    .body(new MessageResponse("Error: Username is already taken!"));
         }
 
         if (userRepository.existsByEmail(signUpRequest.getEmail())) {
-            return ResponseEntity.badRequest().body(new MessageResponse("Error: Email is already in use!"));
+            return ResponseEntity.badRequest()
+                    .body(new MessageResponse("Error: Email is already in use!"));
         }
 
-        // Create new user's account
+        if (signUpRequest.getPhoneNumber() != null && !signUpRequest.getPhoneNumber().isEmpty() &&
+                userRepository.existsByPhoneNumber(signUpRequest.getPhoneNumber())) {
+            return ResponseEntity.badRequest().body(new MessageResponse("Error: Phone number is already registered!"));
+        }
+
+        // Create new user's account with defaults for missing fields
         User user = new User();
         user.setUsername(signUpRequest.getUsername());
         user.setEmail(signUpRequest.getEmail());
         user.setPassword(encoder.encode(signUpRequest.getPassword()));
-        user.setFirstName(signUpRequest.getFirstName());
-        user.setLastName(signUpRequest.getLastName());
-        user.setPhoneNumber(signUpRequest.getPhoneNumber());
 
-        Set<String> strRoles = signUpRequest.getRoles();
+        // Handle optional fields with defaults
+        user.setFirstName(signUpRequest.getFirstName() != null ? signUpRequest.getFirstName() : "");
+        user.setLastName(signUpRequest.getLastName() != null ? signUpRequest.getLastName() : "");
+        user.setPhoneNumber(signUpRequest.getPhoneNumber() != null ? signUpRequest.getPhoneNumber() : "");
+
+        // Set default role to CUSTOMER
         Set<Role> roles = new HashSet<>();
+        Role customerRole = roleRepository.findByName("ROLE_CUSTOMER")
+                .orElseThrow(() -> new RuntimeException("Error: Default customer role not found."));
+        roles.add(customerRole);
 
-        if (strRoles == null) {
-            Role userRole = roleRepository.findByName("ROLE_CUSTOMER")
-                    .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
-            roles.add(userRole);
-        } else {
+        // Add additional roles if specified
+        Set<String> strRoles = signUpRequest.getRoles();
+        if (strRoles != null) {
             strRoles.forEach(role -> {
                 switch (role) {
                     case "admin":
                         Role adminRole = roleRepository.findByName("ROLE_ADMIN")
-                                .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
+                                .orElseThrow(() -> new RuntimeException("Error: Admin role not found."));
                         roles.add(adminRole);
                         break;
                     case "restaurant":
                         Role restaurantRole = roleRepository.findByName("ROLE_RESTAURANT_ADMIN")
-                                .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
+                                .orElseThrow(() -> new RuntimeException("Error: Restaurant role not found."));
                         roles.add(restaurantRole);
                         break;
                     case "delivery":
                         Role deliveryRole = roleRepository.findByName("ROLE_DELIVERY_PERSONNEL")
-                                .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
+                                .orElseThrow(() -> new RuntimeException("Error: Delivery role not found."));
                         roles.add(deliveryRole);
                         break;
-                    default:
-                        Role userRole = roleRepository.findByName("ROLE_CUSTOMER")
-                                .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
-                        roles.add(userRole);
                 }
             });
         }
@@ -131,13 +175,12 @@ public class AuthController {
         user.setRoles(roles);
         User savedUser = userRepository.save(user);
 
-        // Generate confirmation token
+        // Rest of the code for token generation and event publishing remains the same...
         ConfirmationToken confirmationToken = new ConfirmationToken(savedUser);
         confirmationTokenRepository.save(confirmationToken);
 
-        String confirmationUrl = "http://localhost:8081/api/auth/confirm?token=" + confirmationToken.getToken();
+        String confirmationUrl = CONFIRMATION_URL + confirmationToken.getToken();
 
-        // Create and send registration event
         UserRegistrationEvent event = new UserRegistrationEvent(
                 savedUser.getId(),
                 savedUser.getUsername(),
@@ -145,7 +188,7 @@ public class AuthController {
                 savedUser.getFirstName(),
                 savedUser.getLastName(),
                 "USER_REGISTERED",
-                savedUser.getPhoneNumber() != null ? savedUser.getPhoneNumber() : "",
+                savedUser.getPhoneNumber(),
                 confirmationUrl,
                 System.currentTimeMillis()
         );
@@ -183,7 +226,7 @@ public class AuthController {
     }
 
     @PostMapping("/forgot-password")
-    @CircuitBreaker(name = AUTHENTICATION_SERVICE, fallbackMethod = "forgotPasswordFallback")
+    @CircuitBreaker(name = AUTHENTICATION_SERVICE, fallbackMethod = "555555555555555")
     public ResponseEntity<?> forgotPassword(@RequestParam String email) {
         Optional<User> userOptional = userRepository.findByEmail(email);
 
@@ -199,7 +242,7 @@ public class AuthController {
             passwordResetTokenRepository.save(passwordResetToken);
 
             // Create reset URL
-            String resetUrl = "http://localhost:8081/api/auth/reset-password?token=" + token;
+            String resetUrl = RESET_PASSWORD_URL + token;
 
             // Send password reset event through Kafka
             kafkaProducerService.sendPasswordResetEvent(
@@ -222,12 +265,40 @@ public class AuthController {
                 .body(new MessageResponse("Password reset service is currently unavailable. Please try again later."));
     }
 
+    @GetMapping("/password/validate")
+    @CircuitBreaker(name = AUTHENTICATION_SERVICE, fallbackMethod = "validateTokenFallback")
+    public ResponseEntity<?> validateResetToken(@RequestParam("token") String token) {
+        Optional<PasswordResetToken> tokenOptional = passwordResetTokenRepository.findByToken(token);
+
+        if (tokenOptional.isPresent()) {
+            PasswordResetToken resetToken = tokenOptional.get();
+
+            if (resetToken.isExpired()) {
+                return ResponseEntity.badRequest()
+                        .body(new MessageResponse("Error: Token has expired!"));
+            }
+
+            return ResponseEntity.ok(new MessageResponse("Token is valid"));
+        }
+
+        return ResponseEntity.badRequest()
+                .body(new MessageResponse("Error: Invalid token!"));
+    }
+
+    public ResponseEntity<?> validateTokenFallback(String token, Exception e) {
+        log.error("Token validation service is down or not responding: {}", e.getMessage());
+        return ResponseEntity.status(503)
+                .body(new MessageResponse("Token validation service is currently unavailable. Please try again later."));
+    }
+
     @PostMapping("/reset-password")
     @CircuitBreaker(name = AUTHENTICATION_SERVICE, fallbackMethod = "resetPasswordFallback")
     public ResponseEntity<?> resetPassword(@Valid @RequestBody PasswordResetRequest resetRequest) {
-        Optional<PasswordResetToken> tokenOptional =
-                passwordResetTokenRepository.findByToken(resetRequest.getToken());
-
+        // Add proper logging
+        log.info("Password reset requested with token: '{}'", resetRequest.getToken());
+        String cleanToken = resetRequest.getToken().trim();
+        Optional<PasswordResetToken> tokenOptional = passwordResetTokenRepository.findByToken(cleanToken);
+        log.info("Token found in database: {}", tokenOptional.isPresent());
         if (tokenOptional.isPresent()) {
             PasswordResetToken resetToken = tokenOptional.get();
 

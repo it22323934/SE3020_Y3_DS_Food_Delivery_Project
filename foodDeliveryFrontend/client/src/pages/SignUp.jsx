@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
 import { Alert, Button, Label, Spinner, TextInput } from "flowbite-react";
+import { authService } from "../service/authService";
 import OAuth from "../components/OAuth";
 
 export default function SignUp() {
@@ -15,27 +16,56 @@ export default function SignUp() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.username || !formData.email || !formData.password) {
-      toast.error("Please fill out all the fields");
+    if (
+      !formData.username ||
+      !formData.email ||
+      !formData.password ||
+      !formData.confirmPassword ||
+      !formData.firstName ||
+      !formData.lastName ||
+      !formData.phoneNumber
+    ) {
+      toast.error("Please fill out all required fields");
       return;
     }
-    if (formData.password.length < 6) {
-      toast.error("Password must be at least 6 characters long");
+    
+    // Password validation
+    if (formData.password.length < 8 || formData.password.length > 20) {
+      toast.error("Password must be at least 8 characters long");
       return;
     }
+    
+    // Confirm password validation
+    if (formData.password !== formData.confirmPassword) {
+      toast.error("Passwords do not match");
+      return;
+    }
+    
+    // Check if password contains personal information
+    const lowerPassword = formData.password.toLowerCase();
+    if (
+      (formData.firstName && lowerPassword.includes(formData.firstName.toLowerCase())) ||
+      (formData.lastName && lowerPassword.includes(formData.lastName.toLowerCase())) ||
+      (formData.email && lowerPassword.includes(formData.email.split('@')[0].toLowerCase()))
+    ) {
+      toast.error("Password should not contain your personal information");
+      return;
+    }
+
+    // Phone number validation
+    const phoneRegex = /^\d{10}$/;
+    if (!phoneRegex.test(formData.phoneNumber)) {
+      toast.error("Please enter a valid 10-digit phone number");
+      return;
+    }
+
     try {
       setLoading(true);
       setErrorMessage(null);
-      const res = await fetch("api/auth/signup", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
-      });
+      const res = await authService.register(formData);
       const data = await res.json();
-      if (data.success === false) {
-        toast.error(data.message);
+      if (res.status === 400) {
+        toast.error(data.message || "Bad Request");
         setLoading(false);
         return;
       }
@@ -68,58 +98,124 @@ export default function SignUp() {
         {/*right*/}
         <div className="flex-1">
           <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
-            <div>
-              <Label value="Your Username" />
-              <TextInput
-                type="text"
-                placeholder="Username"
-                id="username"
-                value={formData.username || ""}
-                onChange={handleChange}
-              />
+            {/* Two-column layout for form fields */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Left column */}
+              <div className="space-y-4">
+                <div>
+                  <Label value="Your Username" />
+                  <TextInput
+                    type="text"
+                    placeholder="Username"
+                    id="username"
+                    value={formData.username || ""}
+                    onChange={handleChange}
+                  />
+                </div>
+                
+                <div>
+                  <Label value="Your Email" />
+                  <TextInput
+                    type="email"
+                    placeholder="name@company.com"
+                    id="email"
+                    value={formData.email || ""}
+                    onChange={handleChange}
+                  />
+                </div>
+                
+                <div>
+                  <Label value="Your Password" />
+                  <TextInput
+                    type="password"
+                    placeholder="***********"
+                    id="password"
+                    value={formData.password || ""}
+                    onChange={handleChange}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Must be 8-20 characters and not contain personal information
+                  </p>
+                </div>
+                
+                <div>
+                  <Label value="Confirm Password" />
+                  <TextInput
+                    type="password"
+                    placeholder="***********"
+                    id="confirmPassword"
+                    value={formData.confirmPassword || ""}
+                    onChange={handleChange}
+                  />
+                </div>
+              </div>
+              
+              {/* Right column */}
+              <div className="space-y-4">
+                <div>
+                  <Label value="First Name" />
+                  <TextInput
+                    type="text"
+                    placeholder="John"
+                    id="firstName"
+                    value={formData.firstName || ""}
+                    onChange={handleChange}
+                  />
+                </div>
+                
+                <div>
+                  <Label value="Last Name" />
+                  <TextInput
+                    type="text"
+                    placeholder="Doe"
+                    id="lastName"
+                    value={formData.lastName || ""}
+                    onChange={handleChange}
+                  />
+                </div>
+                
+                <div>
+                  <Label value="Phone Number" />
+                  <TextInput
+                    type="tel"
+                    placeholder="1234567890"
+                    id="phoneNumber"
+                    value={formData.phoneNumber || ""}
+                    onChange={handleChange}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Please enter a 10-digit phone number</p>
+                </div>
+              </div>
             </div>
-            <div>
-              <Label value="Your Email" />
-              <TextInput
-                type="email"
-                placeholder="name@company.com"
-                id="email"
-                value={formData.email || ""}
-                onChange={handleChange}
-              />
+            
+            {/* Buttons span full width */}
+            <div className="mt-2">
+              <Button
+                gradientDuoTone="purpleToPink"
+                type="submit"
+                disabled={loading}
+                className="w-full"
+              >
+                {loading ? (
+                  <>
+                    <Spinner size="sm" />
+                    <span className="pl-3">Loading....</span>
+                  </>
+                ) : (
+                  "Sign Up"
+                )}
+              </Button>
             </div>
-            <div>
-              <Label value="Your Password" />
-              <TextInput
-                type="password"
-                placeholder="***********"
-                id="password"
-                value={formData.password || ""}
-                onChange={handleChange}
-              />
-            </div>
-            <Button
-              gradientDuoTone="purpleToPink"
-              type="submit"
-              disabled={loading}
-            >
-              {loading ? (
-                <>
-                  <Spinner size="sm" />
-                  <span className="pl-3">Loading....</span>
-                </>
-              ) : (
-                "Sign Up"
-              )}
-            </Button>
             <OAuth />
+            
+            <div className="flex gap-2 text-sm mt-2 justify-center">
+              <span>Have an account?</span>
+              <Link to="/sign-in" className="text-blue-500">
+                Sign In
+              </Link>
+            </div>
           </form>
-          <div className=" flex gap-2 text-sm mt-5">
-            <span>Have an account?</span>
-            <Link to="/sign-in" className=" text-blue-500">
-              Sign In
-            </Link>
-          </div>
+          
           {errorMessage && (
             <Alert color="failure" className="mt-5">
               {errorMessage}

@@ -17,10 +17,13 @@ import {
   FaTrashAlt,
   FaTruck,
   FaCreditCard,
+  FaStore,
+  FaUtensils,
 } from "react-icons/fa";
 import { GiRecycle } from "react-icons/gi";
 import { RiGovernmentLine } from "react-icons/ri";
 import { MdLocalShipping } from "react-icons/md";
+import { authService } from "../service/authService";
 export default function DashSideBar() {
   const dispatch = useDispatch();
   const location = useLocation();
@@ -36,14 +39,11 @@ export default function DashSideBar() {
 
   const handleSignout = async () => {
     try {
-      const res = await fetch("/api/user/signout", {
-        method: "POST",
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        console.log(data.message);
-      } else {
+      const response = await authService.logout(currentUser.token);
+      if (response.status === 200) {
         dispatch(signOutSuccess());
+      } else {
+        console.error("Failed to sign out");
       }
     } catch (error) {
       console.log(error.message);
@@ -53,27 +53,76 @@ export default function DashSideBar() {
     <Sidebar className="w-full md:w-56">
       <Sidebar.Items>
         <Sidebar.ItemGroup className="flex flex-col gap-1">
-          {currentUser && currentUser.isAdmin && (
-            <Link to="/dashboard?tab=waste-management-dashboard">
-              <Sidebar.Item
-                active={tab === "dash" || !tab}
-                icon={HiChartPie}
-                labelColor="dark"
-                as="div"
-              >
-                Dashboard
-              </Sidebar.Item>
-            </Link>
-          )}
+          {currentUser &&
+            (currentUser.roles[0] === "ROLE_ADMIN" ||
+              currentUser.roles[0] === "ROLE_RESTAURANT_ADMIN") && (
+              <>
+                {/* Dashboard Tab - visible to both admin types */}
+                <Link to="/dashboard?tab=waste-management-dashboard">
+                  <Sidebar.Item
+                    active={tab === "dash" || !tab}
+                    icon={HiChartPie}
+                    labelColor="dark"
+                    as="div"
+                  >
+                    Dashboard
+                  </Sidebar.Item>
+                </Link>
+
+                {/* Restaurant Management - visible to both admin types */}
+                <Link to="/dashboard?tab=restaurant-management">
+                  <Sidebar.Item
+                    active={tab === "restaurant-management"}
+                    icon={FaStore}
+                    labelColor="dark"
+                    as="div"
+                  >
+                    Restaurant
+                  </Sidebar.Item>
+                </Link>
+
+                {/* Menu Management - visible to both admin types */}
+                <Link to="/dashboard?tab=menu-management">
+                  <Sidebar.Item
+                    active={tab === "menu-management"}
+                    icon={FaUtensils}
+                    labelColor="dark"
+                    as="div"
+                  >
+                    Menu Item 
+                  </Sidebar.Item>
+                </Link>
+
+                {/* Items that only the main admin should see */}
+                {currentUser.roles[0] === "ROLE_ADMIN" && (
+                  <>
+                    <Link to="/dashboard?tab=user-management">
+                      <Sidebar.Item
+                        active={tab === "user-management"}
+                        icon={HiOutlineUserGroup}
+                        labelColor="dark"
+                        as="div"
+                      >
+                        Users
+                      </Sidebar.Item>
+                    </Link>
+                  </>
+                )}
+              </>
+            )}
           <Link to="/dashboard?tab=profile">
             <Sidebar.Item
               active={tab === "profile"}
               icon={HiUser}
               label={
-                currentUser.isAdmin
-                  ? "Admin"
-                  : currentUser.isDriver
-                  ? "Driver"
+                currentUser.roles && currentUser.roles.length > 0
+                  ? currentUser.roles[0] === "ROLE_ADMIN"
+                    ? "Admin"
+                    : currentUser.roles[0] === "ROLE_RESTAURANT_ADMIN"
+                    ? "Restaurant Admin"
+                    : currentUser.roles[0] === "ROLE_DRIVER"
+                    ? "Driver"
+                    : "User"
                   : "User"
               }
               labelColor="dark"
@@ -82,7 +131,7 @@ export default function DashSideBar() {
               Profile
             </Sidebar.Item>
           </Link>
-          {currentUser.isDriver && (
+          {/* {currentUser.isDriver && (
             <Link to="/dashboard?tab=driver-requests">
               <Sidebar.Item
                 active={tab === "driver-requests"}
@@ -190,7 +239,7 @@ export default function DashSideBar() {
                 </Sidebar.Item>
               </Link>
             </>
-          )}
+          )} */}
           <Sidebar.Item
             icon={HiArrowSmRight}
             className="cursor-pointer"

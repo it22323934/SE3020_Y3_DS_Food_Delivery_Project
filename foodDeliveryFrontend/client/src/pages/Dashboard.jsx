@@ -13,6 +13,8 @@ import DashDriverRequests from "../components/DashDriverRequests";
 import DashAdminPayments from "../components/DashAdminPayments";
 import DashMyPayments from "../components/DashMyPayments";
 import DashWasteDashBoard from "../components/DashWasteDashBoard";
+import DashRestaurant from "../components/DashRestaurant";
+import DashMenuManagement from "../components/DashMenuManagement";
 export default function Dashboard() {
   const location = useLocation();
   const [tab, setTab] = useState("");
@@ -33,24 +35,10 @@ export default function Dashboard() {
       {tab === "profile" && <DashProfile />}
       {/** <DashUserProfiles/> */}
       {tab === "users" && <DashUserProfiles/>}
-      {/** <DashDistrict/> */}
-      {tab === "districts" && <DashDistrict/>}
-      {/** <DashWasteCategory/> */}
-      {tab === "waste-categories" && <DashWasteCategory/>}
-      {/** <DashWasteRequest/> */}
-      {tab === "waste-requests" && <DashWasteRequest/>}
-      {/**<WasteDrivers/> */}
-      {tab === "waste-drivers" && <DashWasteDrivers/>}
-      {/** <DashAdminWasteRequest/> */}
-      {tab === "admin-waste-requests" && <DashAdminWasteRequests/>}
-      {/** <DashDriverRequests/> */}
-      {tab === "driver-requests" && <DashDriverRequests/>}
-      {/** <DashAdminPayments/> */}
-      {tab === "admin-payments" && <DashAdminPayments/>}
-      {/** <DashUserPayments/> */}
-      {tab === "user-payments" && <DashMyPayments/>}
-      {/** <DashboardWasteManagement/> */}
-      {tab === "waste-management-dashboard" && <DashWasteDashBoard/>}
+      {/** <DashRestaurant/> */}
+      {tab === "restaurant-management" && <DashRestaurant/>}
+      {/** <DashMenuManagement/> */}
+      {tab === "menu-management" && <DashMenuManagement/>}
 
     </div>
   );

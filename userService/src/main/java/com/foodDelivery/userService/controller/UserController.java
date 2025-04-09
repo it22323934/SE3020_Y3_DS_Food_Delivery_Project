@@ -1,9 +1,11 @@
 package com.foodDelivery.userService.controller;
 
+import com.foodDelivery.userService.config.JwtUtils;
 import com.foodDelivery.userService.dto.MessageResponse;
 import com.foodDelivery.userService.dto.PasswordChangeRequest;
 import com.foodDelivery.userService.dto.UserProfileRequest;
 import com.foodDelivery.userService.dto.UserProfileResponse;
+import com.foodDelivery.userService.model.User;
 import com.foodDelivery.userService.repository.UserRepository;
 import com.foodDelivery.userService.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -13,6 +15,10 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Optional;
+
+import static org.apache.kafka.common.requests.FetchMetadata.log;
+
 @RestController
 @RequestMapping("/api/users")
 @RequiredArgsConstructor
@@ -20,6 +26,7 @@ public class UserController {
 
     private final UserService userService;
     private final UserRepository userRepository;
+    private final JwtUtils jwtUtils;
 
     @GetMapping("/profile")
     @PreAuthorize("isAuthenticated()")
@@ -28,7 +35,7 @@ public class UserController {
         String username = authentication.getName();
 
         return userService.getUserProfile(username)
-                .map(profile -> ResponseEntity.ok(profile))
+                .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
@@ -53,4 +60,53 @@ public class UserController {
                 ? ResponseEntity.ok(new MessageResponse("Password changed successfully"))
                 : ResponseEntity.badRequest().body(new MessageResponse("Current password is incorrect"));
     }
+
+    @PostMapping("/signout")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<?> logoutUser(@RequestHeader(value = "Authorization", required = false) String authHeader) {
+        // Log the logout attempt
+        log.info("User logout requested");
+
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String jwt = authHeader.substring(7);
+            if (jwtUtils.validateJwtToken(jwt)) {
+                String username = jwtUtils.getUserNameFromJwtToken(jwt);
+                log.info("User {} successfully logged out", username);
+            }
+        }
+
+        return ResponseEntity.ok(new MessageResponse("Logged out successfully"));
+    }
+
+    @GetMapping("/validate")
+    public ResponseEntity<Boolean> validateUserRole(
+            @RequestParam String userId,
+            @RequestParam String role) {
+        // Use proper logging with @Slf4j annotation at the class level
+        org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(UserController.class);
+        log.info("Validating role {} for user {}", role, userId);
+
+        try {
+            // Get user from repository - adjust ID type if needed
+            Optional<User> userOpt = userRepository.findById(Long.valueOf(userId));
+            if (userOpt.isEmpty()) {
+                log.warn("User not found: {}", userId);
+                return ResponseEntity.ok(false);
+            }
+
+            User user = userOpt.get();
+            boolean hasRole = user.getRoles().stream()
+                    .anyMatch(userRole -> {
+                        return userRole.getName().equals(role);
+                    });
+
+            log.info("User {} has role {}: {}", userId, role, hasRole);
+            return ResponseEntity.ok(hasRole);
+        } catch (Exception e) {
+            log.error("Error validating role: {}", e.getMessage());
+            return ResponseEntity.ok(false);
+        }
+    }
+
+
 }
