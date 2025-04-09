@@ -77,7 +77,7 @@ export default function DashSideBar() {
                     labelColor="dark"
                     as="div"
                   >
-                    Restaurant Management
+                    Restaurant
                   </Sidebar.Item>
                 </Link>
 
@@ -89,7 +89,7 @@ export default function DashSideBar() {
                     labelColor="dark"
                     as="div"
                   >
-                    Menu Management
+                    Menu Item 
                   </Sidebar.Item>
                 </Link>
 
@@ -103,7 +103,7 @@ export default function DashSideBar() {
                         labelColor="dark"
                         as="div"
                       >
-                        User Management
+                        Users
                       </Sidebar.Item>
                     </Link>
                   </>

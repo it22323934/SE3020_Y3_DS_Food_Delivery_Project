@@ -51,6 +51,7 @@ export const authService = {
   },
 
   // Validate reset token
+  
   validateToken: async (token) => {
     const res = await fetch(
       `${API_URL}/auth/password/validate?token=${token}`,
