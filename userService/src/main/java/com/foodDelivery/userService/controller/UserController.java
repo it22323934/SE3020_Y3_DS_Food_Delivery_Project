@@ -152,6 +152,21 @@ public class UserController {
         }
     }
 
+    @PutMapping("/update-user/{userId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> adminUpdateUser(@PathVariable Long userId, @Valid @RequestBody UpdateProfileRequest signUpRequest) {
+        try {
+            UserProfileResponse updatedUser = userService.updateUserByAdmin(userId, signUpRequest);
+            return ResponseEntity.ok(updatedUser);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(new MessageResponse("Error: " + e.getMessage()));
+        } catch (RuntimeException e) {
+            log.error("Failed to update user: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new MessageResponse("Error: " + e.getMessage()));
+        }
+    }
+
     public ResponseEntity<?> adminCreateUserFallback(SignupRequest signUpRequest, Exception e) {
         log.error("Admin user creation service is down or not responding: {}", e.getMessage());
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)

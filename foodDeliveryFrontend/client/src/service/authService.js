@@ -131,6 +131,18 @@ export const authService = {
       body: JSON.stringify(userData),
     });
     return res;
+  },
+
+  updateUser: async (userId, userData, token) => {
+    const res = await fetch(`${API_URL}/users/update-user/${userId}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(userData),
+    });
+    return res;
   }
 
 };

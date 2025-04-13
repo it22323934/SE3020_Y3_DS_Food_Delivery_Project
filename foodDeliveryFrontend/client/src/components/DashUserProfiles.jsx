@@ -25,6 +25,7 @@ import LoadingSpinner from "./LoadingSpinner";
 import ReactPaginate from "react-paginate";
 import { UserDetailsModal } from "./sub-components/user-managment/UserDetailsModal";
 import { CreateUserModal } from "./sub-components/user-managment/CreateUserModal";
+import { UpdateUserModal } from "./sub-components/user-managment/UpdateUserModal";
 export default function DashUserProfiles() {
   const { currentUser } = useSelector((state) => state.user);
   const [users, setUsers] = useState([]);
@@ -86,8 +87,18 @@ export default function DashUserProfiles() {
     fetchUser();
   };
 
-  const handleUpdate = (user) => {};
-  const handleDelete = (userId) => {};
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [showUpdateModal, setShowUpdateModal] = useState(false);
+
+  const handleUpdateClick = (user) => {
+    setSelectedUser(user);
+    setShowUpdateModal(true);
+  };
+  const handleUserUpdated = () => {
+    fetchUser();
+    setShowUpdateModal(false);
+    setSelectedUser(null);
+  };
 
   const displayUsers = users
     .slice(pageNumber * userPerPage, (pageNumber + 1) * userPerPage)
@@ -130,20 +141,10 @@ export default function DashUserProfiles() {
                 color="green"
                 size="sm"
                 outline
-                onClick={() => handleUpdate(user)}
+                onClick={() => handleUpdateClick(user)}
               >
                 <FaClipboardList className="mr-2 h-5 w-5" />
                 Update
-              </Button>
-              <Button
-                color="failure"
-                size="sm"
-                disabled={isDeleting}
-                outline
-                onClick={() => handleDelete(user.id)}
-              >
-                <HiOutlineX className="mr-2 h-5 w-5" />
-                Delete
               </Button>
             </div>
           </Table.Cell>
@@ -286,6 +287,15 @@ export default function DashUserProfiles() {
             show={showCreateModal}
             onClose={() => setShowCreateModal(false)}
             onSuccess={handleUserCreated}
+            token={currentUser.token}
+          />
+
+          {/** Update User */}
+          <UpdateUserModal
+            show={showUpdateModal}
+            onClose={() => setShowUpdateModal(false)}
+            onSuccess={handleUserUpdated}
+            userData={selectedUser}
             token={currentUser.token}
           />
 

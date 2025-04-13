@@ -320,4 +320,112 @@ public class UserService {
         }
         return roles;
     }
+
+    public UserProfileResponse updateUserByAdmin(Long userId, UpdateProfileRequest updateRequest) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found with ID: " + userId));
+
+        // Validate unique fields when they change (safely check for null values)
+        if (updateRequest.getUsername() != null && !updateRequest.getUsername().equals(user.getUsername()) &&
+                userRepository.existsByUsername(updateRequest.getUsername())) {
+            throw new IllegalArgumentException("Username is already taken");
+        }
+
+        if (updateRequest.getEmail() != null && !updateRequest.getEmail().equals(user.getEmail()) &&
+                userRepository.existsByEmail(updateRequest.getEmail())) {
+            throw new IllegalArgumentException("Email is already in use");
+        }
+
+        if (updateRequest.getPhoneNumber() != null && !updateRequest.getPhoneNumber().isEmpty() &&
+                !updateRequest.getPhoneNumber().equals(user.getPhoneNumber()) &&
+                userRepository.existsByPhoneNumber(updateRequest.getPhoneNumber())) {
+            throw new IllegalArgumentException("Phone number is already registered");
+        }
+
+        if (updateRequest.getIdentificationNumber() != null && !updateRequest.getIdentificationNumber().isEmpty() &&
+                !updateRequest.getIdentificationNumber().equals(user.getIdentificationNumber()) &&
+                userRepository.existsByIdentificationNumber(updateRequest.getIdentificationNumber())) {
+            throw new IllegalArgumentException("Identification number is already registered");
+        }
+
+        // Update basic user information - only if provided in request
+        if (updateRequest.getUsername() != null) {
+            user.setUsername(updateRequest.getUsername());
+        }
+
+        if (updateRequest.getEmail() != null) {
+            user.setEmail(updateRequest.getEmail());
+        }
+
+        // Only update password if provided
+        if (updateRequest.getPassword() != null && !updateRequest.getPassword().isEmpty()) {
+            user.setPassword(passwordEncoder.encode(updateRequest.getPassword()));
+        }
+
+        // Update personal details
+        if (updateRequest.getFirstName() != null) {
+            user.setFirstName(updateRequest.getFirstName());
+        }
+
+        if (updateRequest.getLastName() != null) {
+            user.setLastName(updateRequest.getLastName());
+        }
+
+        if (updateRequest.getPhoneNumber() != null) {
+            user.setPhoneNumber(updateRequest.getPhoneNumber());
+        }
+
+        if (updateRequest.getProfilePicture() != null) {
+            user.setProfileImage(updateRequest.getProfilePicture());
+        }
+
+        if (updateRequest.getAddress() != null) {
+            user.setAddress(updateRequest.getAddress());
+        }
+
+        // Update location information if provided
+        if (updateRequest.getLocation() != null) {
+            if (updateRequest.getLocation().getType() != null) {
+                user.setLocationType(updateRequest.getLocation().getType());
+            }
+
+            if (updateRequest.getLocation().getCoordinates() != null &&
+                    updateRequest.getLocation().getCoordinates().length == 2) {
+                user.setLongitude(updateRequest.getLocation().getCoordinates()[0]);
+                user.setLatitude(updateRequest.getLocation().getCoordinates()[1]);
+            }
+        }
+
+        // Update special fields for drivers or restaurant admins
+        if (updateRequest.getIdentificationNumber() != null) {
+            user.setIdentificationNumber(updateRequest.getIdentificationNumber());
+        }
+
+        if (updateRequest.getVehicleNumber() != null) {
+            user.setVehicleNumber(updateRequest.getVehicleNumber());
+        }
+
+        // Update status fields if present
+        if (updateRequest.getDisabled() != null) {
+            user.setDisabled(updateRequest.getDisabled());
+        }
+
+        if (updateRequest.getVerified() != null) {
+            user.setVerified(updateRequest.getVerified());
+        }
+
+        // Update roles if specified
+        if (updateRequest.getRoles() != null && !updateRequest.getRoles().isEmpty()) {
+            Set<Role> roles = assignUserRoles(updateRequest.getRoles());
+            user.setRoles(roles);
+        }
+
+        user.setUpdatedAt(LocalDateTime.now());
+        User updatedUser = userRepository.save(user);
+
+        log.info("Admin updated user: {}, with roles: {}", updatedUser.getUsername(),
+                updatedUser.getRoles().stream().map(Role::getName).collect(Collectors.joining(", ")));
+
+        return mapToUserProfileResponse(updatedUser);
+    }
 }

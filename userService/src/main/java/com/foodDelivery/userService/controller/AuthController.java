@@ -84,6 +84,19 @@ public class AuthController {
                         .body(new MessageResponse("Error: Account is not verified. Please check your email to verify your account."));
             }
 
+            // Check if user is disabled or deleted
+            if (user.isDisabled()) {
+                log.info("User account is disabled: {}", loginIdentifier);
+                return ResponseEntity.status(403)
+                        .body(new MessageResponse("Error: Account is disabled. Please contact support."));
+            }
+
+            if (user.isDeleted()) {
+                log.info("User account is deleted: {}", loginIdentifier);
+                return ResponseEntity.status(403)
+                        .body(new MessageResponse("Error: Account is deleted. Please contact support."));
+            }
+
             // Continue with successful authentication
             SecurityContextHolder.getContext().setAuthentication(authentication);
             String jwt = jwtUtils.generateJwtToken(authentication);
