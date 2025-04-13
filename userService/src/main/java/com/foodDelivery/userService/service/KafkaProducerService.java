@@ -1,6 +1,7 @@
 package com.foodDelivery.userService.service;
 
 import com.foodDelivery.userService.event.PasswordResetEvent;
+import com.foodDelivery.userService.event.UserRegistrationAdminEvent;
 import com.foodDelivery.userService.event.UserRegistrationEvent;
 import com.foodDelivery.userService.model.UserNotificationEvent;
 import lombok.RequiredArgsConstructor;
@@ -16,6 +17,7 @@ import java.util.Map;
 public class KafkaProducerService {
     private final KafkaTemplate<String, Object> kafkaTemplate;
     private static final String REGISTRATION_TOPIC = "user-registration";
+    private static final String ADMIN_REGISTRATION_TOPIC = "admin-user-registration";
     private static final String PASSWORD_RESET_TOPIC = "user-password-reset";
 
     public void sendUserRegistrationEvent(UserRegistrationEvent event) {
@@ -33,6 +35,24 @@ public class KafkaProducerService {
         } catch (Exception e) {
             log.error("Error while sending message to Kafka: {}", e.getMessage());
             throw new RuntimeException("Could not send registration event to Kafka", e);
+        }
+    }
+
+    public void sendAdminUserRegistrationEvent(UserRegistrationAdminEvent event) {
+        try {
+            kafkaTemplate.send(ADMIN_REGISTRATION_TOPIC, event)
+                    .whenComplete((result, ex) -> {
+                        if (ex == null) {
+                            log.info("Message sent successfully to ADMIN topic: {}, partition: {}, offset: {}",
+                                    ADMIN_REGISTRATION_TOPIC, result.getRecordMetadata().partition(),
+                                    result.getRecordMetadata().offset());
+                        } else {
+                            log.error("Failed to send message to ADMIN Kafka: {}", ex.getMessage());
+                        }
+                    });
+        } catch (Exception e) {
+            log.error("Error while sending message to ADMIN Kafka: {}", e.getMessage());
+            throw new RuntimeException("Could not send admin registration event to Kafka", e);
         }
     }
 

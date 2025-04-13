@@ -61,6 +61,21 @@ public class User {
 
     private boolean enabled = false;
 
+    @Column(name = "is_disabled")
+    private boolean isDisabled = false;
+
+    @Column(name = "is_deleted")
+    private boolean isDeleted = false;
+
+    @Column(name = "is_verified")
+    private boolean isVerified = false;
+
+    @Column(name = "identification_number",unique = true)
+    private String identificationNumber = "";
+
+    @Column(name = "vehicle_number")
+    private String vehicleNumber = "";
+
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
             name = "user_roles",

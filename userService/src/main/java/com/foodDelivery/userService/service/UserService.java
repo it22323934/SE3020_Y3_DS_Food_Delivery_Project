@@ -1,12 +1,14 @@
 package com.foodDelivery.userService.service;
 
-import com.foodDelivery.userService.dto.PasswordChangeRequest;
-import com.foodDelivery.userService.dto.PasswordResetRequest;
-import com.foodDelivery.userService.dto.UserProfileRequest;
-import com.foodDelivery.userService.dto.UserProfileResponse;
+import com.foodDelivery.userService.dto.*;
+import com.foodDelivery.userService.event.UserRegistrationAdminEvent;
+import com.foodDelivery.userService.model.ConfirmationToken;
 import com.foodDelivery.userService.model.PasswordResetToken;
+import com.foodDelivery.userService.model.Role;
 import com.foodDelivery.userService.model.User;
+import com.foodDelivery.userService.repository.ConfirmationTokenRepository;
 import com.foodDelivery.userService.repository.PasswordResetTokenRepository;
+import com.foodDelivery.userService.repository.RoleRepository;
 import com.foodDelivery.userService.repository.UserRepository;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.RequiredArgsConstructor;
@@ -15,9 +17,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -26,8 +27,11 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
+    private final ConfirmationTokenRepository confirmationTokenRepository;
     private final PasswordEncoder passwordEncoder;
+    private final RoleRepository roleRepository;
     private final KafkaProducerService kafkaProducerService;
+    private static final String CONFIRMATION_URL = "http://localhost:8081/api/auth/confirm?token=";
 
     public Optional<UserProfileResponse> getUserProfile(String username) {
         return userRepository.findByUsername(username)
@@ -157,6 +161,14 @@ public class UserService {
                 user.getLocationType(),
                 user.getLatitude(),
                 user.getLongitude(),
+                user.isEnabled(),
+                user.isDisabled(),
+                user.isDeleted(),
+                user.isVerified(),
+                user.getIdentificationNumber(),
+                user.getVehicleNumber(),
+                user.getCreatedAt(),
+                user.getUpdatedAt(),
                 user.getRoles().stream()
                         .map(role -> role.getName())
                         .toList()
@@ -168,5 +180,144 @@ public class UserService {
                 .stream()
                 .map(this::mapToUserProfileResponse)
                 .toList();
+    }
+
+    public UserProfileResponse createUserByAdmin(SignupRequest signUpRequest) {
+        // Validate unique fields
+        if (userRepository.existsByUsername(signUpRequest.getUsername())) {
+            throw new IllegalArgumentException("Username is already taken");
+        }
+
+        if (userRepository.existsByEmail(signUpRequest.getEmail())) {
+            throw new IllegalArgumentException("Email is already in use");
+        }
+
+        if (signUpRequest.getPhoneNumber() != null && !signUpRequest.getPhoneNumber().isEmpty() &&
+                userRepository.existsByPhoneNumber(signUpRequest.getPhoneNumber())) {
+            throw new IllegalArgumentException("Phone number is already registered");
+        }
+
+        if (signUpRequest.getIdentificationNumber() != null && !signUpRequest.getIdentificationNumber().isEmpty() &&
+                userRepository.existsByIdentificationNumber(signUpRequest.getIdentificationNumber())) {
+            throw new IllegalArgumentException("Identification number is already registered");
+        }
+
+        // Create new user account
+        User user = new User();
+        user.setUsername(signUpRequest.getUsername());
+        user.setEmail(signUpRequest.getEmail());
+        user.setPassword(passwordEncoder.encode(signUpRequest.getPassword()));
+
+        // Handle user details
+        user.setFirstName(signUpRequest.getFirstName() != null ? signUpRequest.getFirstName() : "");
+        user.setLastName(signUpRequest.getLastName() != null ? signUpRequest.getLastName() : "");
+        user.setPhoneNumber(signUpRequest.getPhoneNumber() != null ? signUpRequest.getPhoneNumber() : "");
+        user.setProfileImage(signUpRequest.getProfilePicture() != null ? signUpRequest.getProfilePicture() : "");
+        user.setAddress(signUpRequest.getAddress() != null ? signUpRequest.getAddress() : "");
+
+        // Handle location information
+        if (signUpRequest.getLocation() != null) {
+            user.setLocationType(signUpRequest.getLocation().getType());
+            if (signUpRequest.getLocation().getCoordinates() != null) {
+                user.setLongitude(signUpRequest.getLocation().getCoordinates()[0]);
+                user.setLatitude(signUpRequest.getLocation().getCoordinates()[1]);
+            } else {
+                user.setLongitude(0.0);
+                user.setLatitude(0.0);
+            }
+        } else {
+            user.setLocationType("");
+            user.setLongitude(0.0);
+            user.setLatitude(0.0);
+        }
+
+        // Set status fields for admin-created accounts
+        user.setDisabled(false);
+        user.setDeleted(false);
+        user.setVerified(true);  // Admin-created accounts are pre-verified
+        user.setEnabled(false);
+
+        // Special fields for driver or restaurant admin accounts if applicable
+        if (signUpRequest.getIdentificationNumber() != null) {
+            user.setIdentificationNumber(signUpRequest.getIdentificationNumber());
+        }
+        if (signUpRequest.getVehicleNumber() != null) {
+            user.setVehicleNumber(signUpRequest.getVehicleNumber());
+        }
+
+        // Handle roles - default to CUSTOMER if none specified
+        Set<Role> roles = assignUserRoles(signUpRequest.getRoles());
+        user.setRoles(roles);
+
+        User savedUser = userRepository.save(user);
+
+        // Generate confirmation token and URL
+        ConfirmationToken confirmationToken = new ConfirmationToken(savedUser);
+        confirmationTokenRepository.save(confirmationToken);
+
+        String confirmationUrl = CONFIRMATION_URL + confirmationToken.getToken();
+
+        List<String> roleNames = roles.stream()
+                .map(Role::getName)
+                .toList();
+
+        // Send registration event
+        UserRegistrationAdminEvent event = new UserRegistrationAdminEvent(
+                savedUser.getId(),
+                savedUser.getUsername(),
+                signUpRequest.getPassword(),
+                savedUser.getEmail(),
+                savedUser.getFirstName(),
+                savedUser.getLastName(),
+                roleNames,
+                "ADMIN_USER_REGISTERED",
+                savedUser.getPhoneNumber(),
+                confirmationUrl,
+                System.currentTimeMillis()
+        );
+
+        kafkaProducerService.sendAdminUserRegistrationEvent(event);
+
+
+        log.info("Admin created new user: {}, with roles: {}", savedUser.getUsername(),
+                roles.stream().map(Role::getName).collect(Collectors.toList()));
+
+        return mapToUserProfileResponse(savedUser);
+    }
+
+    private Set<Role> assignUserRoles(Set<String> requestedRoles) {
+        Set<Role> roles = new HashSet<>();
+
+        if (requestedRoles == null || requestedRoles.isEmpty()) {
+            Role customerRole = roleRepository.findByName("ROLE_CUSTOMER")
+                    .orElseThrow(() -> new RuntimeException("Error: Default role not found."));
+            roles.add(customerRole);
+            return roles;
+        }
+
+        for (String role : requestedRoles) {
+            switch (role) {
+                case "ROLE_ADMIN":
+                    Role adminRole = roleRepository.findByName("ROLE_ADMIN")
+                            .orElseThrow(() -> new RuntimeException("Error: Admin role not found."));
+                    roles.add(adminRole);
+                    break;
+                case "ROLE_RESTAURANT_ADMIN":
+                    Role restaurantRole = roleRepository.findByName("ROLE_RESTAURANT_ADMIN")
+                            .orElseThrow(() -> new RuntimeException("Error: Restaurant role not found."));
+                    roles.add(restaurantRole);
+                    break;
+                case "ROLE_DRIVER":
+                    Role deliveryRole = roleRepository.findByName("ROLE_DELIVERY_PERSONNEL")
+                            .orElseThrow(() -> new RuntimeException("Error: Delivery role not found."));
+                    roles.add(deliveryRole);
+                    break;
+                default:
+                    Role customerRole = roleRepository.findByName("ROLE_CUSTOMER")
+                            .orElseThrow(() -> new RuntimeException("Error: Default role not found."));
+                    roles.add(customerRole);
+            }
+        }
+        return roles;
     }
 }

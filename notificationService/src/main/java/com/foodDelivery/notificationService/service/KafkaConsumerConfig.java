@@ -34,6 +34,7 @@ public class KafkaConsumerConfig {
         props.put(ErrorHandlingDeserializer.KEY_DESERIALIZER_CLASS, StringDeserializer.class);
         props.put(ErrorHandlingDeserializer.VALUE_DESERIALIZER_CLASS, JsonDeserializer.class);
         props.put(JsonDeserializer.TRUSTED_PACKAGES, "com.foodDelivery.userService.event");
+        props.put(JsonDeserializer.TYPE_MAPPINGS, "userRegistrationAdminEvent:com.foodDelivery.userService.event.UserRegistrationAdminEvent");
 
         return new DefaultKafkaConsumerFactory<>(props);
     }

@@ -141,46 +141,48 @@ public class AuthController {
         user.setFirstName(signUpRequest.getFirstName() != null ? signUpRequest.getFirstName() : "");
         user.setLastName(signUpRequest.getLastName() != null ? signUpRequest.getLastName() : "");
         user.setPhoneNumber(signUpRequest.getPhoneNumber() != null ? signUpRequest.getPhoneNumber() : "");
+        user.setProfileImage(signUpRequest.getProfilePicture() != null ? signUpRequest.getProfilePicture() : "");
+        user.setAddress(signUpRequest.getAddress() != null ? signUpRequest.getAddress() : "");
 
-        // Set default role to CUSTOMER
+        // Handle location information
+        if (signUpRequest.getLocation() != null) {
+            user.setLocationType(signUpRequest.getLocation().getType());
+            if (signUpRequest.getLocation().getCoordinates() != null) {
+                user.setLongitude(signUpRequest.getLocation().getCoordinates()[0]);
+                user.setLatitude(signUpRequest.getLocation().getCoordinates()[1]);
+            } else {
+                user.setLongitude(0.0);
+                user.setLatitude(0.0);
+            }
+        } else {
+            user.setLocationType("");
+            user.setLongitude(0.0);
+            user.setLatitude(0.0);
+        }
+
+        // Set default account status values
+        user.setDisabled(false);
+        user.setDeleted(false);
+        user.setVerified(false);
+        user.setIdentificationNumber("");
+        user.setVehicleNumber("");
+
+        // Always assign only CUSTOMER role for self-registration
         Set<Role> roles = new HashSet<>();
         Role customerRole = roleRepository.findByName("ROLE_CUSTOMER")
                 .orElseThrow(() -> new RuntimeException("Error: Default customer role not found."));
         roles.add(customerRole);
-
-        // Add additional roles if specified
-        Set<String> strRoles = signUpRequest.getRoles();
-        if (strRoles != null) {
-            strRoles.forEach(role -> {
-                switch (role) {
-                    case "admin":
-                        Role adminRole = roleRepository.findByName("ROLE_ADMIN")
-                                .orElseThrow(() -> new RuntimeException("Error: Admin role not found."));
-                        roles.add(adminRole);
-                        break;
-                    case "restaurant":
-                        Role restaurantRole = roleRepository.findByName("ROLE_RESTAURANT_ADMIN")
-                                .orElseThrow(() -> new RuntimeException("Error: Restaurant role not found."));
-                        roles.add(restaurantRole);
-                        break;
-                    case "delivery":
-                        Role deliveryRole = roleRepository.findByName("ROLE_DELIVERY_PERSONNEL")
-                                .orElseThrow(() -> new RuntimeException("Error: Delivery role not found."));
-                        roles.add(deliveryRole);
-                        break;
-                }
-            });
-        }
-
         user.setRoles(roles);
+
         User savedUser = userRepository.save(user);
 
-        // Rest of the code for token generation and event publishing remains the same...
+        // Generate confirmation token and URL
         ConfirmationToken confirmationToken = new ConfirmationToken(savedUser);
         confirmationTokenRepository.save(confirmationToken);
 
         String confirmationUrl = CONFIRMATION_URL + confirmationToken.getToken();
 
+        // Send registration event
         UserRegistrationEvent event = new UserRegistrationEvent(
                 savedUser.getId(),
                 savedUser.getUsername(),
@@ -195,7 +197,7 @@ public class AuthController {
 
         kafkaProducerService.sendUserRegistrationEvent(event);
 
-        return ResponseEntity.ok(new MessageResponse("User registered successfully!"));
+        return ResponseEntity.ok(new MessageResponse("User registered successfully! Please check your email to verify your account."));
     }
 
     public ResponseEntity<?> signUpFallback(SignupRequest signUpRequest, Exception e) {

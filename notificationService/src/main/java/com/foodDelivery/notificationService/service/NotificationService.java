@@ -3,6 +3,7 @@ package com.foodDelivery.notificationService.service;
 
 import com.foodDelivery.notificationService.event.OrderStatusEvent;
 import com.foodDelivery.userService.event.PasswordResetEvent;
+import com.foodDelivery.userService.event.UserRegistrationAdminEvent;
 import com.foodDelivery.userService.event.UserRegistrationEvent;
 import com.foodDelivery.notificationService.model.*;
 import com.foodDelivery.notificationService.repository.NotificationRepository;
@@ -57,6 +58,249 @@ public class NotificationService {
         // Send SMS notification if phone number exists
         if (event.getPhoneNumber() != null && !event.getPhoneNumber().isEmpty()) {
             sendSmsNotification(event);
+        }
+    }
+
+    @KafkaListener(topics = "user-password-reset", groupId = "notification-service")
+    public void handlePasswordReset(PasswordResetEvent event) {
+        logger.info("Received password reset event for user: {}", event.getEmail());
+
+        // Create notification record
+        Notification notification = new Notification();
+        notification.setUserId(String.valueOf(event.getUserId()));
+        notification.setType(NotificationType.EMAIL);
+        notification.setReferenceType("USER");
+        notification.setReferenceId(String.valueOf(event.getUserId()));
+
+        Optional<NotificationTemplate> template = templateRepository
+                .findByTypeAndEventTypeAndIsActiveTrue(NotificationType.EMAIL, EventType.PASSWORD_RESET_REQUESTED);
+
+        if (template.isPresent()) {
+            notification.setTemplateId(template.get().getTemplateId());
+
+            Map<String, String> variables = new HashMap<>();
+            variables.put("firstName", event.getFirstName());
+            variables.put("resetUrl", event.getResetUrl());
+
+            String content = processTemplate(template.get().getContent(), variables);
+            notification.setContent(content);
+
+            sendEmailNotification(event.getEmail(), template.get().getSubject(), content);
+
+            notification.setStatus(NotificationStatus.SENT);
+            notification.setSentAt(LocalDateTime.now());
+        } else {
+            // Use default template if none found
+            MimeMessagePreparator messagePreparatory = mimeMessage -> {
+                MimeMessageHelper messageHelper = new MimeMessageHelper(mimeMessage);
+                messageHelper.setFrom("asirijayawardena920@gmail.com");
+                messageHelper.setTo(event.getEmail());
+                messageHelper.setSubject("Reset Your Password");
+                messageHelper.setText(String.format("""
+                Dear %s,
+                
+                You have requested to reset your password. Please click the link below to set a new password:
+                
+                %s
+                
+                This link will expire in 24 hours. If you didn't request this, please ignore this email.
+                
+                Best Regards,
+                Food Delivery Team
+                """,
+                        event.getFirstName(),
+                        event.getResetUrl()), true);
+            };
+
+            try {
+                javaMailSender.send(messagePreparatory);
+                notification.setStatus(NotificationStatus.SENT);
+                notification.setSentAt(LocalDateTime.now());
+                logger.info("Password reset email sent to {}", event.getEmail());
+            } catch (MailException e) {
+                notification.setStatus(NotificationStatus.FAILED);
+                logger.error("Failed to send password reset email", e);
+            }
+        }
+
+        notificationRepository.save(notification);
+    }
+
+    @KafkaListener(topics = "order-status-change", groupId = "notification-service")
+    public void handleOrderStatusChange(OrderStatusEvent event) {
+        logger.info("Received order status change event: {}", event);
+
+        // Send email notification
+        sendEmailForOrderStatus(event);
+
+        // Send SMS notification
+        sendSmsForOrderStatus(event);
+
+        // Send push notification
+        sendPushForOrderStatus(event);
+    }
+
+    @KafkaListener(topics = "admin-user-registration", groupId = "notification-service")
+    public void handleAdminUserRegistration(UserRegistrationAdminEvent event) {
+        logger.info("Received admin-created user registration event: {}", event);
+
+        // Create notification record
+        Notification notification = new Notification();
+        notification.setUserId(String.valueOf(event.getUserId()));
+        notification.setType(NotificationType.EMAIL);
+        notification.setReferenceType("USER");
+        notification.setReferenceId(String.valueOf(event.getUserId()));
+
+        // Format roles for display
+        String rolesDisplay = event.getRoles() != null ?
+                String.join(", ", event.getRoles().stream()
+                        .map(role -> role.replace("ROLE_", ""))
+                        .collect(java.util.stream.Collectors.toList())) :
+                "CUSTOMER";
+
+        // Look for admin-specific template
+        Optional<NotificationTemplate> template = templateRepository
+                .findByTypeAndEventTypeAndIsActiveTrue(NotificationType.EMAIL, EventType.ADMIN_USER_REGISTRATION);
+
+        if (template.isPresent()) {
+            notification.setTemplateId(template.get().getTemplateId());
+
+            // Replace variables in template
+            String content = template.get().getContent()
+                    .replace("{{firstName}}", event.getFirstName())
+                    .replace("{{lastName}}", event.getLastName())
+                    .replace("{{username}}", event.getUsername())
+                    .replace("{{password}}", event.getPassword())
+                    .replace("{{verificationLink}}", event.getConfirmationUrl())
+                    .replace("{{roles}}", rolesDisplay);
+
+            notification.setContent(content);
+            sendEmailNotification(event.getEmail(), template.get().getSubject(), content);
+            notification.setStatus(NotificationStatus.SENT);
+            notification.setSentAt(LocalDateTime.now());
+        } else {
+            // Fallback to default HTML template for admin-created accounts
+            String htmlContent = """
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body {
+                    font-family: 'Arial', sans-serif;
+                    line-height: 1.6;
+                    color: #333;
+                    max-width: 600px;
+                    margin: 0 auto;
+                }
+                .header {
+                    background-color: #FF4500;
+                    color: white;
+                    padding: 20px;
+                    text-align: center;
+                    border-radius: 5px 5px 0 0;
+                }
+                .content {
+                    padding: 20px;
+                    background-color: #fff;
+                    border-left: 1px solid #ddd;
+                    border-right: 1px solid #ddd;
+                }
+                .footer {
+                    background-color: #f4f4f4;
+                    padding: 15px;
+                    text-align: center;
+                    font-size: 12px;
+                    color: #666;
+                    border-radius: 0 0 5px 5px;
+                    border: 1px solid #ddd;
+                }
+                .button {
+                    background-color: #FF4500;
+                    color: white;
+                    padding: 10px 20px;
+                    text-align: center;
+                    text-decoration: none;
+                    display: inline-block;
+                    border-radius: 5px;
+                    font-weight: bold;
+                }
+                .credentials {
+                    background-color: #f9f9f9;
+                    border: 1px solid #ddd;
+                    padding: 15px;
+                    margin: 20px 0;
+                    border-radius: 5px;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h1>Your FlavorFleet Account</h1>
+            </div>
+            <div class="content">
+                <p>Dear %s,</p>
+                <p>An administrator has created an account for you on FlavorFleet with the role(s): <strong>%s</strong>.</p>
+
+                <div class="credentials">
+                    <p><strong>Your login credentials:</strong></p>
+                    <p>Username: <strong>%s</strong></p>
+                    <p>Password: <strong>%s</strong></p>
+                    <p><em>For security, please change your password after first login.</em></p>
+                </div>
+
+                <p>Before you can use your account, please verify your email address by clicking the button below:</p>
+
+                <p style="text-align: center; margin-top: 25px;">
+                    <a href="%s" class="button">Verify Email Address</a>
+                </p>
+
+                <p>If the button doesn't work, copy and paste this link into your browser:</p>
+                <p style="word-break: break-all;">%s</p>
+
+                <p>After verification, you can enjoy all FlavorFleet features based on your assigned role.</p>
+            </div>
+            <div class="footer">
+                <p>&copy; %d FlavorFleet. All rights reserved.</p>
+                <p>If you did not expect this account, please contact our support at <a href="mailto:support@FlavorFleet.com">support@FlavorFleet.com</a></p>
+            </div>
+        </body>
+        </html>
+        """.formatted(
+                    event.getFirstName(),
+                    rolesDisplay,
+                    event.getUsername(),
+                    event.getPassword(),
+                    event.getConfirmationUrl(),
+                    event.getConfirmationUrl(),
+                    java.time.Year.now().getValue()
+            );
+
+            MimeMessagePreparator messagePreparatory = mimeMessage -> {
+                MimeMessageHelper messageHelper = new MimeMessageHelper(mimeMessage, true);
+                messageHelper.setFrom("noreply@FlavorFleet.com", "FlavorFleet");
+                messageHelper.setTo(event.getEmail());
+                messageHelper.setSubject("Your FlavorFleet Account - Email Verification Required");
+                messageHelper.setText(htmlContent, true);
+            };
+
+            try {
+                javaMailSender.send(messagePreparatory);
+                notification.setContent(htmlContent);
+                notification.setStatus(NotificationStatus.SENT);
+                notification.setSentAt(LocalDateTime.now());
+                logger.info("Admin-created account email sent to: {}", event.getEmail());
+            } catch (MailException e) {
+                notification.setStatus(NotificationStatus.FAILED);
+                notification.setContent("Failed to send email: " + e.getMessage());
+                logger.error("Failed to send admin-created account email", e);
+            }
+        }
+
+        notificationRepository.save(notification);
+
+        // Send SMS notification if phone number exists
+        if (event.getPhoneNumber() != null && !event.getPhoneNumber().isEmpty()) {
+            sendSmsNotificationForAdminCreatedAccount(event);
         }
     }
 
@@ -389,83 +633,59 @@ public class NotificationService {
         }
     }
 
-    @KafkaListener(topics = "user-password-reset", groupId = "notification-service")
-    public void handlePasswordReset(PasswordResetEvent event) {
-        logger.info("Received password reset event for user: {}", event.getEmail());
+    private void sendSmsNotificationForAdminCreatedAccount(UserRegistrationAdminEvent event) {
+        try {
+            String phoneNumber = event.getPhoneNumber();
 
-        // Create notification record
-        Notification notification = new Notification();
-        notification.setUserId(String.valueOf(event.getUserId()));
-        notification.setType(NotificationType.EMAIL);
-        notification.setReferenceType("USER");
-        notification.setReferenceId(String.valueOf(event.getUserId()));
+            Notification notification = new Notification();
+            notification.setUserId(String.valueOf(event.getUserId()));
+            notification.setType(NotificationType.SMS);
+            notification.setReferenceType("USER");
+            notification.setReferenceId(String.valueOf(event.getUserId()));
 
-        Optional<NotificationTemplate> template = templateRepository
-                .findByTypeAndEventTypeAndIsActiveTrue(NotificationType.EMAIL, EventType.PASSWORD_RESET_REQUESTED);
+            Optional<NotificationTemplate> template = templateRepository
+                    .findByTypeAndEventTypeAndIsActiveTrue(NotificationType.SMS, EventType.ADMIN_USER_REGISTRATION);
 
-        if (template.isPresent()) {
-            notification.setTemplateId(template.get().getTemplateId());
+            if (template.isPresent()) {
+                notification.setTemplateId(template.get().getTemplateId());
+                String content = template.get().getContent()
+                        .replace("{{username}}", event.getUsername())
+                        .replace("{{password}}", event.getPassword());
 
-            Map<String, String> variables = new HashMap<>();
-            variables.put("firstName", event.getFirstName());
-            variables.put("resetUrl", event.getResetUrl());
+                notification.setContent(content);
+                smsService.sendSMS(phoneNumber, content);
+            } else {
+                // Default SMS content
+                String content = String.format(
+                        "FlavorFleet: Your account has been created. Username: %s, Password: %s. Please verify your email to activate your account.",
+                        event.getUsername(),
+                        event.getPassword()
+                );
 
-            String content = processTemplate(template.get().getContent(), variables);
-            notification.setContent(content);
-
-            sendEmailNotification(event.getEmail(), template.get().getSubject(), content);
+                notification.setContent(content);
+                smsService.sendSMS(phoneNumber, content);
+            }
 
             notification.setStatus(NotificationStatus.SENT);
             notification.setSentAt(LocalDateTime.now());
-        } else {
-            // Use default template if none found
-            MimeMessagePreparator messagePreparatory = mimeMessage -> {
-                MimeMessageHelper messageHelper = new MimeMessageHelper(mimeMessage);
-                messageHelper.setFrom("asirijayawardena920@gmail.com");
-                messageHelper.setTo(event.getEmail());
-                messageHelper.setSubject("Reset Your Password");
-                messageHelper.setText(String.format("""
-                Dear %s,
-                
-                You have requested to reset your password. Please click the link below to set a new password:
-                
-                %s
-                
-                This link will expire in 24 hours. If you didn't request this, please ignore this email.
-                
-                Best Regards,
-                Food Delivery Team
-                """,
-                        event.getFirstName(),
-                        event.getResetUrl()), true);
-            };
+            logger.info("Admin user registration SMS sent to {}", phoneNumber);
 
-            try {
-                javaMailSender.send(messagePreparatory);
-                notification.setStatus(NotificationStatus.SENT);
-                notification.setSentAt(LocalDateTime.now());
-                logger.info("Password reset email sent to {}", event.getEmail());
-            } catch (MailException e) {
-                notification.setStatus(NotificationStatus.FAILED);
-                logger.error("Failed to send password reset email", e);
-            }
+            notificationRepository.save(notification);
+        } catch (Exception e) {
+            logger.error("Failed to send admin user registration SMS: {}", e.getMessage(), e);
+
+            // Create a failed notification record
+            Notification failedNotification = new Notification();
+            failedNotification.setUserId(String.valueOf(event.getUserId()));
+            failedNotification.setType(NotificationType.SMS);
+            failedNotification.setReferenceType("USER");
+            failedNotification.setReferenceId(String.valueOf(event.getUserId()));
+            failedNotification.setContent("Failed to send SMS: " + e.getMessage());
+            failedNotification.setStatus(NotificationStatus.FAILED);
+            failedNotification.setSentAt(LocalDateTime.now());
+
+            notificationRepository.save(failedNotification);
         }
-
-        notificationRepository.save(notification);
-    }
-
-    @KafkaListener(topics = "order-status-change", groupId = "notification-service")
-    public void handleOrderStatusChange(OrderStatusEvent event) {
-        logger.info("Received order status change event: {}", event);
-
-        // Send email notification
-        sendEmailForOrderStatus(event);
-
-        // Send SMS notification
-        sendSmsForOrderStatus(event);
-
-        // Send push notification
-        sendPushForOrderStatus(event);
     }
 
     private void sendEmailForOrderStatus(OrderStatusEvent event) {

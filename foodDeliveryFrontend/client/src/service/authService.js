@@ -121,4 +121,16 @@ export const authService = {
     return res;
   },
 
+  createUser: async (userData, token) => {
+    const res = await fetch(`${API_URL}/users/create-user`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(userData),
+    });
+    return res;
+  }
+
 };
