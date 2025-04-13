@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 @Service
@@ -46,13 +47,141 @@ public class NotificationService {
     public void handleUserRegistration(UserRegistrationEvent event) {
         logger.info("Received user registration event: {}", event);
 
-        // Send email notification
-        sendEmailNotification(event);
+        if(Objects.equals(event.getEventType(), "GOOGLE_USER_REGISTERED")){
+            sendGoogleEmailNotification(event);
+        }
+        if(Objects.equals(event.getEventType(), "USER_REGISTERED")){
+            sendEmailNotification(event);
+        }
 
         // Send SMS notification if phone number exists
         if (event.getPhoneNumber() != null && !event.getPhoneNumber().isEmpty()) {
             sendSmsNotification(event);
         }
+    }
+
+    public void sendGoogleEmailNotification(UserRegistrationEvent event) {
+        logger.info("Preparing welcome email for Google authenticated user: {}", event.getEmail());
+
+        // Create notification record
+        Notification notification = new Notification();
+        notification.setUserId(String.valueOf(event.getUserId()));
+        notification.setType(NotificationType.EMAIL);
+        notification.setReferenceType("USER");
+        notification.setReferenceId(String.valueOf(event.getUserId()));
+
+        // Check if we have a template for Google signups
+        Optional<NotificationTemplate> template = templateRepository
+                .findByTypeAndEventTypeAndIsActiveTrue(NotificationType.EMAIL, EventType.GOOGLE_USER_REGISTRATION);
+
+        if (template.isPresent()) {
+            notification.setTemplateId(template.get().getTemplateId());
+
+            // Replace variables in template
+            String content = template.get().getContent()
+                    .replace("{{firstName}}", event.getFirstName())
+                    .replace("{{lastName}}", event.getLastName());
+
+            notification.setContent(content);
+            sendEmailNotification(event.getEmail(), template.get().getSubject(), content);
+            notification.setStatus(NotificationStatus.SENT);
+            notification.setSentAt(LocalDateTime.now());
+        } else {
+            // Use default HTML template for Google users
+            String htmlContent = """
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <style>
+                    body {
+                        font-family: 'Arial', sans-serif;
+                        line-height: 1.6;
+                        color: #333;
+                        max-width: 600px;
+                        margin: 0 auto;
+                    }
+                    .header {
+                        background-color: #FF4500;
+                        color: white;
+                        padding: 20px;
+                        text-align: center;
+                        border-radius: 5px 5px 0 0;
+                    }
+                    .content {
+                        padding: 20px;
+                        background-color: #fff;
+                        border-left: 1px solid #ddd;
+                        border-right: 1px solid #ddd;
+                    }
+                    .footer {
+                        background-color: #f4f4f4;
+                        padding: 15px;
+                        text-align: center;
+                        font-size: 12px;
+                        color: #666;
+                        border-radius: 0 0 5px 5px;
+                        border: 1px solid #ddd;
+                    }
+                    .button {
+                        background-color: #FF4500;
+                        color: white;
+                        padding: 10px 20px;
+                        text-align: center;
+                        text-decoration: none;
+                        display: inline-block;
+                        border-radius: 5px;
+                        font-weight: bold;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="header">
+                    <h1>Welcome to FlavorFleet!</h1>
+                </div>
+                <div class="content">
+                    <p>Dear %s,</p>
+                    <p>Thank you for signing up with your Google account. Your registration is complete and your account is ready to use!</p>
+                    <p>With FlavorFleet you can:</p>
+                    <ul>
+                        <li>Browse restaurants and menus</li>
+                        <li>Place orders quickly and securely</li>
+                        <li>Track your delivery in real-time</li>
+                        <li>Save your favorite restaurants and meals</li>
+                    </ul>
+                    <p style="text-align: center; margin-top: 25px;">
+                        <a href="https://FlavorFleet.com/browse" class="button">Start Ordering</a>
+                    </p>
+                </div>
+                <div class="footer">
+                    <p>&copy; %d FlavorFleet. All rights reserved.</p>
+                    <p>If you did not create this account, please contact our support at <a href="mailto:support@FlavorFleet.com">support@FlavorFleet.com</a></p>
+                </div>
+            </body>
+            </html>
+            """.formatted(event.getFirstName(), java.time.Year.now().getValue());
+
+            MimeMessagePreparator messagePreparatory = mimeMessage -> {
+                MimeMessageHelper messageHelper = new MimeMessageHelper(mimeMessage, true);
+                messageHelper.setFrom("noreply@FlavorFleet.com", "FlavorFleet");
+                messageHelper.setTo(event.getEmail());
+                messageHelper.setSubject("Welcome to FlavorFleet - Your Account is Ready!");
+                messageHelper.setText(htmlContent, true);
+            };
+
+            try {
+                javaMailSender.send(messagePreparatory);
+                notification.setContent(htmlContent);
+                notification.setStatus(NotificationStatus.SENT);
+                notification.setSentAt(LocalDateTime.now());
+                logger.info("Welcome email sent to Google user: {}", event.getEmail());
+            } catch (MailException e) {
+                notification.setStatus(NotificationStatus.FAILED);
+                notification.setContent("Failed to send email: " + e.getMessage());
+                logger.error("Failed to send Google welcome email", e);
+            }
+        }
+
+        notificationRepository.save(notification);
     }
 
     public void sendEmailNotification(UserRegistrationEvent event) {
@@ -78,42 +207,121 @@ public class NotificationService {
                     .replace("{{confirmationUrl}}", event.getConfirmationUrl());
 
             notification.setContent(content);
-
             sendEmailNotification(event.getEmail(), template.get().getSubject(), content);
-
             notification.setStatus(NotificationStatus.SENT);
             notification.setSentAt(LocalDateTime.now());
         } else {
-            // Use default template if none found
+            // Use default HTML template if none found
+            String htmlContent = """
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <style>
+                    body {
+                        font-family: 'Arial', sans-serif;
+                        line-height: 1.6;
+                        color: #333;
+                        max-width: 600px;
+                        margin: 0 auto;
+                    }
+                    .header {
+                        background-color: #FF4500;
+                        color: white;
+                        padding: 20px;
+                        text-align: center;
+                        border-radius: 5px 5px 0 0;
+                    }
+                    .content {
+                        padding: 20px;
+                        background-color: #fff;
+                        border-left: 1px solid #ddd;
+                        border-right: 1px solid #ddd;
+                    }
+                    .verification-box {
+                        background-color: #f9f9f9;
+                        border: 1px solid #eee;
+                        padding: 15px;
+                        margin: 20px 0;
+                        text-align: center;
+                        border-radius: 5px;
+                    }
+                    .footer {
+                        background-color: #f4f4f4;
+                        padding: 15px;
+                        text-align: center;
+                        font-size: 12px;
+                        color: #666;
+                        border-radius: 0 0 5px 5px;
+                        border: 1px solid #ddd;
+                    }
+                    .button {
+                        background-color: #FF4500;
+                        color: white;
+                        padding: 10px 20px;
+                        text-align: center;
+                        text-decoration: none;
+                        display: inline-block;
+                        border-radius: 5px;
+                        font-weight: bold;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="header">
+                    <h1>Welcome to FlavorFleet!</h1>
+                </div>
+                <div class="content">
+                    <p>Dear %s %s,</p>
+                    <p>Thank you for creating an account with FlavorFleet!</p>
+                    
+                    <div class="verification-box">
+                        <p><strong>Please verify your email address to activate your account</strong></p>
+                        <p>You'll need to verify your email before you can place orders and enjoy our services.</p>
+                        <p style="text-align: center; margin-top: 15px;">
+                            <a href="%s" class="button">Verify My Email</a>
+                        </p>
+                    </div>
+                    
+                    <p>With FlavorFleet you can:</p>
+                    <ul>
+                        <li>Browse restaurants and menus</li>
+                        <li>Place orders quickly and securely</li>
+                        <li>Track your delivery in real-time</li>
+                        <li>Save your favorite restaurants and meals</li>
+                    </ul>
+                    
+                    <p>This verification link will expire in 24 hours.</p>
+                </div>
+                <div class="footer">
+                    <p>&copy; %d FlavorFleet. All rights reserved.</p>
+                    <p>If you did not create this account, please ignore this email or contact our support at <a href="mailto:support@FlavorFleet.com">support@FlavorFleet.com</a></p>
+                </div>
+            </body>
+            </html>
+            """.formatted(
+                    event.getFirstName(),
+                    event.getLastName(),
+                    event.getConfirmationUrl(),
+                    java.time.Year.now().getValue()
+            );
+
             MimeMessagePreparator messagePreparatory = mimeMessage -> {
-                MimeMessageHelper messageHelper = new MimeMessageHelper(mimeMessage);
-                messageHelper.setFrom("asirijayawardena920@gmail.com");
+                MimeMessageHelper messageHelper = new MimeMessageHelper(mimeMessage, true);
+                messageHelper.setFrom("noreply@FlavorFleet.com", "FlavorFleet");
                 messageHelper.setTo(event.getEmail());
-                messageHelper.setSubject("Welcome to Food Delivery - Confirm Your Registration");
-                messageHelper.setText(String.format("""
-                    Dear %s %s,
-                    
-                    Welcome to our Food Delivery Service! Please confirm your registration by clicking the link below:
-                    
-                    %s
-                    
-                    This link will expire in 24 hours.
-                    
-                    Best Regards,
-                    Food Delivery Team
-                    """,
-                        event.getFirstName(),
-                        event.getLastName(),
-                        event.getConfirmationUrl()), true);
+                messageHelper.setSubject("Welcome to FlavorFleet - Please Verify Your Email");
+                messageHelper.setText(htmlContent, true);
             };
 
             try {
                 javaMailSender.send(messagePreparatory);
+                notification.setContent(htmlContent);
                 notification.setStatus(NotificationStatus.SENT);
                 notification.setSentAt(LocalDateTime.now());
                 logger.info("Registration confirmation email sent to {}", event.getEmail());
             } catch (MailException e) {
                 notification.setStatus(NotificationStatus.FAILED);
+                notification.setContent("Failed to send email: " + e.getMessage());
                 logger.error("Failed to send registration email", e);
             }
         }

@@ -15,6 +15,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -36,9 +37,60 @@ public class UserService {
     public boolean updateUserProfile(String username, UserProfileRequest profileRequest) {
         return userRepository.findByUsername(username)
                 .map(user -> {
-                    user.setFirstName(profileRequest.getFirstName());
-                    user.setLastName(profileRequest.getLastName());
-                    user.setPhoneNumber(profileRequest.getPhoneNumber());
+                    // Validate unique fields
+                    if (profileRequest.getUsername() != null && !profileRequest.getUsername().equals(user.getUsername())) {
+                        if (userRepository.existsByUsername(profileRequest.getUsername())) {
+                            throw new IllegalArgumentException("Username already taken");
+                        }
+                        user.setUsername(profileRequest.getUsername());
+                    }
+
+                    if (profileRequest.getEmail() != null && !profileRequest.getEmail().equals(user.getEmail())) {
+                        if (userRepository.existsByEmail(profileRequest.getEmail())) {
+                            throw new IllegalArgumentException("Email already in use");
+                        }
+                        user.setEmail(profileRequest.getEmail());
+                    }
+
+                    if (profileRequest.getPhoneNumber() != null && !profileRequest.getPhoneNumber().equals(user.getPhoneNumber())) {
+                        if (userRepository.existsByPhoneNumber(profileRequest.getPhoneNumber())) {
+                            throw new IllegalArgumentException("Phone number already in use");
+                        }
+                        user.setPhoneNumber(profileRequest.getPhoneNumber());
+                    } else if (profileRequest.getPhoneNumber() != null) {
+                        user.setPhoneNumber(profileRequest.getPhoneNumber());
+                    }
+
+                    // Update other fields
+                    if (profileRequest.getFirstName() != null) {
+                        user.setFirstName(profileRequest.getFirstName());
+                    }
+
+                    if (profileRequest.getLastName() != null) {
+                        user.setLastName(profileRequest.getLastName());
+                    }
+
+                    if (profileRequest.getProfilePicture() != null) {
+                        user.setProfileImage(profileRequest.getProfilePicture());
+                    }
+
+                    // Handle location if present
+                    if (profileRequest.getLocation() != null) {
+                        UserProfileRequest.LocationDTO locationDTO = profileRequest.getLocation();
+                        user.setLocationType(locationDTO.getType());
+
+                        if (locationDTO.getCoordinates() != null && locationDTO.getCoordinates().length == 2) {
+                            user.setLongitude(locationDTO.getCoordinates()[0]);
+                            user.setLatitude(locationDTO.getCoordinates()[1]);
+                        }
+
+                        if (locationDTO.getAddress() != null) {
+                            user.setAddress(locationDTO.getAddress());
+                        }
+                    } else if (profileRequest.getAddress() != null) {
+                        user.setAddress(profileRequest.getAddress());
+                    }
+
                     userRepository.save(user);
                     return true;
                 })
@@ -100,9 +152,21 @@ public class UserService {
                 user.getFirstName(),
                 user.getLastName(),
                 user.getPhoneNumber(),
+                user.getProfileImage(),
+                user.getAddress(),
+                user.getLocationType(),
+                user.getLatitude(),
+                user.getLongitude(),
                 user.getRoles().stream()
                         .map(role -> role.getName())
                         .toList()
         );
+    }
+
+    public List<UserProfileResponse> getAllUsers() {
+        return userRepository.findAllUsers()
+                .stream()
+                .map(this::mapToUserProfileResponse)
+                .toList();
     }
 }

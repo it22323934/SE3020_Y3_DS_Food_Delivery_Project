@@ -54,8 +54,8 @@ export default function DashSideBar() {
       <Sidebar.Items>
         <Sidebar.ItemGroup className="flex flex-col gap-1">
           {currentUser &&
-            (currentUser.roles[0] === "ROLE_ADMIN" ||
-              currentUser.roles[0] === "ROLE_RESTAURANT_ADMIN") && (
+            (currentUser?.roles[0] === "ROLE_ADMIN" ||
+              currentUser?.roles[0] === "ROLE_RESTAURANT_ADMIN") && (
               <>
                 {/* Dashboard Tab - visible to both admin types */}
                 <Link to="/dashboard?tab=waste-management-dashboard">

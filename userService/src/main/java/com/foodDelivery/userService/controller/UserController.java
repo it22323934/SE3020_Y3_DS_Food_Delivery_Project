@@ -15,6 +15,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.apache.kafka.common.requests.FetchMetadata.log;
@@ -45,9 +46,14 @@ public class UserController {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String username = authentication.getName();
 
-        return userService.updateUserProfile(username, profileRequest)
-                ? ResponseEntity.ok(new MessageResponse("Profile updated successfully"))
-                : ResponseEntity.badRequest().body(new MessageResponse("Failed to update profile"));
+        try {
+            boolean updated = userService.updateUserProfile(username, profileRequest);
+            return updated
+                    ? ResponseEntity.ok(new MessageResponse("Profile updated successfully"))
+                    : ResponseEntity.badRequest().body(new MessageResponse("Failed to update profile"));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(new MessageResponse(e.getMessage()));
+        }
     }
 
     @PostMapping("/change-password")
@@ -108,5 +114,11 @@ public class UserController {
         }
     }
 
+    @GetMapping("/all-users")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<UserProfileResponse>> getAllUsers() {
+        List<UserProfileResponse> users = userService.getAllUsers();
+        return ResponseEntity.ok(users);
+    }
 
 }
