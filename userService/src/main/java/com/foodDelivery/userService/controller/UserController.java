@@ -2,8 +2,7 @@ package com.foodDelivery.userService.controller;
 
 import com.foodDelivery.userService.config.JwtUtils;
 import com.foodDelivery.userService.dto.*;
-import com.foodDelivery.userService.model.Role;
-import com.foodDelivery.userService.model.User;
+import com.foodDelivery.userService.modal.User;
 import com.foodDelivery.userService.repository.RoleRepository;
 import com.foodDelivery.userService.repository.UserRepository;
 import com.foodDelivery.userService.service.UserService;
@@ -18,11 +17,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 import static org.apache.kafka.common.requests.FetchMetadata.log;
 

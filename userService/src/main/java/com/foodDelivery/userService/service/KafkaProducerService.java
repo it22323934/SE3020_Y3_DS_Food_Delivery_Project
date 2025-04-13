@@ -3,7 +3,7 @@ package com.foodDelivery.userService.service;
 import com.foodDelivery.userService.event.PasswordResetEvent;
 import com.foodDelivery.userService.event.UserRegistrationAdminEvent;
 import com.foodDelivery.userService.event.UserRegistrationEvent;
-import com.foodDelivery.userService.model.UserNotificationEvent;
+import com.foodDelivery.userService.modal.UserNotificationEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -19,6 +19,7 @@ public class KafkaProducerService {
     private static final String REGISTRATION_TOPIC = "user-registration";
     private static final String ADMIN_REGISTRATION_TOPIC = "admin-user-registration";
     private static final String PASSWORD_RESET_TOPIC = "user-password-reset";
+    private static final String PORFILE_UPDATE_TOPIC = "user-profile-update";
 
     public void sendUserRegistrationEvent(UserRegistrationEvent event) {
         try {
@@ -81,6 +82,30 @@ public class KafkaProducerService {
         } catch (Exception e) {
             log.error("Error while sending password reset event to Kafka: {}", e.getMessage());
             throw new RuntimeException("Could not send password reset event to Kafka", e);
+        }
+    }
+
+    public void sendProfileUpdateNotification (Map<String, Object> eventData){
+        try {
+            UserNotificationEvent event = new UserNotificationEvent();
+            event.setEmail((String) eventData.get("email"));
+            event.setEventType((String) eventData.get("eventType"));
+            event.setData(eventData);
+            event.setTimestamp(System.currentTimeMillis());
+
+            kafkaTemplate.send(PORFILE_UPDATE_TOPIC, (String) eventData.get("email"), event)
+                    .whenComplete((result, ex) -> {
+                        if (ex == null) {
+                            log.info("Profile update notification sent successfully to topic: {}, partition: {}, offset: {}",
+                                    PORFILE_UPDATE_TOPIC, result.getRecordMetadata().partition(),
+                                    result.getRecordMetadata().offset());
+                        } else {
+                            log.error("Failed to send profile update notification to Kafka: {}", ex.getMessage());
+                        }
+                    });
+        } catch (Exception e) {
+            log.error("Error while sending profile update notification to Kafka: {}", e.getMessage());
+            throw new RuntimeException("Could not send profile update notification to Kafka", e);
         }
     }
 

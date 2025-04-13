@@ -1,6 +1,6 @@
 package com.foodDelivery.userService.service;
 
-import com.foodDelivery.userService.model.User;
+import com.foodDelivery.userService.modal.User;
 import com.foodDelivery.userService.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;

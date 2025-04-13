@@ -1,5 +1,5 @@
 // notificationService/src/main/java/com/foodDelivery/notificationService/model/NotificationTemplate.java
-package com.foodDelivery.notificationService.model;
+package com.foodDelivery.notificationService.modal;
 
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;

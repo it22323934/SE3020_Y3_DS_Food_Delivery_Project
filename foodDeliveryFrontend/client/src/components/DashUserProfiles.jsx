@@ -8,7 +8,7 @@ import {
   TextInput,
 } from "flowbite-react";
 import { useEffect, useState } from "react";
-import { HiEye, HiOutlineExclamationCircle, HiOutlineX } from "react-icons/hi";
+import { HiEye, HiOutlineExclamationCircle, HiOutlineUserGroup, HiOutlineX } from "react-icons/hi";
 import { useSelector } from "react-redux";
 import {
   FaCheck,
@@ -164,33 +164,33 @@ export default function DashUserProfiles() {
                 <div className="flex justify-between">
                   <div className="">
                     <h3 className="text-gray-500 text-md uppercase">
-                      Total Districts
+                      Total Users
                     </h3>
                     <p className="text-2xl">{}</p>
                   </div>
-                  <RiGovernmentLine className="bg-yellow-500 text-white  text-5xl p-3 shadow-lg" />
+                  <HiOutlineUserGroup className="bg-yellow-500 text-white  text-5xl p-3 shadow-lg" />
                 </div>
               </div>
               <div className="flex flex-col p-3 dark:bg-slate-800 gap-4 md:w-72 w-full rounded-md shadow-md">
                 <div className="flex justify-between">
                   <div className="">
                     <h3 className="text-gray-500 text-md uppercase">
-                      Active Districts
+                      Total Enabled Users
                     </h3>
                     <p className="text-2xl">{}</p>
                   </div>
-                  <RiGovernmentLine className="bg-green-500 text-white  text-5xl p-3 shadow-lg" />
+                  <HiOutlineUserGroup className="bg-green-500 text-white  text-5xl p-3 shadow-lg" />
                 </div>
               </div>
               <div className="flex flex-col p-3 dark:bg-slate-800 gap-4 md:w-72 w-full rounded-md shadow-md">
                 <div className="flex justify-between">
                   <div className="">
                     <h3 className="text-gray-500 text-md uppercase">
-                      Inactive Districts
+                      Total Disabled Users
                     </h3>
                     <p className="text-2xl">{}</p>
                   </div>
-                  <RiGovernmentLine className="bg-red-500 text-white text-5xl p-3 shadow-lg" />
+                  <HiOutlineUserGroup className="bg-red-500 text-white text-5xl p-3 shadow-lg" />
                 </div>
               </div>
             </div>

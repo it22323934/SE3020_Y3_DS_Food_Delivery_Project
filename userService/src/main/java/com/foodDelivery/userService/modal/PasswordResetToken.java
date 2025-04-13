@@ -1,5 +1,5 @@
 // PasswordResetToken.java
-package com.foodDelivery.userService.model;
+package com.foodDelivery.userService.modal;
 
 import jakarta.persistence.*;
 import lombok.Data;

@@ -1,7 +1,7 @@
 package com.foodDelivery.userService.service;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.foodDelivery.userService.model.User;
+import com.foodDelivery.userService.modal.User;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import org.springframework.security.core.GrantedAuthority;

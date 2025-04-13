@@ -5,9 +5,10 @@ import com.foodDelivery.notificationService.event.OrderStatusEvent;
 import com.foodDelivery.userService.event.PasswordResetEvent;
 import com.foodDelivery.userService.event.UserRegistrationAdminEvent;
 import com.foodDelivery.userService.event.UserRegistrationEvent;
-import com.foodDelivery.notificationService.model.*;
+import com.foodDelivery.notificationService.modal.*;
 import com.foodDelivery.notificationService.repository.NotificationRepository;
 import com.foodDelivery.notificationService.repository.NotificationTemplateRepository;
+import com.foodDelivery.userService.modal.UserNotificationEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -301,6 +302,236 @@ public class NotificationService {
         // Send SMS notification if phone number exists
         if (event.getPhoneNumber() != null && !event.getPhoneNumber().isEmpty()) {
             sendSmsNotificationForAdminCreatedAccount(event);
+        }
+    }
+
+    @KafkaListener(topics = "user-profile-update", groupId = "notification-service")
+    public void handleProfileUpdate(UserNotificationEvent event) {
+        logger.info("Received profile update event for user: {}", event.getEmail());
+
+        Map<String, Object> eventData = event.getData();
+        Integer userId = (Integer) eventData.get("userId");
+        String username = (String) eventData.get("username");
+        String email = (String) eventData.get("email");
+
+        // Create notification record
+        Notification notification = new Notification();
+        notification.setUserId(userId.toString());
+        notification.setType(NotificationType.EMAIL);
+        notification.setReferenceType("USER");
+        notification.setReferenceId(userId.toString());
+
+        // Retrieve changed fields
+        @SuppressWarnings("unchecked")
+        Map<String, String> changedFields = (Map<String, String>) eventData.get("changedFields");
+
+        // Look for profile update template
+        Optional<NotificationTemplate> template = templateRepository
+                .findByTypeAndEventTypeAndIsActiveTrue(NotificationType.EMAIL, EventType.PROFILE_UPDATED_BY_ADMIN);
+
+        if (template.isPresent()) {
+            notification.setTemplateId(template.get().getTemplateId());
+
+            // Build changed fields list for template
+            StringBuilder changesHtml = new StringBuilder("<ul>");
+            changedFields.forEach((field, value) -> {
+                changesHtml.append("<li><strong>").append(field).append("</strong>: ")
+                        .append(field.equals("Password") ? "******" : value)
+                        .append("</li>");
+            });
+            changesHtml.append("</ul>");
+
+            // Replace variables in template
+            Map<String, String> variables = new HashMap<>();
+            variables.put("username", username);
+            variables.put("firstName", (String) eventData.get("firstName"));
+            variables.put("lastName", (String) eventData.get("lastName"));
+            variables.put("changedFields", changesHtml.toString());
+
+            String content = processTemplate(template.get().getContent(), variables);
+            notification.setContent(content);
+
+            sendEmailNotification(email, template.get().getSubject(), content);
+            notification.setStatus(NotificationStatus.SENT);
+            notification.setSentAt(LocalDateTime.now());
+        } else {
+            // Use default HTML template if none found
+            String changesHtml = formatChangedFieldsHtml(changedFields);
+
+            String htmlContent = """
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body {
+                    font-family: 'Arial', sans-serif;
+                    line-height: 1.6;
+                    color: #333;
+                    max-width: 600px;
+                    margin: 0 auto;
+                }
+                .header {
+                    background-color: #FF4500;
+                    color: white;
+                    padding: 20px;
+                    text-align: center;
+                    border-radius: 5px 5px 0 0;
+                }
+                .content {
+                    padding: 20px;
+                    background-color: #fff;
+                    border-left: 1px solid #ddd;
+                    border-right: 1px solid #ddd;
+                }
+                .changes {
+                    background-color: #f9f9f9;
+                    border: 1px solid #eee;
+                    padding: 15px;
+                    margin: 20px 0;
+                    border-radius: 5px;
+                }
+                .footer {
+                    background-color: #f4f4f4;
+                    padding: 15px;
+                    text-align: center;
+                    font-size: 12px;
+                    color: #666;
+                    border-radius: 0 0 5px 5px;
+                    border: 1px solid #ddd;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h1>Account Update Notification</h1>
+            </div>
+            <div class="content">
+                <p>Dear %s,</p>
+                <p>We're writing to inform you that an administrator has updated your FlavorFleet account.</p>
+                
+                <div class="changes">
+                    <p><strong>The following changes were made to your account:</strong></p>
+                    %s
+                </div>
+                
+                <p>If you have any questions about these changes, please contact customer support.</p>
+            </div>
+            <div class="footer">
+                <p>&copy; %d FlavorFleet. All rights reserved.</p>
+                <p>If you didn't authorize these changes, please contact our support at <a href="mailto:support@FlavorFleet.com">support@FlavorFleet.com</a></p>
+            </div>
+        </body>
+        </html>
+        """.formatted(
+                    username,
+                    changesHtml,
+                    java.time.Year.now().getValue()
+            );
+
+            MimeMessagePreparator messagePreparator = mimeMessage -> {
+                MimeMessageHelper messageHelper = new MimeMessageHelper(mimeMessage, true);
+                messageHelper.setFrom("noreply@FlavorFleet.com", "FlavorFleet");
+                messageHelper.setTo(email);
+                messageHelper.setSubject("Your FlavorFleet Account Has Been Updated");
+                messageHelper.setText(htmlContent, true);
+            };
+
+            try {
+                javaMailSender.send(messagePreparator);
+                notification.setContent(htmlContent);
+                notification.setStatus(NotificationStatus.SENT);
+                notification.setSentAt(LocalDateTime.now());
+                logger.info("Profile update notification email sent to: {}", email);
+            } catch (MailException e) {
+                notification.setStatus(NotificationStatus.FAILED);
+                notification.setContent("Failed to send email: " + e.getMessage());
+                logger.error("Failed to send profile update notification email", e);
+            }
+        }
+
+        notificationRepository.save(notification);
+
+        // If phone number exists, send SMS notification
+        String phoneNumber = (String) eventData.get("phoneNumber");
+        if (phoneNumber != null && !phoneNumber.isEmpty()) {
+            sendProfileUpdateSMS(userId.toString(), phoneNumber, username, changedFields);
+        }
+    }
+
+    private String formatChangedFieldsHtml(Map<String, String> changedFields) {
+        StringBuilder html = new StringBuilder("<ul>");
+        changedFields.forEach((field, value) -> {
+            html.append("<li><strong>")
+                    .append(field)
+                    .append("</strong>: ")
+                    .append(field.equals("Password") ? "******" : value)
+                    .append("</li>");
+        });
+        html.append("</ul>");
+        return html.toString();
+    }
+
+    private void sendProfileUpdateSMS(String userId, String phoneNumber, String username, Map<String, String> changedFields) {
+        try {
+            // Format phone number properly (ensure it starts with +)
+            if (!phoneNumber.startsWith("+")) {
+                phoneNumber = "+" + phoneNumber;
+            }
+
+            Notification notification = new Notification();
+            notification.setUserId(userId);
+            notification.setType(NotificationType.SMS);
+            notification.setReferenceType("USER");
+            notification.setReferenceId(userId);
+
+            Optional<NotificationTemplate> template = templateRepository
+                    .findByTypeAndEventTypeAndIsActiveTrue(NotificationType.SMS, EventType.PROFILE_UPDATED_BY_ADMIN);
+
+            String content;
+            if (template.isPresent()) {
+                Map<String, String> variables = new HashMap<>();
+                variables.put("username", username);
+
+                StringBuilder changesText = new StringBuilder();
+                int count = 0;
+                for (Map.Entry<String, String> entry : changedFields.entrySet()) {
+                    if (count > 0) changesText.append(", ");
+                    changesText.append(entry.getKey());
+                    count++;
+                }
+                variables.put("changedFieldsList", changesText.toString());
+
+                content = processTemplate(template.get().getContent(), variables);
+                notification.setTemplateId(template.get().getTemplateId());
+            } else {
+                // Default SMS message
+                content = String.format("FlavorFleet: Your account has been updated by an administrator. " +
+                                "Fields updated: %s. Check your email for details.",
+                        String.join(", ", changedFields.keySet()));
+            }
+
+            notification.setContent(content);
+            smsService.sendSMS(phoneNumber, content);
+
+            notification.setStatus(NotificationStatus.SENT);
+            notification.setSentAt(LocalDateTime.now());
+            logger.info("Profile update SMS sent to {}", phoneNumber);
+
+            notificationRepository.save(notification);
+        } catch (Exception e) {
+            logger.error("Failed to send profile update SMS: {}", e.getMessage(), e);
+
+            // Create a failed notification record
+            Notification failedNotification = new Notification();
+            failedNotification.setUserId(userId);
+            failedNotification.setType(NotificationType.SMS);
+            failedNotification.setReferenceType("USER");
+            failedNotification.setReferenceId(userId);
+            failedNotification.setContent("Failed to send SMS: " + e.getMessage());
+            failedNotification.setStatus(NotificationStatus.FAILED);
+            failedNotification.setSentAt(LocalDateTime.now());
+
+            notificationRepository.save(failedNotification);
         }
     }
 

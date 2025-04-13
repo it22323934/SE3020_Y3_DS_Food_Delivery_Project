@@ -8,7 +8,7 @@
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
       </profile>
-      <profile name="Annotation profile for apiGateway" enabled="true">
+      <profile name="Annotation profile for notificationService" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
@@ -17,9 +17,9 @@
         </processorPath>
         <module name="deliveryService" />
         <module name="paymentService" />
+        <module name="notificationService" />
         <module name="restaurantService" />
         <module name="orderService" />
-        <module name="notificationService" />
         <module name="apiGateway" />
         <module name="userService" />
       </profile>

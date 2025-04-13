@@ -2,10 +2,10 @@ package com.foodDelivery.userService.service;
 
 import com.foodDelivery.userService.dto.*;
 import com.foodDelivery.userService.event.UserRegistrationAdminEvent;
-import com.foodDelivery.userService.model.ConfirmationToken;
-import com.foodDelivery.userService.model.PasswordResetToken;
-import com.foodDelivery.userService.model.Role;
-import com.foodDelivery.userService.model.User;
+import com.foodDelivery.userService.modal.ConfirmationToken;
+import com.foodDelivery.userService.modal.PasswordResetToken;
+import com.foodDelivery.userService.modal.Role;
+import com.foodDelivery.userService.modal.User;
 import com.foodDelivery.userService.repository.ConfirmationTokenRepository;
 import com.foodDelivery.userService.repository.PasswordResetTokenRepository;
 import com.foodDelivery.userService.repository.RoleRepository;
@@ -110,69 +110,6 @@ public class UserService {
                     return true;
                 })
                 .orElse(false);
-    }
-
-    @CircuitBreaker(name = "passwordResetEmail", fallbackMethod = "passwordResetEmailFallback")
-    public boolean requestPasswordReset(String email) {
-        return userRepository.findByEmail(email)
-                .map(user -> {
-                    PasswordResetToken token = new PasswordResetToken();
-                    token.setUser(user);
-                    token.setToken(UUID.randomUUID().toString());
-                    token.setExpiryDate(LocalDateTime.now().plusHours(24));
-                    passwordResetTokenRepository.save(token);
-
-                    // Here you would send a notification through Kafka
-                    // Similar to how you're doing it with registration
-
-                    return true;
-                })
-                .orElse(false);
-    }
-
-    public boolean passwordResetEmailFallback(String email, Exception e) {
-        log.error("Failed to process password reset for {}: {}", email, e.getMessage());
-        return false;
-    }
-
-    public boolean resetPassword(PasswordResetRequest resetRequest) {
-        return passwordResetTokenRepository.findByToken(resetRequest.getToken())
-                .filter(token -> !token.isExpired())
-                .map(token -> {
-                    User user = token.getUser();
-                    user.setPassword(passwordEncoder.encode(resetRequest.getNewPassword()));
-                    userRepository.save(user);
-                    passwordResetTokenRepository.delete(token);
-                    return true;
-                })
-                .orElse(false);
-    }
-
-    private UserProfileResponse mapToUserProfileResponse(User user) {
-        return new UserProfileResponse(
-                user.getId(),
-                user.getUsername(),
-                user.getEmail(),
-                user.getFirstName(),
-                user.getLastName(),
-                user.getPhoneNumber(),
-                user.getProfileImage(),
-                user.getAddress(),
-                user.getLocationType(),
-                user.getLatitude(),
-                user.getLongitude(),
-                user.isEnabled(),
-                user.isDisabled(),
-                user.isDeleted(),
-                user.isVerified(),
-                user.getIdentificationNumber(),
-                user.getVehicleNumber(),
-                user.getCreatedAt(),
-                user.getUpdatedAt(),
-                user.getRoles().stream()
-                        .map(role -> role.getName())
-                        .toList()
-        );
     }
 
     public List<UserProfileResponse> getAllUsers() {
@@ -325,107 +262,228 @@ public class UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found with ID: " + userId));
 
+        // Track changed fields for notification
+        Map<String, String> changedFields = new HashMap<>();
+
         // Validate unique fields when they change (safely check for null values)
-        if (updateRequest.getUsername() != null && !updateRequest.getUsername().equals(user.getUsername()) &&
-                userRepository.existsByUsername(updateRequest.getUsername())) {
-            throw new IllegalArgumentException("Username is already taken");
-        }
-
-        if (updateRequest.getEmail() != null && !updateRequest.getEmail().equals(user.getEmail()) &&
-                userRepository.existsByEmail(updateRequest.getEmail())) {
-            throw new IllegalArgumentException("Email is already in use");
-        }
-
-        if (updateRequest.getPhoneNumber() != null && !updateRequest.getPhoneNumber().isEmpty() &&
-                !updateRequest.getPhoneNumber().equals(user.getPhoneNumber()) &&
-                userRepository.existsByPhoneNumber(updateRequest.getPhoneNumber())) {
-            throw new IllegalArgumentException("Phone number is already registered");
-        }
-
-        if (updateRequest.getIdentificationNumber() != null && !updateRequest.getIdentificationNumber().isEmpty() &&
-                !updateRequest.getIdentificationNumber().equals(user.getIdentificationNumber()) &&
-                userRepository.existsByIdentificationNumber(updateRequest.getIdentificationNumber())) {
-            throw new IllegalArgumentException("Identification number is already registered");
-        }
-
-        // Update basic user information - only if provided in request
-        if (updateRequest.getUsername() != null) {
+        if (updateRequest.getUsername() != null && !updateRequest.getUsername().equals(user.getUsername())) {
+            if (userRepository.existsByUsername(updateRequest.getUsername())) {
+                throw new IllegalArgumentException("Username is already taken");
+            }
+            changedFields.put("Username", updateRequest.getUsername());
             user.setUsername(updateRequest.getUsername());
         }
 
-        if (updateRequest.getEmail() != null) {
+        if (updateRequest.getEmail() != null && !updateRequest.getEmail().equals(user.getEmail())) {
+            if (userRepository.existsByEmail(updateRequest.getEmail())) {
+                throw new IllegalArgumentException("Email is already in use");
+            }
+            changedFields.put("Email", updateRequest.getEmail());
             user.setEmail(updateRequest.getEmail());
+        }
+
+        if (updateRequest.getPhoneNumber() != null && !updateRequest.getPhoneNumber().equals(user.getPhoneNumber())) {
+            if (!updateRequest.getPhoneNumber().isEmpty() &&
+                    userRepository.existsByPhoneNumber(updateRequest.getPhoneNumber())) {
+                throw new IllegalArgumentException("Phone number is already registered");
+            }
+            changedFields.put("Phone Number", updateRequest.getPhoneNumber());
+            user.setPhoneNumber(updateRequest.getPhoneNumber());
+        }
+
+        if (updateRequest.getIdentificationNumber() != null &&
+                !updateRequest.getIdentificationNumber().equals(user.getIdentificationNumber())) {
+            if (!updateRequest.getIdentificationNumber().isEmpty() &&
+                    userRepository.existsByIdentificationNumber(updateRequest.getIdentificationNumber())) {
+                throw new IllegalArgumentException("Identification number is already registered");
+            }
+            changedFields.put("Identification Number", updateRequest.getIdentificationNumber());
+            user.setIdentificationNumber(updateRequest.getIdentificationNumber());
         }
 
         // Only update password if provided
         if (updateRequest.getPassword() != null && !updateRequest.getPassword().isEmpty()) {
+            changedFields.put("Password", "********");
             user.setPassword(passwordEncoder.encode(updateRequest.getPassword()));
         }
 
         // Update personal details
-        if (updateRequest.getFirstName() != null) {
+        if (updateRequest.getFirstName() != null && !updateRequest.getFirstName().equals(user.getFirstName())) {
+            changedFields.put("First Name", updateRequest.getFirstName());
             user.setFirstName(updateRequest.getFirstName());
         }
 
-        if (updateRequest.getLastName() != null) {
+        if (updateRequest.getLastName() != null && !updateRequest.getLastName().equals(user.getLastName())) {
+            changedFields.put("Last Name", updateRequest.getLastName());
             user.setLastName(updateRequest.getLastName());
         }
 
-        if (updateRequest.getPhoneNumber() != null) {
-            user.setPhoneNumber(updateRequest.getPhoneNumber());
-        }
-
-        if (updateRequest.getProfilePicture() != null) {
+        if (updateRequest.getProfilePicture() != null && !updateRequest.getProfilePicture().equals(user.getProfileImage())) {
+            changedFields.put("Profile Picture", "Updated");
             user.setProfileImage(updateRequest.getProfilePicture());
         }
 
-        if (updateRequest.getAddress() != null) {
+        if (updateRequest.getAddress() != null && !updateRequest.getAddress().equals(user.getAddress())) {
+            changedFields.put("Address", updateRequest.getAddress());
             user.setAddress(updateRequest.getAddress());
         }
 
         // Update location information if provided
         if (updateRequest.getLocation() != null) {
-            if (updateRequest.getLocation().getType() != null) {
+            if (updateRequest.getLocation().getType() != null &&
+                    !updateRequest.getLocation().getType().equals(user.getLocationType())) {
+                changedFields.put("Location Type", updateRequest.getLocation().getType());
                 user.setLocationType(updateRequest.getLocation().getType());
             }
 
             if (updateRequest.getLocation().getCoordinates() != null &&
                     updateRequest.getLocation().getCoordinates().length == 2) {
-                user.setLongitude(updateRequest.getLocation().getCoordinates()[0]);
-                user.setLatitude(updateRequest.getLocation().getCoordinates()[1]);
+                if (user.getLongitude() != updateRequest.getLocation().getCoordinates()[0] ||
+                        user.getLatitude() != updateRequest.getLocation().getCoordinates()[1]) {
+                    changedFields.put("Location Coordinates",
+                            "Long: " + updateRequest.getLocation().getCoordinates()[0] +
+                                    ", Lat: " + updateRequest.getLocation().getCoordinates()[1]);
+                    user.setLongitude(updateRequest.getLocation().getCoordinates()[0]);
+                    user.setLatitude(updateRequest.getLocation().getCoordinates()[1]);
+                }
             }
         }
 
-        // Update special fields for drivers or restaurant admins
-        if (updateRequest.getIdentificationNumber() != null) {
-            user.setIdentificationNumber(updateRequest.getIdentificationNumber());
-        }
-
-        if (updateRequest.getVehicleNumber() != null) {
+        // Update vehicle number for drivers
+        if (updateRequest.getVehicleNumber() != null && !updateRequest.getVehicleNumber().equals(user.getVehicleNumber())) {
+            changedFields.put("Vehicle Number", updateRequest.getVehicleNumber());
             user.setVehicleNumber(updateRequest.getVehicleNumber());
         }
 
         // Update status fields if present
-        if (updateRequest.getDisabled() != null) {
+        if (updateRequest.getDisabled() != null && updateRequest.getDisabled() != user.isDisabled()) {
+            changedFields.put("Account Status", updateRequest.getDisabled() ? "Disabled" : "Enabled");
             user.setDisabled(updateRequest.getDisabled());
         }
 
-        if (updateRequest.getVerified() != null) {
+        if (updateRequest.getVerified() != null && updateRequest.getVerified() != user.isVerified()) {
+            changedFields.put("Verification Status", updateRequest.getVerified() ? "Verified" : "Unverified");
             user.setVerified(updateRequest.getVerified());
         }
 
         // Update roles if specified
+        Set<String> oldRoleNames = null;
         if (updateRequest.getRoles() != null && !updateRequest.getRoles().isEmpty()) {
+            oldRoleNames = user.getRoles().stream()
+                    .map(Role::getName)
+                    .map(name -> name.replace("ROLE_", ""))
+                    .collect(Collectors.toSet());
+
             Set<Role> roles = assignUserRoles(updateRequest.getRoles());
             user.setRoles(roles);
+
+            Set<String> newRoleNames = roles.stream()
+                    .map(Role::getName)
+                    .map(name -> name.replace("ROLE_", ""))
+                    .collect(Collectors.toSet());
+
+            if (!newRoleNames.equals(oldRoleNames)) {
+                changedFields.put("Roles", String.join(", ", newRoleNames));
+            }
         }
 
         user.setUpdatedAt(LocalDateTime.now());
         User updatedUser = userRepository.save(user);
 
+        // Send notification to user about profile update if any fields changed
+        if (!changedFields.isEmpty()) {
+            sendProfileUpdateNotification(updatedUser, changedFields);
+        }
+
         log.info("Admin updated user: {}, with roles: {}", updatedUser.getUsername(),
                 updatedUser.getRoles().stream().map(Role::getName).collect(Collectors.joining(", ")));
 
         return mapToUserProfileResponse(updatedUser);
+    }
+
+    private void sendProfileUpdateNotification(User user, Map<String, String> changedFields) {
+        // Create notification content
+        StringBuilder changes = new StringBuilder();
+        changedFields.forEach((field, value) ->
+                changes.append("• ").append(field).append(": ").append(value).append("\n"));
+
+        // Create notification event
+        Map<String, Object> eventData = new HashMap<>();
+        eventData.put("userId", user.getId());
+        eventData.put("username", user.getUsername());
+        eventData.put("email", user.getEmail());
+        eventData.put("firstName", user.getFirstName());
+        eventData.put("lastName", user.getLastName());
+        eventData.put("phoneNumber", user.getPhoneNumber());
+        eventData.put("changedFields", changedFields);
+        eventData.put("eventType", "PROFILE_UPDATED_BY_ADMIN");
+        eventData.put("timestamp", System.currentTimeMillis());
+
+        // Send notification through Kafka
+        kafkaProducerService.sendProfileUpdateNotification(eventData);
+
+        log.info("Profile update notification sent to user {}: {}", user.getUsername(), changes.toString().trim());
+    }
+
+    @CircuitBreaker(name = "passwordResetEmail", fallbackMethod = "passwordResetEmailFallback")
+    public boolean requestPasswordReset(String email) {
+        return userRepository.findByEmail(email)
+                .map(user -> {
+                    PasswordResetToken token = new PasswordResetToken();
+                    token.setUser(user);
+                    token.setToken(UUID.randomUUID().toString());
+                    token.setExpiryDate(LocalDateTime.now().plusHours(24));
+                    passwordResetTokenRepository.save(token);
+
+                    // Here you would send a notification through Kafka
+                    // Similar to how you're doing it with registration
+
+                    return true;
+                })
+                .orElse(false);
+    }
+    public boolean passwordResetEmailFallback(String email, Exception e) {
+        log.error("Failed to process password reset for {}: {}", email, e.getMessage());
+        return false;
+    }
+
+    public boolean resetPassword(PasswordResetRequest resetRequest) {
+        return passwordResetTokenRepository.findByToken(resetRequest.getToken())
+                .filter(token -> !token.isExpired())
+                .map(token -> {
+                    User user = token.getUser();
+                    user.setPassword(passwordEncoder.encode(resetRequest.getNewPassword()));
+                    userRepository.save(user);
+                    passwordResetTokenRepository.delete(token);
+                    return true;
+                })
+                .orElse(false);
+    }
+
+    private UserProfileResponse mapToUserProfileResponse(User user) {
+        return new UserProfileResponse(
+                user.getId(),
+                user.getUsername(),
+                user.getEmail(),
+                user.getFirstName(),
+                user.getLastName(),
+                user.getPhoneNumber(),
+                user.getProfileImage(),
+                user.getAddress(),
+                user.getLocationType(),
+                user.getLatitude(),
+                user.getLongitude(),
+                user.isEnabled(),
+                user.isDisabled(),
+                user.isDeleted(),
+                user.isVerified(),
+                user.getIdentificationNumber(),
+                user.getVehicleNumber(),
+                user.getCreatedAt(),
+                user.getUpdatedAt(),
+                user.getRoles().stream()
+                        .map(role -> role.getName())
+                        .toList()
+        );
     }
 }
