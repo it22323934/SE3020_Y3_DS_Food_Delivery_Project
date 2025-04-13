@@ -7,6 +7,7 @@ import { useDispatch } from "react-redux";
 import { signInSuccess } from "../redux/user/userSlice";
 import { useNavigate } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
+import { authService } from "../service/authService";
 export default function OAuth() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -16,18 +17,12 @@ export default function OAuth() {
     provider.setCustomParameters({ prompt: "select_account" });
     try {
       const resultFromGoogle = await signInWithPopup(auth, provider);
-      console.log(resultFromGoogle);
-      const res = await fetch("api/auth/google", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          name: resultFromGoogle.user.displayName,
-          email: resultFromGoogle.user.email,
-          googlePhtotURL: resultFromGoogle.user.photoURL,
-        }),
-      });
+      let userData = {
+        email: resultFromGoogle.user.email,
+        name: resultFromGoogle.user.displayName,
+        googlePhotoURL: resultFromGoogle.user.photoURL,
+      };
+      const res = await authService.google(userData);
       const data = await res.json();
       if (res.ok) {
         dispatch(signInSuccess(data));
@@ -41,15 +36,14 @@ export default function OAuth() {
   };
 
   return (
-      <Button
-        type="button"
-        gradientDuoTone="pinkToOrange"
-        outline
-        onClick={handleGoogleClick}
-      >
-        <AiFillGoogleCircle className="w-6 h-6 mr-2" />
-        Continue with Google
-      </Button>
-
+    <Button
+      type="button"
+      gradientDuoTone="pinkToOrange"
+      outline
+      onClick={handleGoogleClick}
+    >
+      <AiFillGoogleCircle className="w-6 h-6 mr-2" />
+      Continue with Google
+    </Button>
   );
 }

@@ -75,4 +75,74 @@ export const authService = {
     });
     return res;
   },
+
+  getAllUsers: async (token) => {
+    const res = await fetch(`${API_URL}/users/all-users`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return res;
+  },
+
+  google:async (userData) => {
+    const res = await fetch(`${API_URL}/auth/google`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(userData),
+    });
+    return res;
+  },
+
+  getUserDetails: async (token) => {
+    const res = await fetch(`${API_URL}/users/profile`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return res;
+  },
+
+  updateUserDetails: async (userData,token) => {
+    const res = await fetch(`${API_URL}/users/profile`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(userData),
+    });
+    return res;
+  },
+
+  createUser: async (userData, token) => {
+    const res = await fetch(`${API_URL}/users/create-user`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(userData),
+    });
+    return res;
+  },
+
+  updateUser: async (userId, userData, token) => {
+    const res = await fetch(`${API_URL}/users/update-user/${userId}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(userData),
+    });
+    return res;
+  }
+
 };

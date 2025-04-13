@@ -12,25 +12,19 @@ import java.util.Set;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class SignupRequest {
-    @NotBlank(message = "Username is required")
+public class UpdateProfileRequest {
     private String username;
-    @NotBlank(message = "Email is required")
-    @Email(message = "Email should be valid")
     private String email;
-    @NotBlank(message = "Password is required")
-    @Size(min = 8, message = "Password must be at least 8 characters long")
     private String password;
     private String firstName;
     private String lastName;
-    @NotBlank(message = "Phone number is required")
     private String phoneNumber;
     private String profilePicture;
     private String address;
     private String identificationNumber;
     private String vehicleNumber;
-    private boolean verified;
-    private boolean disabled;
+    private Boolean verified;
+    private Boolean disabled;
     private LocationDTO location;
     @Data
     public static class LocationDTO {

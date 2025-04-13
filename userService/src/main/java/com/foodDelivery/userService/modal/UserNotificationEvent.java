@@ -1,4 +1,4 @@
-package com.foodDelivery.userService.model;
+package com.foodDelivery.userService.modal;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;

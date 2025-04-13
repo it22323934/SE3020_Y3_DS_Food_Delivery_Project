@@ -3,10 +3,10 @@ package com.foodDelivery.userService.controller;
 import com.foodDelivery.userService.config.JwtUtils;
 import com.foodDelivery.userService.dto.*;
 import com.foodDelivery.userService.event.UserRegistrationEvent;
-import com.foodDelivery.userService.model.ConfirmationToken;
-import com.foodDelivery.userService.model.PasswordResetToken;
-import com.foodDelivery.userService.model.Role;
-import com.foodDelivery.userService.model.User;
+import com.foodDelivery.userService.modal.ConfirmationToken;
+import com.foodDelivery.userService.modal.PasswordResetToken;
+import com.foodDelivery.userService.modal.Role;
+import com.foodDelivery.userService.modal.User;
 import com.foodDelivery.userService.repository.ConfirmationTokenRepository;
 import com.foodDelivery.userService.repository.PasswordResetTokenRepository;
 import com.foodDelivery.userService.repository.RoleRepository;
@@ -84,6 +84,19 @@ public class AuthController {
                         .body(new MessageResponse("Error: Account is not verified. Please check your email to verify your account."));
             }
 
+            // Check if user is disabled or deleted
+            if (user.isDisabled()) {
+                log.info("User account is disabled: {}", loginIdentifier);
+                return ResponseEntity.status(403)
+                        .body(new MessageResponse("Error: Account is disabled. Please contact support."));
+            }
+
+            if (user.isDeleted()) {
+                log.info("User account is deleted: {}", loginIdentifier);
+                return ResponseEntity.status(403)
+                        .body(new MessageResponse("Error: Account is deleted. Please contact support."));
+            }
+
             // Continue with successful authentication
             SecurityContextHolder.getContext().setAuthentication(authentication);
             String jwt = jwtUtils.generateJwtToken(authentication);
@@ -141,46 +154,48 @@ public class AuthController {
         user.setFirstName(signUpRequest.getFirstName() != null ? signUpRequest.getFirstName() : "");
         user.setLastName(signUpRequest.getLastName() != null ? signUpRequest.getLastName() : "");
         user.setPhoneNumber(signUpRequest.getPhoneNumber() != null ? signUpRequest.getPhoneNumber() : "");
+        user.setProfileImage(signUpRequest.getProfilePicture() != null ? signUpRequest.getProfilePicture() : "");
+        user.setAddress(signUpRequest.getAddress() != null ? signUpRequest.getAddress() : "");
 
-        // Set default role to CUSTOMER
+        // Handle location information
+        if (signUpRequest.getLocation() != null) {
+            user.setLocationType(signUpRequest.getLocation().getType());
+            if (signUpRequest.getLocation().getCoordinates() != null) {
+                user.setLongitude(signUpRequest.getLocation().getCoordinates()[0]);
+                user.setLatitude(signUpRequest.getLocation().getCoordinates()[1]);
+            } else {
+                user.setLongitude(0.0);
+                user.setLatitude(0.0);
+            }
+        } else {
+            user.setLocationType("");
+            user.setLongitude(0.0);
+            user.setLatitude(0.0);
+        }
+
+        // Set default account status values
+        user.setDisabled(false);
+        user.setDeleted(false);
+        user.setVerified(false);
+        user.setIdentificationNumber("");
+        user.setVehicleNumber("");
+
+        // Always assign only CUSTOMER role for self-registration
         Set<Role> roles = new HashSet<>();
         Role customerRole = roleRepository.findByName("ROLE_CUSTOMER")
                 .orElseThrow(() -> new RuntimeException("Error: Default customer role not found."));
         roles.add(customerRole);
-
-        // Add additional roles if specified
-        Set<String> strRoles = signUpRequest.getRoles();
-        if (strRoles != null) {
-            strRoles.forEach(role -> {
-                switch (role) {
-                    case "admin":
-                        Role adminRole = roleRepository.findByName("ROLE_ADMIN")
-                                .orElseThrow(() -> new RuntimeException("Error: Admin role not found."));
-                        roles.add(adminRole);
-                        break;
-                    case "restaurant":
-                        Role restaurantRole = roleRepository.findByName("ROLE_RESTAURANT_ADMIN")
-                                .orElseThrow(() -> new RuntimeException("Error: Restaurant role not found."));
-                        roles.add(restaurantRole);
-                        break;
-                    case "delivery":
-                        Role deliveryRole = roleRepository.findByName("ROLE_DELIVERY_PERSONNEL")
-                                .orElseThrow(() -> new RuntimeException("Error: Delivery role not found."));
-                        roles.add(deliveryRole);
-                        break;
-                }
-            });
-        }
-
         user.setRoles(roles);
+
         User savedUser = userRepository.save(user);
 
-        // Rest of the code for token generation and event publishing remains the same...
+        // Generate confirmation token and URL
         ConfirmationToken confirmationToken = new ConfirmationToken(savedUser);
         confirmationTokenRepository.save(confirmationToken);
 
         String confirmationUrl = CONFIRMATION_URL + confirmationToken.getToken();
 
+        // Send registration event
         UserRegistrationEvent event = new UserRegistrationEvent(
                 savedUser.getId(),
                 savedUser.getUsername(),
@@ -195,7 +210,7 @@ public class AuthController {
 
         kafkaProducerService.sendUserRegistrationEvent(event);
 
-        return ResponseEntity.ok(new MessageResponse("User registered successfully!"));
+        return ResponseEntity.ok(new MessageResponse("User registered successfully! Please check your email to verify your account."));
     }
 
     public ResponseEntity<?> signUpFallback(SignupRequest signUpRequest, Exception e) {
