@@ -35,6 +35,10 @@ public class RestaurantRequest {
     @DecimalMax(value = "180.0", message = "Longitude must be between -180 and 180")
     private Double longitude;
 
+    @NotNull(message = "Location type is required")
+    @Pattern(regexp = "^(Point|Polygon)$", message = "Location type must be either 'Point' or 'Polygon'")
+    private String locationType;
+
     @Valid
     private List<OpeningHourDto> openingHours = new ArrayList<>();
 

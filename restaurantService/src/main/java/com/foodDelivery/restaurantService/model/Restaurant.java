@@ -22,6 +22,7 @@ public class Restaurant {
     // Embedded location fields
     private Double latitude;
     private Double longitude;
+    private String locationType = "Point";
     private String formattedAddress;
 
     // Opening hours directly in restaurant
