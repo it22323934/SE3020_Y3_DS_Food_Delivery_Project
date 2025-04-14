@@ -3,7 +3,7 @@ package com.foodDelivery.userService.controller;
 import com.foodDelivery.userService.dto.GoogleAuthRequest;
 import com.foodDelivery.userService.dto.JwtResponse;
 import com.foodDelivery.userService.dto.MessageResponse;
-import com.foodDelivery.userService.service.GoogleAuthService;
+import com.foodDelivery.userService.serviceInterfaces.GoogleAuthService;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

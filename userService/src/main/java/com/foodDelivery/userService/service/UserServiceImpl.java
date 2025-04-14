@@ -10,6 +10,8 @@ import com.foodDelivery.userService.repository.ConfirmationTokenRepository;
 import com.foodDelivery.userService.repository.PasswordResetTokenRepository;
 import com.foodDelivery.userService.repository.RoleRepository;
 import com.foodDelivery.userService.repository.UserRepository;
+import com.foodDelivery.userService.service.KafkaProducerService;
+import com.foodDelivery.userService.serviceInterfaces.UserService;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,7 +25,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class UserService {
+public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
@@ -33,11 +35,13 @@ public class UserService {
     private final KafkaProducerService kafkaProducerService;
     private static final String CONFIRMATION_URL = "http://localhost:8081/api/auth/confirm?token=";
 
+    @Override
     public Optional<UserProfileResponse> getUserProfile(String username) {
         return userRepository.findByUsername(username)
                 .map(this::mapToUserProfileResponse);
     }
 
+    @Override
     public boolean updateUserProfile(String username, UserProfileRequest profileRequest) {
         return userRepository.findByUsername(username)
                 .map(user -> {
@@ -101,6 +105,7 @@ public class UserService {
                 .orElse(false);
     }
 
+    @Override
     public boolean changePassword(String username, PasswordChangeRequest request) {
         return userRepository.findByUsername(username)
                 .filter(user -> passwordEncoder.matches(request.getCurrentPassword(), user.getPassword()))
@@ -112,6 +117,7 @@ public class UserService {
                 .orElse(false);
     }
 
+    @Override
     public List<UserProfileResponse> getAllUsers() {
         return userRepository.findAllUsers()
                 .stream()
@@ -119,6 +125,7 @@ public class UserService {
                 .toList();
     }
 
+    @Override
     public UserProfileResponse createUserByAdmin(SignupRequest signUpRequest) {
         // Validate unique fields
         if (userRepository.existsByUsername(signUpRequest.getUsername())) {
@@ -215,7 +222,6 @@ public class UserService {
 
         kafkaProducerService.sendAdminUserRegistrationEvent(event);
 
-
         log.info("Admin created new user: {}, with roles: {}", savedUser.getUsername(),
                 roles.stream().map(Role::getName).collect(Collectors.toList()));
 
@@ -258,6 +264,7 @@ public class UserService {
         return roles;
     }
 
+    @Override
     public UserProfileResponse updateUserByAdmin(Long userId, UpdateProfileRequest updateRequest) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found with ID: " + userId));
@@ -425,6 +432,7 @@ public class UserService {
         log.info("Profile update notification sent to user {}: {}", user.getUsername(), changes.toString().trim());
     }
 
+    @Override
     @CircuitBreaker(name = "passwordResetEmail", fallbackMethod = "passwordResetEmailFallback")
     public boolean requestPasswordReset(String email) {
         return userRepository.findByEmail(email)
@@ -442,11 +450,13 @@ public class UserService {
                 })
                 .orElse(false);
     }
+
     public boolean passwordResetEmailFallback(String email, Exception e) {
         log.error("Failed to process password reset for {}: {}", email, e.getMessage());
         return false;
     }
 
+    @Override
     public boolean resetPassword(PasswordResetRequest resetRequest) {
         return passwordResetTokenRepository.findByToken(resetRequest.getToken())
                 .filter(token -> !token.isExpired())
@@ -482,8 +492,15 @@ public class UserService {
                 user.getCreatedAt(),
                 user.getUpdatedAt(),
                 user.getRoles().stream()
-                        .map(role -> role.getName())
+                        .map(Role::getName)
                         .toList()
         );
+    }
+    @Override
+    public boolean validateUserRole(Long userId, String role) {
+        return userRepository.findById(userId)
+                .map(user -> user.getRoles().stream()
+                        .anyMatch(userRole -> userRole.getName().equals(role)))
+                .orElse(false);
     }
 }

@@ -2,37 +2,29 @@ package com.foodDelivery.userService.controller;
 
 import com.foodDelivery.userService.config.JwtUtils;
 import com.foodDelivery.userService.dto.*;
-import com.foodDelivery.userService.modal.User;
-import com.foodDelivery.userService.repository.RoleRepository;
-import com.foodDelivery.userService.repository.UserRepository;
-import com.foodDelivery.userService.service.UserService;
+import com.foodDelivery.userService.serviceInterfaces.UserService;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Optional;
-
-import static org.apache.kafka.common.requests.FetchMetadata.log;
 
 @RestController
 @RequestMapping("/api/users")
 @RequiredArgsConstructor
+@Slf4j
 public class UserController {
 
     private final UserService userService;
-    private final UserRepository userRepository;
-    private final RoleRepository roleRepository;
-    private static final String AUTHENTICATION_SERVICE = "authenticationService";
-    private final PasswordEncoder encoder;
     private final JwtUtils jwtUtils;
+    private static final String AUTHENTICATION_SERVICE = "authenticationService";
 
     @GetMapping("/profile")
     @PreAuthorize("isAuthenticated()")
@@ -75,7 +67,6 @@ public class UserController {
     @PostMapping("/signout")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> logoutUser(@RequestHeader(value = "Authorization", required = false) String authHeader) {
-        // Log the logout attempt
         log.info("User logout requested");
 
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
@@ -93,24 +84,11 @@ public class UserController {
     public ResponseEntity<Boolean> validateUserRole(
             @RequestParam String userId,
             @RequestParam String role) {
-        // Use proper logging with @Slf4j annotation at the class level
-        org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(UserController.class);
         log.info("Validating role {} for user {}", role, userId);
 
         try {
-            // Get user from repository - adjust ID type if needed
-            Optional<User> userOpt = userRepository.findById(Long.valueOf(userId));
-            if (userOpt.isEmpty()) {
-                log.warn("User not found: {}", userId);
-                return ResponseEntity.ok(false);
-            }
-
-            User user = userOpt.get();
-            boolean hasRole = user.getRoles().stream()
-                    .anyMatch(userRole -> {
-                        return userRole.getName().equals(role);
-                    });
-
+            // Delegate to service layer
+            boolean hasRole = userService.validateUserRole(Long.valueOf(userId), role);
             log.info("User {} has role {}: {}", userId, role, hasRole);
             return ResponseEntity.ok(hasRole);
         } catch (Exception e) {
@@ -150,9 +128,9 @@ public class UserController {
 
     @PutMapping("/update-user/{userId}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<?> adminUpdateUser(@PathVariable Long userId, @Valid @RequestBody UpdateProfileRequest signUpRequest) {
+    public ResponseEntity<?> adminUpdateUser(@PathVariable Long userId, @Valid @RequestBody UpdateProfileRequest updateRequest) {
         try {
-            UserProfileResponse updatedUser = userService.updateUserByAdmin(userId, signUpRequest);
+            UserProfileResponse updatedUser = userService.updateUserByAdmin(userId, updateRequest);
             return ResponseEntity.ok(updatedUser);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(new MessageResponse("Error: " + e.getMessage()));
@@ -168,5 +146,4 @@ public class UserController {
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
                 .body(new MessageResponse("User creation service is currently unavailable. Please try again later."));
     }
-
 }

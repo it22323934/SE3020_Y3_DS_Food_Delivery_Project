@@ -10,6 +10,7 @@ import com.foodDelivery.userService.modal.User;
 import com.foodDelivery.userService.repository.ConfirmationTokenRepository;
 import com.foodDelivery.userService.repository.RoleRepository;
 import com.foodDelivery.userService.repository.UserRepository;
+import com.foodDelivery.userService.serviceInterfaces.GoogleAuthService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -27,7 +28,7 @@ import java.util.stream.Collectors;
 @Service
 @Slf4j
 @RequiredArgsConstructor
-public class GoogleAuthService {
+public class GoogleAuthServiceImpl implements GoogleAuthService {
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
@@ -37,6 +38,7 @@ public class GoogleAuthService {
     private final KafkaProducerService kafkaProducerService;
     private final UserDetailsServiceImpl userDetailsService;
 
+    @Override
     @Transactional
     public JwtResponse processGoogleAuth(GoogleAuthRequest request) {
         log.info("Processing Google authentication for email: {}", request.getEmail());
