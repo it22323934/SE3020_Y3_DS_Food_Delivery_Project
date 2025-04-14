@@ -5,6 +5,7 @@ import DashProfile from "../components/DashProfile";
 import DashUserProfiles from "../components/DashUserProfiles";
 import DashRestaurantManagement from "../components/DashRestaurantManagement";
 import DashMenuManagement from "../components/DashMenuManagement";
+import DashCuisineManagement from "../components/DashCuisineManagement";
 // import DashRestaurant from "../components/DashRestaurant";
 // import DashMenuManagement from "../components/DashMenuManagement";
 export default function Dashboard() {
@@ -31,7 +32,8 @@ export default function Dashboard() {
       {tab === "restaurant-management" && <DashRestaurantManagement />}
       {/** <DashMenuManagement/> */}
       {tab === "menu-management" && <DashMenuManagement />}
-      {/** <DashDistrict/> */}
+      {/** <DashCuisineManagement/> */}
+      {tab === "cuisine-management" && <DashCuisineManagement />}
 
     </div>
   );

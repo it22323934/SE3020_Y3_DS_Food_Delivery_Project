@@ -29,9 +29,9 @@ import { RiGovernmentLine } from "react-icons/ri";
 import { AiOutlineSearch } from "react-icons/ai";
 import LoadingSpinner from "./LoadingSpinner";
 import ReactPaginate from "react-paginate";
-import { UserDetailsModal } from "./sub-components/user-managment/UserDetailsModal";
-import { CreateUserModal } from "./sub-components/user-managment/CreateUserModal";
-import { UpdateUserModal } from "./sub-components/user-managment/UpdateUserModal";
+import { UserDetailsModal } from "./sub-components/user-management/UserDetailsModal";
+import { CreateUserModal } from "./sub-components/user-management/CreateUserModal";
+import { UpdateUserModal } from "./sub-components/user-management/UpdateUserModal";
 import { use } from "react";
 
 export default function DashUserProfiles() {

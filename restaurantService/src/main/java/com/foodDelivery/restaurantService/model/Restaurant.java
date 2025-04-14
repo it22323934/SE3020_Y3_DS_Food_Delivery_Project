@@ -15,23 +15,27 @@ public class Restaurant {
     private String name;
     private String description;
     private String address;
-    private List<String> imageUrls = new ArrayList<>();
+    private String restaurantImageUrl;  // Main restaurant image
+    private String bannerImageUrl;      // Banner image
+    private List<String> additionalImageUrls = new ArrayList<>();
     private String phoneNumber;
     private String email;
 
-    // Embedded location fields
+    // Location fields
     private Double latitude;
     private Double longitude;
     private String locationType = "Point";
     private String formattedAddress;
 
-    // Opening hours directly in restaurant
+    // Opening hours
     private List<OpeningHourInfo> openingHours = new ArrayList<>();
 
-    private List<String> cuisineTypes = new ArrayList<>();
+    // References to categories
+    private List<String> cuisineTypeIds = new ArrayList<>();
+
     private boolean enabled = true;
-    private String ownerId;  // User ID of the restaurant admin
-    private List<String> managerIds = new ArrayList<>(); // Additional managers
+    private String primaryAdminId;  // Primary restaurant admin
+    private List<String> adminIds = new ArrayList<>(); // Additional restaurant admins
     private double avgRating;
     private int totalRatings;
     private long createdAt;
@@ -39,9 +43,9 @@ public class Restaurant {
 
     @Data
     public static class OpeningHourInfo {
-        private int dayOfWeek; // 1-7 (Monday-Sunday)
-        private String openTime; // HH:mm format
-        private String closeTime; // HH:mm format
+        private int dayOfWeek;
+        private String openTime;
+        private String closeTime;
         private boolean closed;
     }
 }
