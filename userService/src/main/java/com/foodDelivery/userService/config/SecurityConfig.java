@@ -1,7 +1,7 @@
 package com.foodDelivery.userService.config;
 
 
-import com.foodDelivery.userService.service.UserDetailsServiceImpl;
+import com.foodDelivery.userService.serviceImplementation.UserDetailsServiceImpl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

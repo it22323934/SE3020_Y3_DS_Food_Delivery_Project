@@ -1,4 +1,4 @@
-package com.foodDelivery.userService.service;
+package com.foodDelivery.userService.serviceImplementation;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.foodDelivery.userService.modal.User;

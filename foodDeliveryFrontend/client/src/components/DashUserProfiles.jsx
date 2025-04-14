@@ -22,6 +22,7 @@ import {
   FaTimes,
   FaTimesCircle,
 } from "react-icons/fa";
+import ReactSelect from "react-select";
 import { ToastContainer, toast } from "react-toastify";
 import { authService } from "../service/authService";
 import { RiGovernmentLine } from "react-icons/ri";
@@ -31,6 +32,7 @@ import ReactPaginate from "react-paginate";
 import { UserDetailsModal } from "./sub-components/user-managment/UserDetailsModal";
 import { CreateUserModal } from "./sub-components/user-managment/CreateUserModal";
 import { UpdateUserModal } from "./sub-components/user-managment/UpdateUserModal";
+import { use } from "react";
 
 export default function DashUserProfiles() {
   const { currentUser } = useSelector((state) => state.user);
@@ -49,6 +51,9 @@ export default function DashUserProfiles() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedUserForReport, setSelectedUserForReport] = useState(null);
+  const [userSelectOptions, setUserSelectOptions] = useState([]);
+  const [roleOptions, setRoleOptions] = useState([]);
+  const [selectedRole, setSelectedRole] = useState(null);
 
   const fetchUser = async () => {
     try {
@@ -127,12 +132,67 @@ export default function DashUserProfiles() {
     }
   };
 
+  // Add this function to extract unique roles from users
+  const extractUniqueRoles = (usersArray) => {
+    const allRoles = new Set();
+
+    usersArray.forEach((user) => {
+      if (user.roles && Array.isArray(user.roles)) {
+        user.roles.forEach((role) => {
+          allRoles.add(role.replace("ROLE_", ""));
+        });
+      }
+    });
+
+    return Array.from(allRoles).map((role) => ({
+      value: role,
+      label: role,
+    }));
+  };
+
+  // Add this function to filter users by selected role
+  const filterUsersByRole = (role) => {
+    if (!role) {
+      // If no role selected, show all users in select
+      return users.map((user) => ({
+        value: user.id,
+        label: `${user.id} - ${user.username}`,
+      }));
+    }
+
+    // Filter users that have the selected role
+    const filteredByRole = users.filter(
+      (user) =>
+        user.roles &&
+        user.roles.some(
+          (userRole) => userRole.replace("ROLE_", "") === role.value
+        )
+    );
+
+    return filteredByRole.map((user) => ({
+      value: user.id,
+      label: `${user.id} - ${user.username}`,
+    }));
+  };
+
+  const handleRoleChange = (option) => {
+    setSelectedRole(option);
+    setSelectedUserForReport(null);
+  };
+
   useEffect(() => {
     if (currentUser?.roles?.[0] === "ROLE_ADMIN") {
       fetchUser();
       setLoading(false);
     }
-  }, [currentUser]);
+    if (users.length > 0) {
+      const roleOpts = extractUniqueRoles(users);
+      setRoleOptions(roleOpts);
+
+      const userOpts = filterUsersByRole(selectedRole);
+      setUserSelectOptions(userOpts);
+    }
+  }, [currentUser, selectedRole]);
 
   const [pageNumber, setPageNumber] = useState(0);
   const userPerPage = 5;
@@ -282,18 +342,62 @@ export default function DashUserProfiles() {
                 className="ml-1 bg-gray-50 border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-80 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500 mb"
               />
 
-              <Select
-                className="ml-4"
-                placeholder="Select a user for report"
-                value={selectedUserForReport}
-                onChange={(option) => setSelectedUserForReport(option)}
-                options={users.map((user) => ({
-                  value: user.id,
-                  label: `${user.id} - ${user.username}`,
-                }))}
-                isSearchable
-                isClearable
-              />
+              <div className="flex items-center mb-2">
+                {/* Role selector */}
+                <div className="ml-4 w-48">
+                  <ReactSelect
+                    placeholder="Filter by role"
+                    value={selectedRole}
+                    onChange={handleRoleChange}
+                    options={roleOptions}
+                    isSearchable
+                    isClearable
+                    className="react-select-container"
+                    classNamePrefix="react-select"
+                    styles={{
+                      control: (baseStyles) => ({
+                        ...baseStyles,
+                        backgroundColor: "white",
+                        borderColor: "#D1D5DB",
+                      }),
+                      option: (baseStyles, { isFocused }) => ({
+                        ...baseStyles,
+                        backgroundColor: isFocused ? "#E5E7EB" : "white",
+                        color: "black",
+                      }),
+                    }}
+                  />
+                </div>
+
+                {/* User selector */}
+                <div className="ml-4 w-64">
+                  <ReactSelect
+                    placeholder="Select a user for report"
+                    value={selectedUserForReport}
+                    onChange={(option) => setSelectedUserForReport(option)}
+                    options={users.map((user) => ({
+                      value: user.id,
+                      label: `${user.id} - ${user.username}`,
+                    }))}
+                    isSearchable
+                    isClearable
+                    className="react-select-container"
+                    classNamePrefix="react-select"
+                    styles={{
+                      control: (baseStyles) => ({
+                        ...baseStyles,
+                        backgroundColor: "white",
+                        borderColor: "#D1D5DB",
+                      }),
+                      option: (baseStyles, { isFocused }) => ({
+                        ...baseStyles,
+                        backgroundColor: isFocused ? "#E5E7EB" : "white",
+                        color: "black",
+                      }),
+                    }}
+                  />
+                </div>
+              </div>
 
               <Button
                 outline

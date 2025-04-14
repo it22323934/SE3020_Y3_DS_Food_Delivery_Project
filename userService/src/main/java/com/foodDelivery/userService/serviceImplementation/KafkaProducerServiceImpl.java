@@ -1,9 +1,10 @@
-package com.foodDelivery.userService.service;
+package com.foodDelivery.userService.serviceImplementation;
 
 import com.foodDelivery.userService.event.PasswordResetEvent;
 import com.foodDelivery.userService.event.UserRegistrationAdminEvent;
 import com.foodDelivery.userService.event.UserRegistrationEvent;
 import com.foodDelivery.userService.modal.UserNotificationEvent;
+import com.foodDelivery.userService.serviceInterfaces.KafkaProducerService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -14,13 +15,14 @@ import java.util.Map;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class KafkaProducerService {
+public class KafkaProducerServiceImpl implements KafkaProducerService {
     private final KafkaTemplate<String, Object> kafkaTemplate;
     private static final String REGISTRATION_TOPIC = "user-registration";
     private static final String ADMIN_REGISTRATION_TOPIC = "admin-user-registration";
     private static final String PASSWORD_RESET_TOPIC = "user-password-reset";
-    private static final String PORFILE_UPDATE_TOPIC = "user-profile-update";
+    private static final String PROFILE_UPDATE_TOPIC = "user-profile-update"; // Fixed typo in constant name
 
+    @Override
     public void sendUserRegistrationEvent(UserRegistrationEvent event) {
         try {
             kafkaTemplate.send(REGISTRATION_TOPIC, event)
@@ -39,6 +41,7 @@ public class KafkaProducerService {
         }
     }
 
+    @Override
     public void sendAdminUserRegistrationEvent(UserRegistrationAdminEvent event) {
         try {
             kafkaTemplate.send(ADMIN_REGISTRATION_TOPIC, event)
@@ -57,6 +60,7 @@ public class KafkaProducerService {
         }
     }
 
+    @Override
     public void sendPasswordResetEvent(Long userId, String email, String firstName,
                                        String eventType, String resetUrl) {
         try {
@@ -85,7 +89,8 @@ public class KafkaProducerService {
         }
     }
 
-    public void sendProfileUpdateNotification (Map<String, Object> eventData){
+    @Override
+    public void sendProfileUpdateNotification(Map<String, Object> eventData) {
         try {
             UserNotificationEvent event = new UserNotificationEvent();
             event.setEmail((String) eventData.get("email"));
@@ -93,11 +98,11 @@ public class KafkaProducerService {
             event.setData(eventData);
             event.setTimestamp(System.currentTimeMillis());
 
-            kafkaTemplate.send(PORFILE_UPDATE_TOPIC, (String) eventData.get("email"), event)
+            kafkaTemplate.send(PROFILE_UPDATE_TOPIC, (String) eventData.get("email"), event)
                     .whenComplete((result, ex) -> {
                         if (ex == null) {
                             log.info("Profile update notification sent successfully to topic: {}, partition: {}, offset: {}",
-                                    PORFILE_UPDATE_TOPIC, result.getRecordMetadata().partition(),
+                                    PROFILE_UPDATE_TOPIC, result.getRecordMetadata().partition(),
                                     result.getRecordMetadata().offset());
                         } else {
                             log.error("Failed to send profile update notification to Kafka: {}", ex.getMessage());
@@ -109,6 +114,7 @@ public class KafkaProducerService {
         }
     }
 
+    @Override
     public void sendUserNotification(String email, String eventType, Map<String, Object> data) {
         try {
             UserNotificationEvent event = new UserNotificationEvent();

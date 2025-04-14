@@ -1,5 +1,5 @@
 package com.foodDelivery.userService.config;
-import com.foodDelivery.userService.service.UserDetailsImpl;
+import com.foodDelivery.userService.serviceImplementation.UserDetailsImpl;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;

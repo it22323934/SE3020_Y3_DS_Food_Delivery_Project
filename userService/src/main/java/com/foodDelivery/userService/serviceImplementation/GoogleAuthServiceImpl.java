@@ -1,4 +1,4 @@
-package com.foodDelivery.userService.service;
+package com.foodDelivery.userService.serviceImplementation;
 
 import com.foodDelivery.userService.config.JwtUtils;
 import com.foodDelivery.userService.dto.GoogleAuthRequest;
@@ -11,6 +11,7 @@ import com.foodDelivery.userService.repository.ConfirmationTokenRepository;
 import com.foodDelivery.userService.repository.RoleRepository;
 import com.foodDelivery.userService.repository.UserRepository;
 import com.foodDelivery.userService.serviceInterfaces.GoogleAuthService;
+import com.foodDelivery.userService.serviceInterfaces.KafkaProducerService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;

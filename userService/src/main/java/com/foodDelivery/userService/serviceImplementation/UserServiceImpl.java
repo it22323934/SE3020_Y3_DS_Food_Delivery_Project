@@ -1,4 +1,4 @@
-package com.foodDelivery.userService.service;
+package com.foodDelivery.userService.serviceImplementation;
 
 import com.foodDelivery.userService.dto.*;
 import com.foodDelivery.userService.event.UserRegistrationAdminEvent;
@@ -10,7 +10,7 @@ import com.foodDelivery.userService.repository.ConfirmationTokenRepository;
 import com.foodDelivery.userService.repository.PasswordResetTokenRepository;
 import com.foodDelivery.userService.repository.RoleRepository;
 import com.foodDelivery.userService.repository.UserRepository;
-import com.foodDelivery.userService.service.KafkaProducerService;
+import com.foodDelivery.userService.serviceInterfaces.KafkaProducerService;
 import com.foodDelivery.userService.serviceInterfaces.UserService;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.RequiredArgsConstructor;

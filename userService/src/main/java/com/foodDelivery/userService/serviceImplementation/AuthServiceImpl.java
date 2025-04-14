@@ -1,4 +1,4 @@
-package com.foodDelivery.userService.service;
+package com.foodDelivery.userService.serviceImplementation;
 
 import com.foodDelivery.userService.config.JwtUtils;
 import com.foodDelivery.userService.dto.*;
@@ -12,8 +12,7 @@ import com.foodDelivery.userService.repository.PasswordResetTokenRepository;
 import com.foodDelivery.userService.repository.RoleRepository;
 import com.foodDelivery.userService.repository.UserRepository;
 import com.foodDelivery.userService.serviceInterfaces.AuthService;
-import com.foodDelivery.userService.service.KafkaProducerService;
-import com.foodDelivery.userService.service.UserDetailsImpl;
+import com.foodDelivery.userService.serviceInterfaces.KafkaProducerService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
