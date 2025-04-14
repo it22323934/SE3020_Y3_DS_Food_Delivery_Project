@@ -87,12 +87,12 @@ public class UserController {
         log.info("Validating role {} for user {}", role, userId);
 
         try {
-            // Delegate to service layer
-            boolean hasRole = userService.validateUserRole(Long.valueOf(userId), role);
-            log.info("User {} has role {}: {}", userId, role, hasRole);
-            return ResponseEntity.ok(hasRole);
+            // Delegate to service layer to check both role and enabled status
+            boolean hasRoleAndEnabled = userService.validateUserRoleAndEnabled(Long.valueOf(userId), role);
+            log.info("User {} has role {} and is enabled: {}", userId, role, hasRoleAndEnabled);
+            return ResponseEntity.ok(hasRoleAndEnabled);
         } catch (Exception e) {
-            log.error("Error validating role: {}", e.getMessage());
+            log.error("Error validating role or enabled status: {}", e.getMessage());
             return ResponseEntity.ok(false);
         }
     }
@@ -145,5 +145,21 @@ public class UserController {
         log.error("Admin user creation service is down or not responding: {}", e.getMessage());
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
                 .body(new MessageResponse("User creation service is currently unavailable. Please try again later."));
+    }
+
+    @GetMapping("/by-role")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<UserProfileResponse>> getUsersByRole(@RequestParam String roleName) {
+        log.info("Fetching users with role: {}", roleName);
+        try {
+            List<UserProfileResponse> users = userService.getUsersByRole(roleName);
+            return ResponseEntity.ok(users);
+        } catch (IllegalArgumentException e) {
+            log.error("Invalid role specified: {}", e.getMessage());
+            return ResponseEntity.badRequest().build();
+        } catch (Exception e) {
+            log.error("Error retrieving users by role: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 }

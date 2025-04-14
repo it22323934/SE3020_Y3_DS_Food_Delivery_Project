@@ -51,7 +51,7 @@ export const authService = {
   },
 
   // Validate reset token
-  
+
   validateToken: async (token) => {
     const res = await fetch(
       `${API_URL}/auth/password/validate?token=${token}`,
@@ -87,7 +87,7 @@ export const authService = {
     return res;
   },
 
-  google:async (userData) => {
+  google: async (userData) => {
     const res = await fetch(`${API_URL}/auth/google`, {
       method: "POST",
       headers: {
@@ -109,7 +109,7 @@ export const authService = {
     return res;
   },
 
-  updateUserDetails: async (userData,token) => {
+  updateUserDetails: async (userData, token) => {
     const res = await fetch(`${API_URL}/users/profile`, {
       method: "PUT",
       headers: {
@@ -143,6 +143,21 @@ export const authService = {
       body: JSON.stringify(userData),
     });
     return res;
-  }
+  },
 
+  getUserByRole: async (role, token) => {
+    const res = await fetch(`${API_URL}/users/by-role?roleName=${role}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return res;
+  },
+
+  // For restaurant admin users specifically (to use in restaurant creation form)
+  getRestaurantAdmins: async (token) => {
+    return authService.getUserByRole("ROLE_RESTAURANT_ADMIN", token);
+  },
 };

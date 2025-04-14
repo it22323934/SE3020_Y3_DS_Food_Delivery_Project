@@ -16,4 +16,6 @@ public interface UserService {
     boolean requestPasswordReset(String email);
     boolean resetPassword(PasswordResetRequest resetRequest);
     boolean validateUserRole(Long userId, String role);
+    boolean validateUserRoleAndEnabled(Long userId, String role);
+    List<UserProfileResponse> getUsersByRole(String roleName);
 }

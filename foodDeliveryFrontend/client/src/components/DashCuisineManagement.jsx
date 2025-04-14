@@ -252,14 +252,14 @@ export default function DashCuisineManagement() {
               </Button>
               <TextInput
                 type="text"
-                placeholder="Search by district name"
+                placeholder="Search by cuisine name"
                 onChange={(e) => setSearch(e.target.value)}
                 rightIcon={AiOutlineSearch}
                 className="ml-1 bg-gray-50 border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-80 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500 mb"
               />
               <Select
                 className="ml-4"
-                placeholder="Select a Supplier"
+                placeholder="Select a Cuisine"
                 isSearchable
                 styles={{
                   control: (provided) => ({

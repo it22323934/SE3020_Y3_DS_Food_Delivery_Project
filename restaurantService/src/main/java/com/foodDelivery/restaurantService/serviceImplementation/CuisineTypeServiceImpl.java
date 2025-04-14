@@ -3,6 +3,8 @@ package com.foodDelivery.restaurantService.serviceImplementation;
 import com.foodDelivery.restaurantService.dto.CuisineTypeCreateRequest;
 import com.foodDelivery.restaurantService.dto.CuisineTypeResponse;
 import com.foodDelivery.restaurantService.dto.CuisineTypeUpdateRequest;
+import com.foodDelivery.restaurantService.exception.BusinessValidationException;
+import com.foodDelivery.restaurantService.exception.ResourceNotFoundException;
 import com.foodDelivery.restaurantService.mapper.CuisineTypeMapper;
 import com.foodDelivery.restaurantService.model.CuisineType;
 import com.foodDelivery.restaurantService.model.Restaurant;
@@ -107,7 +109,15 @@ public class CuisineTypeServiceImpl implements CuisineTypeService {
     @Override
     public void addRestaurantToCuisineType(String cuisineTypeId, String restaurantId) {
         CuisineType cuisineType = cuisineTypeRepository.findById(cuisineTypeId)
-                .orElseThrow(() -> new RuntimeException("Cuisine type not found with id: " + cuisineTypeId));
+                .orElseThrow(() -> new ResourceNotFoundException("Cuisine type not found with id: " + cuisineTypeId));
+
+        Restaurant restaurant = restaurantRepository.findById(restaurantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found with id: " + restaurantId));
+
+        // Check if restaurant is disabled - only enabled restaurants can be added
+        if (!restaurant.isEnabled()) {
+            throw new BusinessValidationException("Restaurant is disabled and cannot be added to cuisine type");
+        }
 
         if (!cuisineType.getRestaurantIds().contains(restaurantId)) {
             cuisineType.getRestaurantIds().add(restaurantId);

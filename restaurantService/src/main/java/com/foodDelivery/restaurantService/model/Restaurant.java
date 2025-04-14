@@ -17,7 +17,6 @@ public class Restaurant {
     private String address;
     private String restaurantImageUrl;  // Main restaurant image
     private String bannerImageUrl;      // Banner image
-    private List<String> additionalImageUrls = new ArrayList<>();
     private String phoneNumber;
     private String email;
 
@@ -34,8 +33,7 @@ public class Restaurant {
     private List<String> cuisineTypeIds = new ArrayList<>();
 
     private boolean enabled = true;
-    private String primaryAdminId;  // Primary restaurant admin
-    private List<String> adminIds = new ArrayList<>(); // Additional restaurant admins
+    private List<String> adminIds = new ArrayList<>();  // Other admins
     private double avgRating;
     private int totalRatings;
     private long createdAt;

@@ -8,8 +8,7 @@ import java.util.List;
 
 @Repository
 public interface RestaurantRepository extends MongoRepository<Restaurant, String> {
-    List<Restaurant> findByPrimaryAdminId(String primaryAdminId);
-    // Add any additional query methods you need using the correct field names
+    List<Restaurant> findByAdminIdsContaining(String adminId);
     List<Restaurant> findByCuisineTypeIdsContaining(String cuisineTypeId);
     List<Restaurant> findByEnabled(boolean enabled);
 }

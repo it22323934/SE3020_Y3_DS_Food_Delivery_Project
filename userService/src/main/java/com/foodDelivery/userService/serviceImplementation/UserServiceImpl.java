@@ -496,6 +496,7 @@ public class UserServiceImpl implements UserService {
                         .toList()
         );
     }
+
     @Override
     public boolean validateUserRole(Long userId, String role) {
         return userRepository.findById(userId)
@@ -503,4 +504,36 @@ public class UserServiceImpl implements UserService {
                         .anyMatch(userRole -> userRole.getName().equals(role)))
                 .orElse(false);
     }
+
+    @Override
+    public boolean validateUserRoleAndEnabled(Long userId, String role) {
+        return userRepository.findById(userId)
+                .map(user -> user.isEnabled() && user.getRoles().stream()
+                        .anyMatch(userRole -> userRole.getName().equals(role)))
+                .orElse(false);
+    }
+
+    @Override
+    public List<UserProfileResponse> getUsersByRole(String roleName) {
+        // Ensure role name format is correct
+        if (!roleName.startsWith("ROLE_")) {
+            roleName = "ROLE_" + roleName;
+        }
+
+        // Find the role
+        Optional<Role> role = roleRepository.findByName(roleName);
+        if (role.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        // Get users with this role
+        List<User> users = userRepository.findByRolesContaining(role.get());
+
+        // Map to response objects
+        return users.stream()
+                .map(this::mapToUserProfileResponse)
+                .collect(Collectors.toList());
+    }
+
+
 }

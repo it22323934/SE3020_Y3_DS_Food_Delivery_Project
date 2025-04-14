@@ -1,32 +1,29 @@
 package com.foodDelivery.restaurantService.dto;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
+
 import java.util.ArrayList;
 import java.util.List;
 
 @Data
-public class RestaurantResponse {
-    private String id;
+public class RestaurantUpdateRequest {
+    @NotBlank(message = "Restaurant name is required")
+    @Size(min = 2, max = 100, message = "Name must be between 2 and 100 characters")
     private String name;
+
     private String description;
     private String address;
     private String restaurantImageUrl;
     private String bannerImageUrl;
-    private List<String> imageUrls = new ArrayList<>();
+    private List<String> additionalImageUrls = new ArrayList<>();
     private String phoneNumber;
     private String email;
     private Double latitude;
     private Double longitude;
-    private String formattedAddress;
     private List<OpeningHourDto> openingHours = new ArrayList<>();
-    private List<String> cuisineTypes = new ArrayList<>();
-    private List<String> adminIds = new ArrayList<>();
-    private String ownerId;
-    private boolean enabled;
-    private double avgRating;
-    private int totalRatings;
-    private long createdAt;
-    private long updatedAt;
+    private List<String> cuisineTypeIds = new ArrayList<>();
 
     @Data
     public static class OpeningHourDto {
