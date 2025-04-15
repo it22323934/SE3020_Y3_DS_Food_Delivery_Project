@@ -34,9 +34,8 @@ public class ReportServiceImpl implements ReportService {
 
     @Override
     public byte[] generateRoleBasedReport(String roleName) {
-        String formattedRole = "ROLE_" + roleName.toUpperCase();
+        String formattedRole = roleName.toUpperCase();
         List<User> users = userRepository.findByRolesName(formattedRole);
-
         return generatePdfForUserList(users, roleName);
     }
 

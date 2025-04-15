@@ -33,6 +33,7 @@ import { UserDetailsModal } from "./sub-components/user-management/UserDetailsMo
 import { CreateUserModal } from "./sub-components/user-management/CreateUserModal";
 import { UpdateUserModal } from "./sub-components/user-management/UpdateUserModal";
 import { use } from "react";
+import { reportService } from "../service/userReportService";
 
 export default function DashUserProfiles() {
   const { currentUser } = useSelector((state) => state.user);
@@ -106,32 +107,6 @@ export default function DashUserProfiles() {
     }
   };
 
-  const handleDownloadReport = async () => {
-    if (!selectedUserForReport) {
-      toast.error("Please select a user first");
-      return;
-    }
-
-    setIsDownloading(true);
-    try {
-      // Implement your download logic here
-      const user = users.find((u) => u.id === selectedUserForReport.value);
-      if (user) {
-        // Call your API to generate report
-        // const response = await authService.generateUserReport(user.id, currentUser.token);
-        // For now, just simulate a download delay
-        await new Promise((resolve) => setTimeout(resolve, 1500));
-        toast.success(`Report for ${user.username} downloaded successfully`);
-      }
-    } catch (error) {
-      toast.error(
-        "Failed to download report: " + (error.message || "Unknown error")
-      );
-    } finally {
-      setIsDownloading(false);
-    }
-  };
-
   // Add this function to extract unique roles from users
   const extractUniqueRoles = (usersArray) => {
     const allRoles = new Set();
@@ -185,14 +160,7 @@ export default function DashUserProfiles() {
       fetchUser();
       setLoading(false);
     }
-    if (users.length > 0) {
-      const roleOpts = extractUniqueRoles(users);
-      setRoleOptions(roleOpts);
-
-      const userOpts = filterUsersByRole(selectedRole);
-      setUserSelectOptions(userOpts);
-    }
-  }, [currentUser, selectedRole]);
+  }, [currentUser]);
 
   const [pageNumber, setPageNumber] = useState(0);
   const userPerPage = 5;
@@ -225,6 +193,71 @@ export default function DashUserProfiles() {
     fetchUser();
     setShowUpdateModal(false);
     setSelectedUser(null);
+  };
+
+  useEffect(() => {
+    if (users.length > 0) {
+      const roleOpts = extractUniqueRoles(users);
+      setRoleOptions(roleOpts);
+
+      const userOpts = filterUsersByRole(selectedRole);
+      setUserSelectOptions(userOpts);
+    }
+  }, [users, selectedRole]);
+
+  // Update the handleDownloadReport function to use the reportService
+  const handleDownloadReport = async () => {
+    if (!selectedUserForReport) {
+      toast.error("Please select a user first");
+      return;
+    }
+
+    setIsDownloading(true);
+    try {
+      const userId = selectedUserForReport.value;
+      // Fix the typo in "token"
+      const pdfBlob = await reportService.generateUserReport(
+        userId,
+        currentUser.token
+      );
+      await reportService.downloadPdfReport(
+        pdfBlob,
+        `user-report-${userId}.pdf`
+      );
+      toast.success(
+        `Report for ${selectedUserForReport.label} downloaded successfully`
+      );
+    } catch (error) {
+      toast.error(
+        "Failed to download report: " + (error.message || "Unknown error")
+      );
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  // Add a new function to handle role-based reports
+  const handleRoleReport = async () => {
+    if (!selectedRole) {
+      toast.error("Please select a role first");
+      return;
+    }
+
+    try {
+      const roleName = `ROLE_${selectedRole.value}`; // Add ROLE_ prefix back
+      const pdfBlob =await reportService.generateRoleBasedReport(roleName, currentUser.token);
+      await reportService.downloadPdfReport(
+        pdfBlob,
+        `Report-${roleName}.pdf`
+      );
+      toast.success(
+        `Report for ${selectedRole.label} role generated successfully`
+      );
+    } catch (error) {
+      toast.error(
+        "Failed to generate role report: " + (error.message || "Unknown error")
+      );
+    }
   };
 
   const displayUsers = filteredUsers
@@ -403,13 +436,25 @@ export default function DashUserProfiles() {
                 outline
                 gradientDuoTone="greenToBlue"
                 className="ml-4"
-                onClick={handleDownloadReport}
-                disabled={!selectedUserForReport || isDownloading}
+                onClick={() => {
+                  if (selectedUserForReport) {
+                    handleDownloadReport();
+                  } else if (selectedRole) {
+                    handleRoleReport();
+                  } else {
+                    toast.error(
+                      "Please select either a user or a role for report generation"
+                    );
+                  }
+                }}
+                disabled={
+                  isDownloading || (!selectedUserForReport && !selectedRole)
+                }
               >
                 {isDownloading ? (
                   <Spinner className="animate-spin" color="white" size="sm" />
                 ) : (
-                  "Download User Report"
+                  "Generate Report"
                 )}
               </Button>
             </div>
