@@ -21,9 +21,9 @@ public class CuisineTypeResponse {
         private String id;
         private String name;
         private String imageUrl;
-        private boolean status;
         private Double latitude;
         private Double longitude;
+        private boolean enabled;
         private String formattedAddress;
     }
 }

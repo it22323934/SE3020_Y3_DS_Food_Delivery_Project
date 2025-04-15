@@ -42,6 +42,33 @@ public class JwtUtils {
         return claims.get(ROLES_KEY, List.class);
     }
 
+    public Long getUserIdFromJwtToken(String token) {
+        Claims claims = Jwts.parser()
+                .setSigningKey(key)
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
+
+        // Check how the ID is stored in your token (common claim names for ID)
+        if (claims.containsKey("userId")) {
+            return Long.valueOf(claims.get("userId").toString());
+        } else if (claims.containsKey("id")) {
+            return Long.valueOf(claims.get("id").toString());
+        } else if (claims.containsKey("uid")) {
+            return Long.valueOf(claims.get("uid").toString());
+        }
+
+        // If no ID found, return null
+        return null;
+    }
+
+    public Claims getAllClaimsFromJwtToken(String token) {
+        return Jwts.parser()
+                .setSigningKey(key)
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
+    }
 
 
     public boolean validateJwtToken(String authToken) {

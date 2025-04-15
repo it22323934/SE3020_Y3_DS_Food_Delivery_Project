@@ -76,6 +76,7 @@ export const UpdateRestaurantModal = ({
     openingHours: [],
     cuisineTypeIds: [],
     adminIds: [],
+    enabled: true, // Add the enabled property with default true
   });
 
   // States for storing lists of cuisines and admins
@@ -138,12 +139,58 @@ export const UpdateRestaurantModal = ({
     }
   }, [show, token]);
 
+  const handleEnabledChange = () => {
+    setFormData({
+      ...formData,
+      enabled: !formData.enabled,
+    });
+  };
+
   // Initialize form data from restaurant object
   const initializeFormData = () => {
     setIsLoading(true);
 
     try {
       // Initialize form data from restaurant
+      let cuisineIds = [];
+      if (restaurant.cuisineTypes) {
+        // If cuisineTypes is an array of objects with id properties
+        if (
+          Array.isArray(restaurant.cuisineTypes) &&
+          restaurant.cuisineTypes.length > 0 &&
+          typeof restaurant.cuisineTypes[0] === "object" &&
+          restaurant.cuisineTypes[0].id
+        ) {
+          cuisineIds = restaurant.cuisineTypes.map((cuisine) => cuisine.id);
+        }
+        // If cuisineTypes is already an array of IDs
+        else if (Array.isArray(restaurant.cuisineTypes)) {
+          cuisineIds = restaurant.cuisineTypes;
+        }
+      } else if (restaurant.cuisineTypeIds) {
+        cuisineIds = restaurant.cuisineTypeIds;
+      }
+
+      // Extract admin IDs properly
+      let adminIds = [];
+      if (restaurant.admins) {
+        // If admins is an array of objects with id properties
+        if (
+          Array.isArray(restaurant.admins) &&
+          restaurant.admins.length > 0 &&
+          typeof restaurant.admins[0] === "object" &&
+          restaurant.admins[0].id
+        ) {
+          adminIds = restaurant.admins.map((admin) => admin.id);
+        }
+        // If admins is already an array of IDs
+        else if (Array.isArray(restaurant.admins)) {
+          adminIds = restaurant.admins;
+        }
+      } else if (restaurant.adminIds) {
+        adminIds = restaurant.adminIds;
+      }
+
       setFormData({
         name: restaurant.name || "",
         description: restaurant.description || "",
@@ -155,8 +202,9 @@ export const UpdateRestaurantModal = ({
         latitude: restaurant.latitude || 0,
         longitude: restaurant.longitude || 0,
         formattedAddress: restaurant.formattedAddress || "",
-        cuisineTypeIds: restaurant.cuisineTypeIds || [],
-        adminIds: restaurant.adminIds || [],
+        cuisineTypeIds: cuisineIds,
+        adminIds: adminIds,
+        enabled: restaurant.enabled !== undefined ? restaurant.enabled : true, // Initialize from restaurant data
       });
 
       // Set image previews
@@ -551,7 +599,7 @@ export const UpdateRestaurantModal = ({
       setTimeout(() => {
         onSuccess?.();
         onClose();
-      }, 1500);
+      }, 200);
     } catch (error) {
       toast.error(
         error.message || "An error occurred while updating the restaurant"
@@ -642,6 +690,47 @@ export const UpdateRestaurantModal = ({
             )}
 
             <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="flex items-center justify-between p-4 mb-4 bg-gray-50 border rounded-lg">
+                <div className="flex items-center">
+                  <div
+                    className={`p-2 ${
+                      formData.enabled ? "bg-green-100" : "bg-red-100"
+                    } rounded-full mr-3`}
+                  >
+                    {formData.enabled ? (
+                      <HiCheck className="text-green-600" size={18} />
+                    ) : (
+                      <HiX className="text-red-600" size={18} />
+                    )}
+                  </div>
+                  <div>
+                    <h4 className="text-lg font-medium">
+                      {formData.enabled
+                        ? "Restaurant Active"
+                        : "Restaurant Inactive"}
+                    </h4>
+                    <p className="text-sm text-gray-500">
+                      {formData.enabled
+                        ? "This restaurant is visible to customers and can accept orders."
+                        : "This restaurant is hidden from customers and cannot accept orders."}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center">
+                  <Label
+                    htmlFor="restaurant-enabled"
+                    value={formData.enabled ? "Enabled" : "Disabled"}
+                    className="mr-3 font-medium"
+                  />
+                  <ToggleSwitch
+                    id="restaurant-enabled"
+                    checked={formData.enabled}
+                    onChange={handleEnabledChange}
+                    label=""
+                  />
+                </div>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Left column */}
                 <div className="space-y-4">

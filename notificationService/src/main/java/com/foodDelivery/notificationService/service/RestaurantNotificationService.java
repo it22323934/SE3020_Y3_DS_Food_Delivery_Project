@@ -32,8 +32,7 @@ public class RestaurantNotificationService {
     private final NotificationRepository notificationRepository;
     private final UserServiceClient userServiceClient;
     private final RestaurantServiceClient restaurantServiceClient;
-
-    @KafkaListener(topics = "restaurant-notifications", groupId = "notification-service")
+    @KafkaListener(topics = "restaurant-notifications", containerFactory = "kafkaListenerContainerFactoryBroker2")
     public void handleRestaurantEvent(RestaurantEvent event) {
         log.info("Received restaurant event: {} for restaurant: {}", event.getEventType(), event.getRestaurantName());
 

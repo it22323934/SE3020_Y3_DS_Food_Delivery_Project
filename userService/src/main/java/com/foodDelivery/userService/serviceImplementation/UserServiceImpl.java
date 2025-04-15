@@ -552,7 +552,15 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserProfileResponse getUserById(Long userId) {
-        return null;
+        return userRepository.findById(userId)
+                .map(this::mapToUserProfileResponse)
+                .orElse(null);
+    }
+
+    @Override
+    public Optional<Long> findIdByUsername(String username) {
+        return userRepository.findByUsername(username)
+                .map(User::getId);
     }
 
 

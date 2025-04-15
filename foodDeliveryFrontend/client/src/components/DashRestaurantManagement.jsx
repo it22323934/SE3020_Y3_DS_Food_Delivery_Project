@@ -29,6 +29,7 @@ import { CreateRestaurantModal } from "./sub-components/restaurant-management/Cr
 import { useSelector } from "react-redux";
 import { restaurantService } from "../service/restaurantService";
 import { UpdateRestaurantModal } from "./sub-components/restaurant-management/UpdateRestaurantModal";
+import { ViewRestaurantModal } from "./sub-components/restaurant-management/ViewRestaurantModal";
 export default function DashRestaurantManagement() {
   const [loading, setLoading] = useState(true);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -41,6 +42,7 @@ export default function DashRestaurantManagement() {
   const { currentUser } = useSelector((state) => state.user);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [selectedRestaurantId, setSelectedRestaurantId] = useState(null);
+  const [viewModal, setViewModal] = useState(false);
 
   const fetchRestaurants = async () => {
     try {
@@ -80,6 +82,11 @@ export default function DashRestaurantManagement() {
     });
   };
 
+  const handleDisplayViewModal = (restaurant) => {
+    setViewModal(true);
+    setSelectedRestaurant(restaurant);
+  };
+
   const displayRestaurants = restaurants
     .slice(
       pageNumber * restaurantsPerPage,
@@ -92,9 +99,11 @@ export default function DashRestaurantManagement() {
           className="bg-white dark:border-gray-700 dark:bg-gray-800"
         >
           <Table.Cell>{restaurant.name}</Table.Cell>
+          <Table.Cell>{restaurant.email}</Table.Cell>
+          <Table.Cell>{restaurant.phoneNumber}</Table.Cell>
           <Table.Cell>
-            <Button size="sm" color="gray">
-              <HiEye className="mr-2 h-5 w-5" />
+            <Button size="sm" color="gray" onClick={()=>handleDisplayViewModal(restaurant)}>
+              <HiEye className="mr-2 h-5 w-5"/>
               View
             </Button>
           </Table.Cell>
@@ -118,12 +127,6 @@ export default function DashRestaurantManagement() {
                 }}
               ></Badge>
             }
-          </Table.Cell>
-          <Table.Cell>
-            <Button size="sm" color="gray">
-              <HiEye className="mr-2 h-5 w-5" />
-              View
-            </Button>
           </Table.Cell>
           <Table.Cell>
             <div className="flex items-center space-x-4">
@@ -252,9 +255,10 @@ export default function DashRestaurantManagement() {
               <Table>
                 <Table.Head>
                   <Table.HeadCell>Name</Table.HeadCell>
-                  <Table.HeadCell>Cities</Table.HeadCell>
-                  <Table.HeadCell>District Active Status</Table.HeadCell>
-                  <Table.HeadCell>Waste Drivers Assigned</Table.HeadCell>
+                  <Table.HeadCell>Email</Table.HeadCell>
+                  <Table.HeadCell>Phone</Table.HeadCell>
+                  <Table.HeadCell>More</Table.HeadCell>
+                  <Table.HeadCell>Status</Table.HeadCell>
                   <Table.HeadCell>Actions</Table.HeadCell>
                 </Table.Head>
                 {displayRestaurants}
@@ -299,6 +303,12 @@ export default function DashRestaurantManagement() {
           />
 
           {/** Verify Modal */}
+          <ViewRestaurantModal
+            show={viewModal}
+            onClose={() => setViewModal(false)}
+            restaurant={selectedRestaurant}
+            token={currentUser.token}
+          />
         </>
       )}
     </div>

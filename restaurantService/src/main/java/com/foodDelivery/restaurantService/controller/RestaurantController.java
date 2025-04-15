@@ -51,14 +51,8 @@ public class RestaurantController {
             @PathVariable String id,
             @Valid @RequestBody RestaurantRequest request,
             @RequestHeader("Authorization") String token) {
-
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String userId = authentication.getName();
-
         try {
             Restaurant restaurant = mapToEntity(request);
-            restaurant.getAdminIds().add(userId); // Ensure current user is in admins list
-
             Restaurant updated = restaurantService.updateRestaurant(id, restaurant, token);
             return ResponseEntity.ok(mapToResponse(updated));
         } catch (BusinessValidationException e) {
@@ -160,6 +154,7 @@ public class RestaurantController {
         response.setEmail(restaurant.getEmail());
         response.setLatitude(restaurant.getLatitude());
         response.setAdminIds(restaurant.getAdminIds());
+        response.setCuisineTypeIds(restaurant.getCuisineTypeIds());
         response.setLongitude(restaurant.getLongitude());
         response.setFormattedAddress(restaurant.getFormattedAddress());
         response.setEnabled(restaurant.isEnabled());

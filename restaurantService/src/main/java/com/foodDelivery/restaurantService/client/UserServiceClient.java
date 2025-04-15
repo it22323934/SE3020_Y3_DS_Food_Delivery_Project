@@ -61,4 +61,25 @@ public class UserServiceClient {
             return false;
         }
     }
+
+    public Long getUserIdFromToken(String token) {
+        try {
+            Long userId = webClientBuilder.build()
+                    .get()
+                    .uri(userServiceBaseUrl + "/api/users/getUserId")
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                    .retrieve()
+                    .bodyToMono(Long.class)
+                    .onErrorResume(e -> {
+                        log.error("Error retrieving user ID: {}", e.getMessage());
+                        return Mono.empty();
+                    })
+                    .block();
+
+            return userId;
+        } catch (Exception e) {
+            log.error("Failed to retrieve user ID from user service", e);
+            return null;
+        }
+    }
 }

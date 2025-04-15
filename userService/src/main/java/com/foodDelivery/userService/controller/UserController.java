@@ -7,6 +7,7 @@ import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -184,6 +185,26 @@ public class UserController {
         } catch (Exception e) {
             log.error("Error retrieving users by role: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+    @GetMapping("/getUserId")
+    public ResponseEntity<Long> getUserId(@RequestHeader(HttpHeaders.AUTHORIZATION) String token) {
+        try {
+            // Extract token without "Bearer " prefix
+            String jwt = token.substring(7);
+
+            // Get username from token
+            String username = jwtUtils.getUserNameFromJwtToken(jwt);
+            log.info("Getting user ID for username: {}", username);
+
+            // Find user by username using the userService
+            return userService.findIdByUsername(username)
+                    .map(ResponseEntity::ok)
+                    .orElse(ResponseEntity.status(HttpStatus.NOT_FOUND)
+                            .body(null));
+        } catch (Exception e) {
+            log.error("Error retrieving user ID: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
     }
 }

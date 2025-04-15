@@ -21,4 +21,5 @@ public interface UserService {
     boolean validateUserRoleAndEnabled(Long userId, String role);
     List<UserProfileResponse> getUsersByRole(String roleName);
     UserProfileResponse getUserById(Long userId);
+    Optional<Long> findIdByUsername(String username);
 }

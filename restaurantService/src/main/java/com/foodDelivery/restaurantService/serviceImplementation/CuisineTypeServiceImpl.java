@@ -83,7 +83,7 @@ public class CuisineTypeServiceImpl implements CuisineTypeService {
                         summary.setLatitude(restaurant.getLatitude());
                         summary.setLongitude(restaurant.getLongitude());
                         summary.setFormattedAddress(restaurant.getFormattedAddress());
-                        summary.setStatus(restaurant.isEnabled());
+                        summary.setEnabled(restaurant.isEnabled());
                         return summary;
                     })
                     .collect(Collectors.toList()));

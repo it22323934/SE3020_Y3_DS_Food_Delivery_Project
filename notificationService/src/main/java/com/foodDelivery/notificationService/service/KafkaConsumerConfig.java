@@ -21,11 +21,14 @@ public class KafkaConsumerConfig {
     @Value("${spring.kafka.bootstrap-servers}")
     private String bootstrapServers;
 
+    @Value("${spring.kafka.bootstrap-servers.broker2}")
+    private String broker2BootstrapServers;
+
     // Keep original consumer factory for user events
     @Bean
     public ConsumerFactory<? super String, ? super Object> consumerFactory() {
         Map<String, Object> props = new HashMap<>();
-        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9093");
+        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
         props.put(ConsumerConfig.GROUP_ID_CONFIG, "notification-service");
 
         // Configure error handling deserializer
@@ -41,19 +44,15 @@ public class KafkaConsumerConfig {
 
     // New consumer factory for restaurant events
     @Bean
-    public ConsumerFactory<String, Object> restaurantConsumerFactory() {
+    public ConsumerFactory<String, Object> consumerFactoryBroker2() {
         Map<String, Object> props = new HashMap<>();
-        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9093");
-        props.put(ConsumerConfig.GROUP_ID_CONFIG, "notification-service-restaurant");
-
-        // Configure error handling deserializer
+        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, broker2BootstrapServers);
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, "notification-service-broker2");
         props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, ErrorHandlingDeserializer.class);
         props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, ErrorHandlingDeserializer.class);
         props.put(ErrorHandlingDeserializer.KEY_DESERIALIZER_CLASS, StringDeserializer.class);
         props.put(ErrorHandlingDeserializer.VALUE_DESERIALIZER_CLASS, JsonDeserializer.class);
         props.put(JsonDeserializer.TRUSTED_PACKAGES, "*");
-        props.put(JsonDeserializer.TYPE_MAPPINGS, "restaurantEvent:com.foodDelivery.restaurantService.event.RestaurantEvent");
-        props.put(JsonDeserializer.VALUE_DEFAULT_TYPE, "java.lang.Object");
         return new DefaultKafkaConsumerFactory<>(props);
     }
 
@@ -68,10 +67,10 @@ public class KafkaConsumerConfig {
 
     // New container factory for restaurant events
     @Bean
-    public ConcurrentKafkaListenerContainerFactory<String, Object> restaurantKafkaListenerContainerFactory() {
+    public ConcurrentKafkaListenerContainerFactory<String, Object> kafkaListenerContainerFactoryBroker2() {
         ConcurrentKafkaListenerContainerFactory<String, Object> factory =
                 new ConcurrentKafkaListenerContainerFactory<>();
-        factory.setConsumerFactory(restaurantConsumerFactory());
+        factory.setConsumerFactory(consumerFactoryBroker2());
         return factory;
     }
 }

@@ -19,7 +19,7 @@ public class RestaurantResponse {
     private Double longitude;
     private String formattedAddress;
     private List<OpeningHourDto> openingHours = new ArrayList<>();
-    private List<String> cuisineTypes = new ArrayList<>();
+    private List<String> cuisineTypeIds = new ArrayList<>();
     private List<String> adminIds = new ArrayList<>();
     private String ownerId;
     private boolean enabled;

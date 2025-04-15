@@ -16,7 +16,9 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -105,26 +107,49 @@ public class RestaurantServiceImpl implements RestaurantService {
 
     @Override
     public Restaurant updateRestaurant(String id, Restaurant restaurant, String token) {
+        long userID = 0;
         Restaurant existingRestaurant = getRestaurantById(id);
-        String userId = restaurant.getAdminIds().isEmpty() ? null : restaurant.getAdminIds().getFirst();
+        // Extract user ID from authentication
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String adminUser = authentication.getName();
 
-        // Store original admin list to detect changes
+        // Store original admin list for notification
         List<String> originalAdminIds = new ArrayList<>(existingRestaurant.getAdminIds());
 
         // Check token for ROLE_ADMIN - allow admins to update any restaurant
-        boolean isAdmin = userServiceClient.validateUserRole(userId, "ROLE_ADMIN", token);
+        boolean isAdmin = userServiceClient.validateUserRole(adminUser, "ROLE_ADMIN", token);
 
+        if(!isAdmin){
+            userID = userServiceClient.getUserIdFromToken(token);
+        }
         // Only check restaurant ownership if not an admin
-        if (!isAdmin && !existingRestaurant.getAdminIds().contains(userId)) {
+        if (!isAdmin && !existingRestaurant.getAdminIds().contains(userID)) {
             throw new BusinessValidationException("You don't have permission to update this restaurant");
         }
+        log.info("Cuisine ID: {}", restaurant.getCuisineTypeIds());
+        validateCuisineTypes(restaurant);
 
-        validateRestaurantData(restaurant, userId, token);
-
-        // Only allow admins to modify the admin users list
+        // Admin list handling
         if (!isAdmin) {
-            // Non-admins must use the existing admin list
+            // Non-admins cannot modify the admin list
             restaurant.setAdminIds(existingRestaurant.getAdminIds());
+        } else if (restaurant.getAdminIds() != null) {
+            // Only system admins can modify the admin list
+            // Remove duplicates by converting to Set and back to List
+            restaurant.setAdminIds(new ArrayList<>(new HashSet<>(restaurant.getAdminIds())));
+
+            // Validate each admin has the correct role
+            for (String adminId : restaurant.getAdminIds()) {
+                if (!userServiceClient.validateUserRoleById(adminId, "ROLE_RESTAURANT_ADMIN", token)) {
+                    throw new BusinessValidationException("User " + adminId +
+                            " doesn't have required role to manage restaurants");
+                }
+            }
+
+            // Ensure at least one admin remains
+            if (restaurant.getAdminIds().isEmpty()) {
+                throw new BusinessValidationException("Restaurant must have at least one admin");
+            }
         }
 
         // Update fields
@@ -139,63 +164,88 @@ public class RestaurantServiceImpl implements RestaurantService {
         existingRestaurant.setLongitude(restaurant.getLongitude());
         existingRestaurant.setFormattedAddress(restaurant.getFormattedAddress());
         existingRestaurant.setOpeningHours(restaurant.getOpeningHours());
-        existingRestaurant.setAdminIds(restaurant.getAdminIds());
         existingRestaurant.setEnabled(restaurant.isEnabled());
         existingRestaurant.setUpdatedAt(System.currentTimeMillis());
 
-        // Handle cuisine type changes
-        List<String> oldCuisineIds = existingRestaurant.getCuisineTypeIds();
-        List<String> newCuisineIds = restaurant.getCuisineTypeIds();
-
-        // Set new cuisine IDs
-        existingRestaurant.setCuisineTypeIds(newCuisineIds);
-
-        // Save restaurant first to ensure it exists
-        Restaurant savedRestaurant = restaurantRepository.save(existingRestaurant);
-
-        // Remove restaurant from cuisines that are no longer associated
-        if (oldCuisineIds != null) {
-            for (String cuisineId : oldCuisineIds) {
-                if (!newCuisineIds.contains(cuisineId)) {
-                    // This cuisine is no longer associated with this restaurant
-                    CuisineType cuisineType = cuisineTypeRepository.findById(cuisineId)
-                            .orElse(null);
-
-                    if (cuisineType != null && cuisineType.getRestaurantIds() != null) {
-                        cuisineType.getRestaurantIds().remove(savedRestaurant.getId());
-                        cuisineType.setUpdatedAt(System.currentTimeMillis());
-                        cuisineTypeRepository.save(cuisineType);
-                    }
-                }
-            }
+        // Only update adminIds if it was changed
+        if (restaurant.getAdminIds() != null) {
+            existingRestaurant.setAdminIds(restaurant.getAdminIds());
         }
 
-        // Add restaurant to new cuisines
-        if (newCuisineIds != null) {
-            for (String cuisineId : newCuisineIds) {
-                if (oldCuisineIds == null || !oldCuisineIds.contains(cuisineId)) {
-                    // This is a newly associated cuisine
-                    CuisineType cuisineType = cuisineTypeRepository.findById(cuisineId)
-                            .orElseThrow(() -> new ResourceNotFoundException("Cuisine type not found: " + cuisineId));
+        // Handle cuisine type changes
+        if (restaurant.getCuisineTypeIds() != null) {
+            log.info("Processing cuisine types for restaurant: {}", id);
+
+            // Ensure existing restaurant has initialized cuisine type list
+            if (existingRestaurant.getCuisineTypeIds() == null) {
+                existingRestaurant.setCuisineTypeIds(new ArrayList<>());
+                log.info("Initialized empty cuisine type list for existing restaurant");
+            }
+
+            // Find cuisine types that were added and removed
+            List<String> originalCuisineTypeIds = new ArrayList<>(existingRestaurant.getCuisineTypeIds());
+            log.info("Original cuisine types: {}", originalCuisineTypeIds);
+            log.info("New cuisine types: {}", restaurant.getCuisineTypeIds());
+
+            List<String> addedCuisineTypes = new ArrayList<>(restaurant.getCuisineTypeIds());
+            addedCuisineTypes.removeAll(originalCuisineTypeIds);
+            log.info("Added cuisine types: {}", addedCuisineTypes);
+
+            List<String> removedCuisineTypes = new ArrayList<>(originalCuisineTypeIds);
+            removedCuisineTypes.removeAll(restaurant.getCuisineTypeIds());
+            log.info("Removed cuisine types: {}", removedCuisineTypes);
+
+            // Update each added cuisine type with this restaurant ID
+            for (String cuisineTypeId : addedCuisineTypes) {
+                try {
+                    CuisineType cuisineType = cuisineTypeRepository.findById(cuisineTypeId)
+                            .orElseThrow(() -> new ResourceNotFoundException("Cuisine type not found with id: " + cuisineTypeId));
 
                     if (cuisineType.getRestaurantIds() == null) {
                         cuisineType.setRestaurantIds(new ArrayList<>());
                     }
 
-                    if (!cuisineType.getRestaurantIds().contains(savedRestaurant.getId())) {
-                        cuisineType.getRestaurantIds().add(savedRestaurant.getId());
+                    if (!cuisineType.getRestaurantIds().contains(id)) {
+                        cuisineType.getRestaurantIds().add(id);
                         cuisineType.setUpdatedAt(System.currentTimeMillis());
                         cuisineTypeRepository.save(cuisineType);
+                        log.info("Added restaurant {} to cuisine type {}", id, cuisineTypeId);
                     }
+                } catch (Exception e) {
+                    log.error("Error processing cuisine type {}: {}", cuisineTypeId, e.getMessage(), e);
                 }
             }
+
+            // Remove this restaurant ID from removed cuisine types
+            for (String cuisineTypeId : removedCuisineTypes) {
+                try {
+                    CuisineType cuisineType = cuisineTypeRepository.findById(cuisineTypeId)
+                            .orElseThrow(() -> new ResourceNotFoundException("Cuisine type not found with id: " + cuisineTypeId));
+
+                    if (cuisineType.getRestaurantIds() != null && cuisineType.getRestaurantIds().contains(id)) {
+                        cuisineType.getRestaurantIds().remove(id);
+                        cuisineType.setUpdatedAt(System.currentTimeMillis());
+                        cuisineTypeRepository.save(cuisineType);
+                        log.info("Removed restaurant {} from cuisine type {}", id, cuisineTypeId);
+                    }
+                } catch (Exception e) {
+                    log.error("Error removing cuisine type {}: {}", cuisineTypeId, e.getMessage(), e);
+                }
+            }
+
+            // Update restaurant's cuisine type list
+            existingRestaurant.setCuisineTypeIds(restaurant.getCuisineTypeIds());
         }
 
-        List<String> addedAdmins = new ArrayList<>(savedRestaurant.getAdminIds());
+        // Calculate admin changes for notifications
+        List<String> addedAdmins = new ArrayList<>(existingRestaurant.getAdminIds());
         addedAdmins.removeAll(originalAdminIds);
 
         List<String> removedAdmins = new ArrayList<>(originalAdminIds);
-        removedAdmins.removeAll(savedRestaurant.getAdminIds());
+        removedAdmins.removeAll(existingRestaurant.getAdminIds());
+
+        // Save restaurant and send notification
+        Restaurant savedRestaurant = restaurantRepository.save(existingRestaurant);
 
         // Send notification event with admin changes
         kafkaProducerService.sendRestaurantUpdatedEvent(
@@ -247,12 +297,6 @@ public class RestaurantServiceImpl implements RestaurantService {
     public Restaurant addAdminToRestaurant(String restaurantId, String adminId, String token) {
         Restaurant restaurant = getRestaurantById(restaurantId);
 
-//        // Verify user exists
-//        boolean isValidUser = userServiceClient.validateUserExists(adminId, token);
-//        if (!isValidUser) {
-//            throw new BusinessValidationException("Invalid user ID provided");
-//        }
-
         // Verify user has correct role
         boolean isValidRole = userServiceClient.validateUserRole(adminId, "ROLE_RESTAURANT_ADMIN", token);
         if (!isValidRole) {
@@ -290,35 +334,6 @@ public class RestaurantServiceImpl implements RestaurantService {
         }
 
         return restaurant;
-    }
-
-    private void validateRestaurantData(Restaurant restaurant, String userId, String token) {
-        if (userId == null || userId.isEmpty()) {
-            throw new BusinessValidationException("User ID is required");
-        }
-
-        // Validate user has correct role
-        boolean isValidRole = userServiceClient.validateUserRole(userId, "ROLE_RESTAURANT_ADMIN", token);
-        if (!isValidRole) {
-            throw new BusinessValidationException("User doesn't have required role to manage restaurants");
-        }
-
-        // Validate cuisine type IDs
-        if (restaurant.getCuisineTypeIds() == null || restaurant.getCuisineTypeIds().isEmpty()) {
-            throw new BusinessValidationException("At least one cuisine type must be selected");
-        }
-
-        List<CuisineType> foundCuisines = cuisineTypeRepository.findAllById(restaurant.getCuisineTypeIds());
-        List<String> foundCuisineIds = foundCuisines.stream()
-                .map(CuisineType::getId)
-                .collect(Collectors.toList());
-
-        if (foundCuisineIds.size() != restaurant.getCuisineTypeIds().size()) {
-            List<String> invalidIds = new ArrayList<>(restaurant.getCuisineTypeIds());
-            invalidIds.removeAll(foundCuisineIds);
-            throw new BusinessValidationException("Invalid cuisine type IDs: " + String.join(", ", invalidIds));
-        }
-
     }
 
     private void validateCuisineTypes(Restaurant restaurant) {
