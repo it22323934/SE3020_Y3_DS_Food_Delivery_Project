@@ -45,11 +45,12 @@ export const restaurantService = {
    * @param {string} id - Restaurant ID
    * @returns {Promise<Response>} - Fetch response
    */
-  getRestaurantById: async (id) => {
+  getRestaurantById: async (id,token) => {
     const res = await fetch(`${API_URL}/restaurants/${id}`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
       },
     });
     return res;

@@ -22,6 +22,28 @@ public class UserServiceClient {
         try {
             Boolean result = webClientBuilder.build()
                     .get()
+                    .uri(userServiceBaseUrl + "/api/users/validate?userName={userId}&role={role}",
+                            userId, role)
+                    .header(HttpHeaders.AUTHORIZATION, token)
+                    .retrieve()
+                    .bodyToMono(Boolean.class)
+                    .onErrorResume(e -> {
+                        log.error("Error validating user role: {}", e.getMessage());
+                        return Mono.just(false);
+                    })
+                    .block();
+
+            return result != null && result;
+        } catch (Exception e) {
+            log.error("Failed to connect to user service", e);
+            return false;
+        }
+    }
+
+    public boolean validateUserRoleById(String userId, String role, String token) {
+        try {
+            Boolean result = webClientBuilder.build()
+                    .get()
                     .uri(userServiceBaseUrl + "/api/users/validate?userId={userId}&role={role}",
                             userId, role)
                     .header(HttpHeaders.AUTHORIZATION, token)

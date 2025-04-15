@@ -161,7 +161,8 @@ export const CreateRestaurantModal = ({ show, onClose, onSuccess, token }) => {
 
         // Filter only enabled admins
         const enabledAdmins = data.filter(
-          (user) => user.enabled === true && !user.disabled
+          (user) =>
+            user.enabled === true && !user.disabled && user.verified === true
         );
 
         // Transform data for react-select
@@ -358,22 +359,37 @@ export const CreateRestaurantModal = ({ show, onClose, onSuccess, token }) => {
     setLocationValue(place);
 
     if (place?.value?.place_id) {
-      const geocoder = new window.google.maps.Geocoder();
-      geocoder.geocode({ placeId: place.value.place_id }, (results, status) => {
-        if (status === "OK" && results[0]) {
-          const lat = results[0].geometry.location.lat();
-          const lng = results[0].geometry.location.lng();
+      // Wait for the Google Maps API to be properly loaded
+      const handleGeocode = () => {
+        if (window.google && window.google.maps) {
+          const geocoder = new window.google.maps.Geocoder();
+          geocoder.geocode(
+            { placeId: place.value.place_id },
+            (results, status) => {
+              if (status === "OK" && results[0]) {
+                const lat = results[0].geometry.location.lat();
+                const lng = results[0].geometry.location.lng();
 
-          setMapCenter({ lat, lng });
-          setFormData({
-            ...formData,
-            latitude: lat,
-            longitude: lng,
-            address: place.label,
-            formattedAddress: place.label,
-          });
+                setMapCenter({ lat, lng });
+                setFormData({
+                  ...formData,
+                  latitude: lat,
+                  longitude: lng,
+                  address: place.label,
+                  formattedAddress: place.label,
+                });
+              } else {
+                console.error("Geocode failed:", status);
+              }
+            }
+          );
+        } else {
+          // If Google Maps API isn't loaded yet, retry after a short delay
+          setTimeout(handleGeocode, 200);
         }
-      });
+      };
+
+      handleGeocode();
     }
   };
 
@@ -673,6 +689,12 @@ export const CreateRestaurantModal = ({ show, onClose, onSuccess, token }) => {
                 <LoadScript
                   googleMapsApiKey="AIzaSyCms2-r4afPJIKiStBZUNuRx_4BdU2p9ps"
                   libraries={["places"]}
+                  onLoad={() =>
+                    console.log("Google Maps API loaded successfully")
+                  }
+                  onError={(error) =>
+                    console.error("Google Maps API loading failed:", error)
+                  }
                 >
                   <GooglePlacesAutocomplete
                     apiKey="AIzaSyCms2-r4afPJIKiStBZUNuRx_4BdU2p9ps"
@@ -690,21 +712,22 @@ export const CreateRestaurantModal = ({ show, onClose, onSuccess, token }) => {
                       },
                     }}
                   />
+
+                  {formData.latitude !== 0 && formData.longitude !== 0 && (
+                    <div className="mt-2">
+                      <GoogleMap
+                        mapContainerStyle={mapContainerStyle}
+                        zoom={15}
+                        center={mapCenter}
+                      >
+                        <Marker position={mapCenter} />
+                      </GoogleMap>
+                    </div>
+                  )}
                 </LoadScript>
+
                 {errors.location && (
                   <p className="text-red-500 text-sm mt-1">{errors.location}</p>
-                )}
-
-                {formData.latitude !== 0 && formData.longitude !== 0 && (
-                  <div className="mt-2">
-                    <GoogleMap
-                      mapContainerStyle={mapContainerStyle}
-                      zoom={15}
-                      center={mapCenter}
-                    >
-                      <Marker position={mapCenter} />
-                    </GoogleMap>
-                  </div>
                 )}
               </div>
             </div>

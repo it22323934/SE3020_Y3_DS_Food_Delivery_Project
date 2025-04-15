@@ -28,6 +28,7 @@ import Select from "react-select";
 import { CreateRestaurantModal } from "./sub-components/restaurant-management/CreateRestaurantModal";
 import { useSelector } from "react-redux";
 import { restaurantService } from "../service/restaurantService";
+import { UpdateRestaurantModal } from "./sub-components/restaurant-management/UpdateRestaurantModal";
 export default function DashRestaurantManagement() {
   const [loading, setLoading] = useState(true);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -38,6 +39,8 @@ export default function DashRestaurantManagement() {
   const [restaurants, setRestaurants] = useState([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const { currentUser } = useSelector((state) => state.user);
+  const [showUpdateModal, setShowUpdateModal] = useState(false);
+  const [selectedRestaurantId, setSelectedRestaurantId] = useState(null);
 
   const fetchRestaurants = async () => {
     try {
@@ -124,7 +127,12 @@ export default function DashRestaurantManagement() {
           </Table.Cell>
           <Table.Cell>
             <div className="flex items-center space-x-4">
-              <Button color="green" type="submit" outline>
+              <Button
+                color="green"
+                type="submit"
+                onClick={() => handleEditClick(restaurant)}
+                outline
+              >
                 <FaClipboardList className="mr-2 h-5 w-5" />
                 Update
               </Button>
@@ -138,6 +146,17 @@ export default function DashRestaurantManagement() {
       </Table.Body>
     ));
 
+  const [selectedRestaurant, setSelectedRestaurant] = useState(null);
+
+  const handleEditClick = (restaurant) => {
+    setSelectedRestaurant(restaurant);
+    setShowUpdateModal(true);
+  };
+
+  const handleRestaurantUpdated = () => {
+    // Refresh restaurant list or update the state
+    fetchRestaurants();
+  };
   return (
     <div className="table-auto overflow-x-scroll md:mx-auto p-3 scrollbar scrollbar-track-slate-100 scrollbar-thumb-slate-300 dark:scrollbar-track-slate-700 dark:scrollbar-thumb-slate-500">
       <ToastContainer />
@@ -270,7 +289,14 @@ export default function DashRestaurantManagement() {
             token={currentUser.token}
           />
 
-          {/** Delete Report Modal */}
+          {/** Update Modal */}
+          <UpdateRestaurantModal
+            show={showUpdateModal}
+            onClose={() => setShowUpdateModal(false)}
+            restaurant={selectedRestaurant}
+            onSuccess={handleRestaurantUpdated}
+            token={currentUser.token}
+          />
 
           {/** Verify Modal */}
         </>

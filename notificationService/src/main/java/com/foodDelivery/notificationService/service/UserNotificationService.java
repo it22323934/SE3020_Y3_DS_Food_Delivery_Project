@@ -25,19 +25,19 @@ import java.util.Objects;
 import java.util.Optional;
 
 @Service
-public class NotificationService {
-    private static final Logger logger = LoggerFactory.getLogger(NotificationService.class);
+public class UserNotificationService {
+    private static final Logger logger = LoggerFactory.getLogger(UserNotificationService.class);
     private final JavaMailSender javaMailSender;
     private final NotificationTemplateRepository templateRepository;
     private final NotificationRepository notificationRepository;
     private final SMSService smsService;
     private final PushNotificationService pushService;
 
-    public NotificationService(JavaMailSender javaMailSender,
-                               NotificationTemplateRepository templateRepository,
-                               NotificationRepository notificationRepository,
-                               SMSService smsService,
-                               PushNotificationService pushService) {
+    public UserNotificationService(JavaMailSender javaMailSender,
+                                   NotificationTemplateRepository templateRepository,
+                                   NotificationRepository notificationRepository,
+                                   SMSService smsService,
+                                   PushNotificationService pushService) {
         this.javaMailSender = javaMailSender;
         this.templateRepository = templateRepository;
         this.notificationRepository = notificationRepository;

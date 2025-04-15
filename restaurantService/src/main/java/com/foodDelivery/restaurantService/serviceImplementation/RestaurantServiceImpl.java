@@ -7,9 +7,12 @@ import com.foodDelivery.restaurantService.model.CuisineType;
 import com.foodDelivery.restaurantService.model.Restaurant;
 import com.foodDelivery.restaurantService.repository.CuisineTypeRepository;
 import com.foodDelivery.restaurantService.repository.RestaurantRepository;
+import com.foodDelivery.restaurantService.serviceInterfaces.KafkaProducerService;
 import com.foodDelivery.restaurantService.serviceInterfaces.RestaurantService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -24,19 +27,37 @@ public class RestaurantServiceImpl implements RestaurantService {
     private final RestaurantRepository restaurantRepository;
     private final CuisineTypeRepository cuisineTypeRepository;
     private final UserServiceClient userServiceClient;
+    private final KafkaProducerService kafkaProducerService;
 
     @Override
     public Restaurant createRestaurant(Restaurant restaurant, String token) {
-        // Validate that all provided admin IDs are valid restaurant admins
+        // Extract user ID from authentication
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String currentUserId = authentication.getName();
+
+
+        // Check if current user is a system admin
+        boolean isSystemAdmin = userServiceClient.validateUserRole(currentUserId, "ROLE_ADMIN", token);
+
+        // Validate admin IDs list
         if (restaurant.getAdminIds() == null || restaurant.getAdminIds().isEmpty()) {
             throw new BusinessValidationException("At least one restaurant admin must be specified");
         }
 
-        // Validate each admin ID in the list
-        for (String adminId : restaurant.getAdminIds()) {
-            boolean isValidRole = userServiceClient.validateUserRole(adminId, "ROLE_RESTAURANT_ADMIN", token);
-            if (!isValidRole) {
-                throw new BusinessValidationException("User " + adminId + " doesn't have required role to manage restaurants");
+        // If not a system admin, only allow adding themselves as admin
+        if (!isSystemAdmin) {
+            // Non-admins can only specify themselves as admin
+            if (restaurant.getAdminIds().size() > 1 || !restaurant.getAdminIds().contains(currentUserId)) {
+                restaurant.setAdminIds(List.of(currentUserId));
+                log.info("Non-admin user can only add themselves as restaurant admin. Adjusted admin list accordingly.");
+            }
+        } else {
+            // System admin can add any restaurant admin, validate each admin ID
+            for (String adminId : restaurant.getAdminIds()) {
+                boolean isValidRole = userServiceClient.validateUserRoleById(adminId, "ROLE_RESTAURANT_ADMIN", token);
+                if (!isValidRole) {
+                    throw new BusinessValidationException("User " + adminId + " doesn't have required role to manage restaurants");
+                }
             }
         }
 
@@ -69,13 +90,26 @@ public class RestaurantServiceImpl implements RestaurantService {
             }
         }
 
+        // Send notification event
+        kafkaProducerService.sendRestaurantCreatedEvent(
+                savedRestaurant.getId(),
+                savedRestaurant.getName(),
+                savedRestaurant.getEmail(),
+                savedRestaurant.getPhoneNumber(),
+                savedRestaurant.getAdminIds(),
+                savedRestaurant.getCuisineTypeIds()
+        );
+
         return savedRestaurant;
     }
 
     @Override
     public Restaurant updateRestaurant(String id, Restaurant restaurant, String token) {
         Restaurant existingRestaurant = getRestaurantById(id);
-        String userId = restaurant.getAdminIds().isEmpty() ? null : restaurant.getAdminIds().get(0);
+        String userId = restaurant.getAdminIds().isEmpty() ? null : restaurant.getAdminIds().getFirst();
+
+        // Store original admin list to detect changes
+        List<String> originalAdminIds = new ArrayList<>(existingRestaurant.getAdminIds());
 
         // Check token for ROLE_ADMIN - allow admins to update any restaurant
         boolean isAdmin = userServiceClient.validateUserRole(userId, "ROLE_ADMIN", token);
@@ -86,6 +120,12 @@ public class RestaurantServiceImpl implements RestaurantService {
         }
 
         validateRestaurantData(restaurant, userId, token);
+
+        // Only allow admins to modify the admin users list
+        if (!isAdmin) {
+            // Non-admins must use the existing admin list
+            restaurant.setAdminIds(existingRestaurant.getAdminIds());
+        }
 
         // Update fields
         existingRestaurant.setName(restaurant.getName());
@@ -99,12 +139,78 @@ public class RestaurantServiceImpl implements RestaurantService {
         existingRestaurant.setLongitude(restaurant.getLongitude());
         existingRestaurant.setFormattedAddress(restaurant.getFormattedAddress());
         existingRestaurant.setOpeningHours(restaurant.getOpeningHours());
-        existingRestaurant.setCuisineTypeIds(restaurant.getCuisineTypeIds());
+        existingRestaurant.setAdminIds(restaurant.getAdminIds());
         existingRestaurant.setEnabled(restaurant.isEnabled());
         existingRestaurant.setUpdatedAt(System.currentTimeMillis());
 
-        log.info("Updating restaurant with id: {}", id);
-        return restaurantRepository.save(existingRestaurant);
+        // Handle cuisine type changes
+        List<String> oldCuisineIds = existingRestaurant.getCuisineTypeIds();
+        List<String> newCuisineIds = restaurant.getCuisineTypeIds();
+
+        // Set new cuisine IDs
+        existingRestaurant.setCuisineTypeIds(newCuisineIds);
+
+        // Save restaurant first to ensure it exists
+        Restaurant savedRestaurant = restaurantRepository.save(existingRestaurant);
+
+        // Remove restaurant from cuisines that are no longer associated
+        if (oldCuisineIds != null) {
+            for (String cuisineId : oldCuisineIds) {
+                if (!newCuisineIds.contains(cuisineId)) {
+                    // This cuisine is no longer associated with this restaurant
+                    CuisineType cuisineType = cuisineTypeRepository.findById(cuisineId)
+                            .orElse(null);
+
+                    if (cuisineType != null && cuisineType.getRestaurantIds() != null) {
+                        cuisineType.getRestaurantIds().remove(savedRestaurant.getId());
+                        cuisineType.setUpdatedAt(System.currentTimeMillis());
+                        cuisineTypeRepository.save(cuisineType);
+                    }
+                }
+            }
+        }
+
+        // Add restaurant to new cuisines
+        if (newCuisineIds != null) {
+            for (String cuisineId : newCuisineIds) {
+                if (oldCuisineIds == null || !oldCuisineIds.contains(cuisineId)) {
+                    // This is a newly associated cuisine
+                    CuisineType cuisineType = cuisineTypeRepository.findById(cuisineId)
+                            .orElseThrow(() -> new ResourceNotFoundException("Cuisine type not found: " + cuisineId));
+
+                    if (cuisineType.getRestaurantIds() == null) {
+                        cuisineType.setRestaurantIds(new ArrayList<>());
+                    }
+
+                    if (!cuisineType.getRestaurantIds().contains(savedRestaurant.getId())) {
+                        cuisineType.getRestaurantIds().add(savedRestaurant.getId());
+                        cuisineType.setUpdatedAt(System.currentTimeMillis());
+                        cuisineTypeRepository.save(cuisineType);
+                    }
+                }
+            }
+        }
+
+        List<String> addedAdmins = new ArrayList<>(savedRestaurant.getAdminIds());
+        addedAdmins.removeAll(originalAdminIds);
+
+        List<String> removedAdmins = new ArrayList<>(originalAdminIds);
+        removedAdmins.removeAll(savedRestaurant.getAdminIds());
+
+        // Send notification event with admin changes
+        kafkaProducerService.sendRestaurantUpdatedEvent(
+                savedRestaurant.getId(),
+                savedRestaurant.getName(),
+                savedRestaurant.getEmail(),
+                savedRestaurant.getPhoneNumber(),
+                savedRestaurant.getAdminIds(),
+                addedAdmins.isEmpty() ? null : addedAdmins,
+                removedAdmins.isEmpty() ? null : removedAdmins,
+                savedRestaurant.getCuisineTypeIds()
+        );
+
+        log.info("Updated restaurant with id: {}", id);
+        return savedRestaurant;
     }
 
     @Override

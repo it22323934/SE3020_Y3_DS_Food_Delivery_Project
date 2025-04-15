@@ -42,6 +42,8 @@ public class JwtUtils {
         return claims.get(ROLES_KEY, List.class);
     }
 
+
+
     public boolean validateJwtToken(String authToken) {
         try {
             Jwts.parser().setSigningKey(key).build().parseClaimsJws(authToken);

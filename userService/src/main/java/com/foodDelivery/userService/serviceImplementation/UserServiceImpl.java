@@ -42,6 +42,21 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    public boolean validateUserRoleAndEnabled(Long userId, String role) {
+        return userRepository.findById(userId)
+                .map(user -> user.isEnabled() && user.getRoles().stream()
+                        .anyMatch(userRole -> userRole.getName().equals(role)))
+                .orElse(false);
+    }
+
+    @Override
+    public UserProfileResponse getUserByUserName(String username){
+        return userRepository.findByUsername(username)
+                .map(this::mapToUserProfileResponse)
+                .orElse(null);
+    }
+
+    @Override
     public boolean updateUserProfile(String username, UserProfileRequest profileRequest) {
         return userRepository.findByUsername(username)
                 .map(user -> {
@@ -506,8 +521,8 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public boolean validateUserRoleAndEnabled(Long userId, String role) {
-        return userRepository.findById(userId)
+    public boolean validateUserRoleAndEnabledByUsername(String username, String role) {
+        return userRepository.findByUsername(username)
                 .map(user -> user.isEnabled() && user.getRoles().stream()
                         .anyMatch(userRole -> userRole.getName().equals(role)))
                 .orElse(false);
@@ -533,6 +548,11 @@ public class UserServiceImpl implements UserService {
         return users.stream()
                 .map(this::mapToUserProfileResponse)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public UserProfileResponse getUserById(Long userId) {
+        return null;
     }
 
 

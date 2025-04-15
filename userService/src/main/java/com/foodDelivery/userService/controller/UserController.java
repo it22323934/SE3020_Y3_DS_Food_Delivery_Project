@@ -82,17 +82,26 @@ public class UserController {
 
     @GetMapping("/validate")
     public ResponseEntity<Boolean> validateUserRole(
-            @RequestParam String userId,
+            @RequestParam(required = false) Long userId,
+            @RequestParam(required = false) String userName,
             @RequestParam String role) {
-        log.info("Validating role {} for user {}", role, userId);
+
+        log.info("Validating role {} for userId: {}, userName: {}", role, userId, userName);
 
         try {
-            // Delegate to service layer to check both role and enabled status
-            boolean hasRoleAndEnabled = userService.validateUserRoleAndEnabled(Long.valueOf(userId), role);
-            log.info("User {} has role {} and is enabled: {}", userId, role, hasRoleAndEnabled);
-            return ResponseEntity.ok(hasRoleAndEnabled);
+            boolean isValid;
+            if (userId != null) {
+                isValid = userService.validateUserRoleAndEnabled(userId, role);
+            } else if (userName != null) {
+                isValid = userService.validateUserRoleAndEnabledByUsername(userName, role);
+            } else {
+                return ResponseEntity.badRequest().body(false);
+            }
+
+            log.info("Validation result: {}", isValid);
+            return ResponseEntity.ok(isValid);
         } catch (Exception e) {
-            log.error("Error validating role or enabled status: {}", e.getMessage());
+            log.error("Error validating user role: {}", e.getMessage());
             return ResponseEntity.ok(false);
         }
     }
@@ -102,6 +111,21 @@ public class UserController {
     public ResponseEntity<List<UserProfileResponse>> getAllUsers() {
         List<UserProfileResponse> users = userService.getAllUsers();
         return ResponseEntity.ok(users);
+    }
+
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<UserProfileResponse> getUserById(@PathVariable String userId) {
+        log.info("Fetching user with ID: {}", userId);
+        try {
+            UserProfileResponse user = userService.getUserById(Long.valueOf(userId));
+            return ResponseEntity.ok(user);
+        } catch (IllegalArgumentException e) {
+            log.error("Invalid user ID specified: {}", e.getMessage());
+            return ResponseEntity.badRequest().build();
+        } catch (Exception e) {
+            log.error("Error retrieving user by ID: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 
     @PostMapping("/create-user")
