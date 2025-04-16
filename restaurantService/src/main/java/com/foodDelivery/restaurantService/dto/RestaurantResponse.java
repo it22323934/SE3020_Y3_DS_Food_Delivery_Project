@@ -10,6 +10,8 @@ public class RestaurantResponse {
     private String name;
     private String description;
     private String address;
+    private String restaurantImageUrl;
+    private String bannerImageUrl;
     private List<String> imageUrls = new ArrayList<>();
     private String phoneNumber;
     private String email;
@@ -17,7 +19,8 @@ public class RestaurantResponse {
     private Double longitude;
     private String formattedAddress;
     private List<OpeningHourDto> openingHours = new ArrayList<>();
-    private List<String> cuisineTypes = new ArrayList<>();
+    private List<String> cuisineTypeIds = new ArrayList<>();
+    private List<String> adminIds = new ArrayList<>();
     private String ownerId;
     private boolean enabled;
     private double avgRating;

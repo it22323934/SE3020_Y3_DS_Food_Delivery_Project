@@ -8,7 +8,12 @@ import {
   TextInput,
 } from "flowbite-react";
 import { useEffect, useState } from "react";
-import { HiEye, HiOutlineExclamationCircle, HiOutlineUserGroup, HiOutlineX } from "react-icons/hi";
+import {
+  HiEye,
+  HiOutlineExclamationCircle,
+  HiOutlineUserGroup,
+  HiOutlineX,
+} from "react-icons/hi";
 import { useSelector } from "react-redux";
 import {
   FaCheck,
@@ -17,26 +22,39 @@ import {
   FaTimes,
   FaTimesCircle,
 } from "react-icons/fa";
+import ReactSelect from "react-select";
 import { ToastContainer, toast } from "react-toastify";
 import { authService } from "../service/authService";
 import { RiGovernmentLine } from "react-icons/ri";
 import { AiOutlineSearch } from "react-icons/ai";
 import LoadingSpinner from "./LoadingSpinner";
 import ReactPaginate from "react-paginate";
-import { UserDetailsModal } from "./sub-components/user-managment/UserDetailsModal";
-import { CreateUserModal } from "./sub-components/user-managment/CreateUserModal";
-import { UpdateUserModal } from "./sub-components/user-managment/UpdateUserModal";
+import { UserDetailsModal } from "./sub-components/user-management/UserDetailsModal";
+import { CreateUserModal } from "./sub-components/user-management/CreateUserModal";
+import { UpdateUserModal } from "./sub-components/user-management/UpdateUserModal";
+import { use } from "react";
+import { reportService } from "../service/userReportService";
+
 export default function DashUserProfiles() {
   const { currentUser } = useSelector((state) => state.user);
   const [users, setUsers] = useState([]);
+  const [filteredUsers, setFilteredUsers] = useState([]);
   const [showMore, setShowMore] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [userIdToDelete, setUserIdToDelete] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
   const [loading, setLoading] = useState(true);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [totalUsers, setTotalUser] = useState(0);
+  const [totalActiveUsers, setTotalActiveUsers] = useState(0);
+  const [totalInActiveUsers, setTotalInActiveUsers] = useState(0);
   const [userToShow, setUserToShow] = useState({});
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedUserForReport, setSelectedUserForReport] = useState(null);
+  const [userSelectOptions, setUserSelectOptions] = useState([]);
+  const [roleOptions, setRoleOptions] = useState([]);
+  const [selectedRole, setSelectedRole] = useState(null);
 
   const fetchUser = async () => {
     try {
@@ -44,6 +62,13 @@ export default function DashUserProfiles() {
       const data = await res.json();
       if (res.ok) {
         setUsers(data);
+        setFilteredUsers(data);
+        // Calculate stats
+        setTotalUser(data.length);
+        const enabledUsers = data.filter((user) => user.enabled);
+        setTotalActiveUsers(enabledUsers.length);
+        const disabledUsers = data.filter((user) => user.disabled);
+        setTotalInActiveUsers(disabledUsers.length);
       }
       if (res.status === 401) {
         toast.error(data.message || "Unauthorized access");
@@ -62,6 +87,74 @@ export default function DashUserProfiles() {
     }
   };
 
+  const handleSearch = (e) => {
+    const term = e.target.value;
+    setSearchTerm(term);
+
+    // Reset pagination when searching
+    setPageNumber(0);
+
+    if (term.trim() === "") {
+      setFilteredUsers(users);
+    } else {
+      const filtered = users.filter(
+        (user) =>
+          user.username?.toLowerCase().includes(term.toLowerCase()) ||
+          user.email?.toLowerCase().includes(term.toLowerCase()) ||
+          user.phoneNumber?.toLowerCase().includes(term.toLowerCase())
+      );
+      setFilteredUsers(filtered);
+    }
+  };
+
+  // Add this function to extract unique roles from users
+  const extractUniqueRoles = (usersArray) => {
+    const allRoles = new Set();
+
+    usersArray.forEach((user) => {
+      if (user.roles && Array.isArray(user.roles)) {
+        user.roles.forEach((role) => {
+          allRoles.add(role.replace("ROLE_", ""));
+        });
+      }
+    });
+
+    return Array.from(allRoles).map((role) => ({
+      value: role,
+      label: role,
+    }));
+  };
+
+  // Add this function to filter users by selected role
+  const filterUsersByRole = (role) => {
+    if (!role) {
+      // If no role selected, show all users in select
+      return users.map((user) => ({
+        value: user.id,
+        label: `${user.id} - ${user.username}`,
+      }));
+    }
+
+    // Filter users that have the selected role
+    const filteredByRole = users.filter(
+      (user) =>
+        user.roles &&
+        user.roles.some(
+          (userRole) => userRole.replace("ROLE_", "") === role.value
+        )
+    );
+
+    return filteredByRole.map((user) => ({
+      value: user.id,
+      label: `${user.id} - ${user.username}`,
+    }));
+  };
+
+  const handleRoleChange = (option) => {
+    setSelectedRole(option);
+    setSelectedUserForReport(null);
+  };
+
   useEffect(() => {
     if (currentUser?.roles?.[0] === "ROLE_ADMIN") {
       fetchUser();
@@ -72,7 +165,7 @@ export default function DashUserProfiles() {
   const [pageNumber, setPageNumber] = useState(0);
   const userPerPage = 5;
 
-  const pageCount = Math.ceil(users.length / userPerPage);
+  const pageCount = Math.ceil(filteredUsers.length / userPerPage);
 
   const handlePageChange = ({ selected }) => {
     setPageNumber(selected);
@@ -83,6 +176,7 @@ export default function DashUserProfiles() {
     setUserToShow(user);
     setShowModal(true);
   };
+
   const handleUserCreated = () => {
     fetchUser();
   };
@@ -94,13 +188,79 @@ export default function DashUserProfiles() {
     setSelectedUser(user);
     setShowUpdateModal(true);
   };
+
   const handleUserUpdated = () => {
     fetchUser();
     setShowUpdateModal(false);
     setSelectedUser(null);
   };
 
-  const displayUsers = users
+  useEffect(() => {
+    if (users.length > 0) {
+      const roleOpts = extractUniqueRoles(users);
+      setRoleOptions(roleOpts);
+
+      const userOpts = filterUsersByRole(selectedRole);
+      setUserSelectOptions(userOpts);
+    }
+  }, [users, selectedRole]);
+
+  // Update the handleDownloadReport function to use the reportService
+  const handleDownloadReport = async () => {
+    if (!selectedUserForReport) {
+      toast.error("Please select a user first");
+      return;
+    }
+
+    setIsDownloading(true);
+    try {
+      const userId = selectedUserForReport.value;
+      // Fix the typo in "token"
+      const pdfBlob = await reportService.generateUserReport(
+        userId,
+        currentUser.token
+      );
+      await reportService.downloadPdfReport(
+        pdfBlob,
+        `user-report-${userId}.pdf`
+      );
+      toast.success(
+        `Report for ${selectedUserForReport.label} downloaded successfully`
+      );
+    } catch (error) {
+      toast.error(
+        "Failed to download report: " + (error.message || "Unknown error")
+      );
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  // Add a new function to handle role-based reports
+  const handleRoleReport = async () => {
+    if (!selectedRole) {
+      toast.error("Please select a role first");
+      return;
+    }
+
+    try {
+      const roleName = `ROLE_${selectedRole.value}`; // Add ROLE_ prefix back
+      const pdfBlob =await reportService.generateRoleBasedReport(roleName, currentUser.token);
+      await reportService.downloadPdfReport(
+        pdfBlob,
+        `Report-${roleName}.pdf`
+      );
+      toast.success(
+        `Report for ${selectedRole.label} role generated successfully`
+      );
+    } catch (error) {
+      toast.error(
+        "Failed to generate role report: " + (error.message || "Unknown error")
+      );
+    }
+  };
+
+  const displayUsers = filteredUsers
     .slice(pageNumber * userPerPage, (pageNumber + 1) * userPerPage)
     .map((user) => (
       <Table.Body className="divide-y" key={user.id}>
@@ -151,6 +311,7 @@ export default function DashUserProfiles() {
         </Table.Row>
       </Table.Body>
     ));
+
   return (
     <div className="table-auto overflow-x-scroll md:mx-auto p-3 scrollbar scrollbar-track-slate-100 scrollbar-thumb-slate-300 dark:scrollbar-track-slate-700 dark:scrollbar-thumb-slate-500">
       <ToastContainer />
@@ -159,16 +320,16 @@ export default function DashUserProfiles() {
       ) : (
         <>
           <div className="p-3 md:mx-auto">
-            <div className=" flex-wrap flex gap-4 justify-center">
+            <div className="flex-wrap flex gap-4 justify-center">
               <div className="flex flex-col p-3 dark:bg-slate-800 gap-4 md:w-72 w-full rounded-md shadow-md">
                 <div className="flex justify-between">
                   <div className="">
                     <h3 className="text-gray-500 text-md uppercase">
                       Total Users
                     </h3>
-                    <p className="text-2xl">{}</p>
+                    <p className="text-2xl">{totalUsers}</p>
                   </div>
-                  <HiOutlineUserGroup className="bg-yellow-500 text-white  text-5xl p-3 shadow-lg" />
+                  <HiOutlineUserGroup className="bg-yellow-500 text-white text-5xl p-3 shadow-lg" />
                 </div>
               </div>
               <div className="flex flex-col p-3 dark:bg-slate-800 gap-4 md:w-72 w-full rounded-md shadow-md">
@@ -177,9 +338,9 @@ export default function DashUserProfiles() {
                     <h3 className="text-gray-500 text-md uppercase">
                       Total Enabled Users
                     </h3>
-                    <p className="text-2xl">{}</p>
+                    <p className="text-2xl">{totalActiveUsers}</p>
                   </div>
-                  <HiOutlineUserGroup className="bg-green-500 text-white  text-5xl p-3 shadow-lg" />
+                  <HiOutlineUserGroup className="bg-green-500 text-white text-5xl p-3 shadow-lg" />
                 </div>
               </div>
               <div className="flex flex-col p-3 dark:bg-slate-800 gap-4 md:w-72 w-full rounded-md shadow-md">
@@ -188,7 +349,7 @@ export default function DashUserProfiles() {
                     <h3 className="text-gray-500 text-md uppercase">
                       Total Disabled Users
                     </h3>
-                    <p className="text-2xl">{}</p>
+                    <p className="text-2xl">{totalInActiveUsers}</p>
                   </div>
                   <HiOutlineUserGroup className="bg-red-500 text-white text-5xl p-3 shadow-lg" />
                 </div>
@@ -196,7 +357,7 @@ export default function DashUserProfiles() {
             </div>
           </div>
           <div>
-            <div className=" flex items-center mb-2">
+            <div className="flex items-center mb-2">
               <Button
                 outline
                 gradientDuoTone="greenToBlue"
@@ -207,41 +368,99 @@ export default function DashUserProfiles() {
               </Button>
               <TextInput
                 type="text"
-                placeholder="Search by district name"
+                placeholder="Search by name, email or phone"
+                value={searchTerm}
+                onChange={handleSearch}
                 rightIcon={AiOutlineSearch}
                 className="ml-1 bg-gray-50 border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-80 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500 mb"
               />
-              <Select
+
+              <div className="flex items-center mb-2">
+                {/* Role selector */}
+                <div className="ml-4 w-48">
+                  <ReactSelect
+                    placeholder="Filter by role"
+                    value={selectedRole}
+                    onChange={handleRoleChange}
+                    options={roleOptions}
+                    isSearchable
+                    isClearable
+                    className="react-select-container"
+                    classNamePrefix="react-select"
+                    styles={{
+                      control: (baseStyles) => ({
+                        ...baseStyles,
+                        backgroundColor: "white",
+                        borderColor: "#D1D5DB",
+                      }),
+                      option: (baseStyles, { isFocused }) => ({
+                        ...baseStyles,
+                        backgroundColor: isFocused ? "#E5E7EB" : "white",
+                        color: "black",
+                      }),
+                    }}
+                  />
+                </div>
+
+                {/* User selector */}
+                <div className="ml-4 w-64">
+                  <ReactSelect
+                    placeholder="Select a user for report"
+                    value={selectedUserForReport}
+                    onChange={(option) => setSelectedUserForReport(option)}
+                    options={users.map((user) => ({
+                      value: user.id,
+                      label: `${user.id} - ${user.username}`,
+                    }))}
+                    isSearchable
+                    isClearable
+                    className="react-select-container"
+                    classNamePrefix="react-select"
+                    styles={{
+                      control: (baseStyles) => ({
+                        ...baseStyles,
+                        backgroundColor: "white",
+                        borderColor: "#D1D5DB",
+                      }),
+                      option: (baseStyles, { isFocused }) => ({
+                        ...baseStyles,
+                        backgroundColor: isFocused ? "#E5E7EB" : "white",
+                        color: "black",
+                      }),
+                    }}
+                  />
+                </div>
+              </div>
+
+              <Button
+                outline
+                gradientDuoTone="greenToBlue"
                 className="ml-4"
-                placeholder="Select a user"
-                isSearchable
-                isClearable
-                styles={{
-                  control: (provided) => ({
-                    ...provided,
-                    width: "200px",
-                  }),
-                  option: (provided) => ({
-                    ...provided,
-                    color: "black",
-                  }),
-                  singleValue: (provided) => ({
-                    ...provided,
-                    color: "black",
-                  }),
+                onClick={() => {
+                  if (selectedUserForReport) {
+                    handleDownloadReport();
+                  } else if (selectedRole) {
+                    handleRoleReport();
+                  } else {
+                    toast.error(
+                      "Please select either a user or a role for report generation"
+                    );
+                  }
                 }}
-              />
-              <Button outline gradientDuoTone="greenToBlue" className=" ml-4">
+                disabled={
+                  isDownloading || (!selectedUserForReport && !selectedRole)
+                }
+              >
                 {isDownloading ? (
                   <Spinner className="animate-spin" color="white" size="sm" />
                 ) : (
-                  "Download User Report"
+                  "Generate Report"
                 )}
               </Button>
             </div>
           </div>
           <div className="overflow-x-auto">
-            {users.length > 0 ? (
+            {filteredUsers.length > 0 ? (
               <Table>
                 <Table.Head>
                   <Table.HeadCell>Name</Table.HeadCell>
@@ -254,7 +473,7 @@ export default function DashUserProfiles() {
                 {displayUsers}
               </Table>
             ) : (
-              <p>No Users Available</p>
+              <p className="text-center py-4">No Users Available</p>
             )}
             <div className="mt-9 center">
               <ReactPaginate
@@ -275,14 +494,14 @@ export default function DashUserProfiles() {
             </div>
           </div>
 
-          {/** View More Modal */}
+          {/* View More Modal */}
           <UserDetailsModal
             showModal={showModal}
             setShowModal={setShowModal}
             user={userToShow}
           />
 
-          {/** Create user component */}
+          {/* Create user component */}
           <CreateUserModal
             show={showCreateModal}
             onClose={() => setShowCreateModal(false)}
@@ -290,7 +509,7 @@ export default function DashUserProfiles() {
             token={currentUser.token}
           />
 
-          {/** Update User */}
+          {/* Update User */}
           <UpdateUserModal
             show={showUpdateModal}
             onClose={() => setShowUpdateModal(false)}
@@ -298,8 +517,6 @@ export default function DashUserProfiles() {
             userData={selectedUser}
             token={currentUser.token}
           />
-
-          {/** Verify Modal */}
         </>
       )}
     </div>

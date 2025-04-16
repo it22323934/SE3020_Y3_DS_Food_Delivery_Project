@@ -1,22 +1,20 @@
 package com.foodDelivery.restaurantService.controller;
 
-import com.foodDelivery.restaurantService.client.UserServiceClient;
 import com.foodDelivery.restaurantService.dto.RestaurantRequest;
 import com.foodDelivery.restaurantService.dto.RestaurantResponse;
+import com.foodDelivery.restaurantService.exception.BusinessValidationException;
 import com.foodDelivery.restaurantService.model.Restaurant;
-import com.foodDelivery.restaurantService.service.RestaurantService;
-import jakarta.servlet.http.HttpServletRequest;
+import com.foodDelivery.restaurantService.serviceInterfaces.RestaurantService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -27,122 +25,107 @@ import java.util.stream.Collectors;
 public class RestaurantController {
 
     private final RestaurantService restaurantService;
-    private final UserServiceClient userServiceClient;
 
     @PostMapping
-    @PreAuthorize("hasRole('ROLE_RESTAURANT_ADMIN') or hasRole('ROLE_ADMIN')")
     public ResponseEntity<RestaurantResponse> createRestaurant(
             @Valid @RequestBody RestaurantRequest request,
-            HttpServletRequest httpRequest) {
+            @RequestHeader("Authorization") String token) {
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String userId = request.getOwnerId();
-        String token = httpRequest.getHeader(HttpHeaders.AUTHORIZATION);
+        String userId = authentication.getName();
 
-        // Verify user role with User Service
-        boolean isValidRole = userServiceClient.validateUserRole(userId, "ROLE_RESTAURANT_ADMIN", token);
-        if (!isValidRole) {
-            log.warn("User {} attempted to create restaurant without valid role verification", userId);
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        try {
+            Restaurant restaurant = mapToEntity(request);
+            Restaurant created = restaurantService.createRestaurant(restaurant, token);
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(mapToResponse(created));
+        } catch (BusinessValidationException e) {
+            log.warn("Validation error: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new RestaurantResponse());
         }
+    }
 
-        // Map request to entity
-        Restaurant restaurant = mapToEntity(request);
-        restaurant.setOwnerId(userId);
-
-        // Create restaurant
-        Restaurant created = restaurantService.createRestaurant(restaurant);
-
-        // Convert to response and return
-        return ResponseEntity.status(HttpStatus.CREATED).body(mapToResponse(created));
+    @PutMapping("/{id}")
+    public ResponseEntity<RestaurantResponse> updateRestaurant(
+            @PathVariable String id,
+            @Valid @RequestBody RestaurantRequest request,
+            @RequestHeader("Authorization") String token) {
+        try {
+            Restaurant restaurant = mapToEntity(request);
+            Restaurant updated = restaurantService.updateRestaurant(id, restaurant, token);
+            return ResponseEntity.ok(mapToResponse(updated));
+        } catch (BusinessValidationException e) {
+            log.warn("Validation error: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new RestaurantResponse());
+        }
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<RestaurantResponse> getRestaurant(@PathVariable String id) {
-        Restaurant restaurant = restaurantService.getRestaurantById(id);
-        return ResponseEntity.ok(mapToResponse(restaurant));
+        try {
+            Restaurant restaurant = restaurantService.getRestaurantById(id);
+            return ResponseEntity.ok(mapToResponse(restaurant));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new RestaurantResponse());
+        }
     }
 
     @GetMapping
     public ResponseEntity<List<RestaurantResponse>> getAllRestaurants() {
         List<Restaurant> restaurants = restaurantService.getAllRestaurants();
-        List<RestaurantResponse> response = restaurants.stream()
+        List<RestaurantResponse> responses = restaurants.stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
-        return ResponseEntity.ok(response);
-    }
-
-    @PutMapping("/{id}")
-    @PreAuthorize("hasRole('RESTAURANT_OWNER') or hasRole('ADMIN')")
-    public ResponseEntity<RestaurantResponse> updateRestaurant(
-            @PathVariable String id,
-            @RequestBody RestaurantRequest request) {
-
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String userId = authentication.getName();
-
-        Restaurant existing = restaurantService.getRestaurantById(id);
-
-        // Check if user has permission to update
-        if (!existing.getOwnerId().equals(userId) &&
-                !existing.getManagerIds().contains(userId)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-        }
-
-        // Update restaurant
-        Restaurant updated = mapToEntity(request);
-        updated.setId(id);
-        updated.setOwnerId(existing.getOwnerId());
-        Restaurant result = restaurantService.updateRestaurant(id, updated);
-
-        return ResponseEntity.ok(mapToResponse(result));
-    }
-
-    @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('RESTAURANT_OWNER') or hasRole('ADMIN')")
-    public ResponseEntity<?> deleteRestaurant(@PathVariable String id) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String userId = authentication.getName();
-
-        Restaurant existing = restaurantService.getRestaurantById(id);
-
-        // Check if user has permission to delete
-        if (!existing.getOwnerId().equals(userId)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-        }
-
-        restaurantService.deleteRestaurant(id);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(responses);
     }
 
     @GetMapping("/my-restaurants")
-    @PreAuthorize("hasRole('RESTAURANT_OWNER')")
     public ResponseEntity<List<RestaurantResponse>> getMyRestaurants() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String userId = authentication.getName();
 
-        List<Restaurant> restaurants = restaurantService.getRestaurantsByOwnerId(userId);
-        List<RestaurantResponse> response = restaurants.stream()
+        List<Restaurant> restaurants = restaurantService.getRestaurantsByAdminId(userId);
+        List<RestaurantResponse> responses = restaurants.stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
-
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(responses);
     }
 
-    // Helper methods for mapping
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteRestaurant(
+            @PathVariable String id,
+            @RequestHeader("Authorization") String token) {
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String userId = authentication.getName();
+
+        try {
+            restaurantService.deleteRestaurant(id, userId, token);
+            return ResponseEntity.noContent().build();
+        } catch (BusinessValidationException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(new RestaurantResponse());
+        }
+    }
+
     private Restaurant mapToEntity(RestaurantRequest request) {
         Restaurant restaurant = new Restaurant();
         restaurant.setName(request.getName());
         restaurant.setDescription(request.getDescription());
         restaurant.setAddress(request.getAddress());
-        restaurant.setImageUrls(request.getImageUrls());
+        restaurant.setRestaurantImageUrl(request.getRestaurantImageUrl());
+        restaurant.setBannerImageUrl(request.getBannerImageUrl());
         restaurant.setPhoneNumber(request.getPhoneNumber());
         restaurant.setEmail(request.getEmail());
         restaurant.setLatitude(request.getLatitude());
         restaurant.setLongitude(request.getLongitude());
-        restaurant.setCuisineTypes(request.getCuisineTypes());
+        restaurant.setFormattedAddress(request.getFormattedAddress());
+        restaurant.setAdminIds(request.getAdminIds());
+        restaurant.setCuisineTypeIds(request.getCuisineTypeIds());
 
-        // Map opening hours
         if (request.getOpeningHours() != null) {
             restaurant.setOpeningHours(request.getOpeningHours().stream()
                     .map(dto -> {
@@ -164,21 +147,22 @@ public class RestaurantController {
         response.setId(restaurant.getId());
         response.setName(restaurant.getName());
         response.setDescription(restaurant.getDescription());
+        response.setRestaurantImageUrl(restaurant.getRestaurantImageUrl());
+        response.setBannerImageUrl(restaurant.getBannerImageUrl());
         response.setAddress(restaurant.getAddress());
-        response.setImageUrls(restaurant.getImageUrls());
         response.setPhoneNumber(restaurant.getPhoneNumber());
         response.setEmail(restaurant.getEmail());
         response.setLatitude(restaurant.getLatitude());
+        response.setAdminIds(restaurant.getAdminIds());
+        response.setCuisineTypeIds(restaurant.getCuisineTypeIds());
         response.setLongitude(restaurant.getLongitude());
         response.setFormattedAddress(restaurant.getFormattedAddress());
-        response.setCuisineTypes(restaurant.getCuisineTypes());
         response.setEnabled(restaurant.isEnabled());
         response.setAvgRating(restaurant.getAvgRating());
         response.setTotalRatings(restaurant.getTotalRatings());
         response.setCreatedAt(restaurant.getCreatedAt());
         response.setUpdatedAt(restaurant.getUpdatedAt());
 
-        // Map opening hours
         if (restaurant.getOpeningHours() != null) {
             response.setOpeningHours(restaurant.getOpeningHours().stream()
                     .map(info -> {
