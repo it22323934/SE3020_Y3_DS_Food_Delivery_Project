@@ -31,9 +31,9 @@ export default function Header() {
         className="self-center whitespace-nowrap text-sm sm:text-xl font-semibold dark:text-white"
       >
         <span className="px-2 py-1 bg-gradient-to-r  from-green-500 via-green-500 to-green-500  rounded-lg text-white">
-          Zero
+          Economy
         </span>
-        Waste
+        Plus
       </Link>
       <form>
         <TextInput

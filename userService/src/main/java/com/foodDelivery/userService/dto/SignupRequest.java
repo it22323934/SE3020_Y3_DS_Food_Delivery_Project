@@ -23,6 +23,20 @@ public class SignupRequest {
     private String password;
     private String firstName;
     private String lastName;
+    @NotBlank(message = "Phone number is required")
     private String phoneNumber;
+    private String profilePicture;
+    private String address;
+    private String identificationNumber;
+    private String vehicleNumber;
+    private boolean verified;
+    private boolean disabled;
+    private LocationDTO location;
+    @Data
+    public static class LocationDTO {
+        private String type;
+        private double[] coordinates;
+        private String address;
+    }
     private Set<String> roles;
 }

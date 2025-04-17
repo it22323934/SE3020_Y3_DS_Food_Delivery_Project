@@ -1,6 +1,6 @@
 package com.foodDelivery.userService.repository;
 
-import com.foodDelivery.userService.model.ConfirmationToken;
+import com.foodDelivery.userService.modal.ConfirmationToken;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;

@@ -65,6 +65,24 @@ public class Routes {
                 .build();
     }
 
+    @Bean
+    public RouterFunction<ServerResponse> userServiceReport() {
+        return GatewayRouterFunctions.route("user_service_report")
+                .route(RequestPredicates.path("/api/reports/**"), HandlerFunctions.http(userServiceUrl))
+                .filter((request, next) -> {
+                    HttpServletRequest httpRequest = request.servletRequest();
+                    boolean authenticated = jwtAuthFilter.isAuthenticated(httpRequest);
+                    if (!authenticated) {
+                        return ServerResponse.status(HttpStatus.UNAUTHORIZED)
+                                .body("Access denied: Authentication required");
+                    }
+                    return next.handle(request);
+                })
+                .filter(CircuitBreakerFilterFunctions.circuitBreaker("userServiceCircuitBreaker",
+                        URI.create("forward:/fallbackRoute")))
+                .build();
+    }
+
     // Restaurant service routes
     @Bean
     public RouterFunction<ServerResponse> restaurantServiceRoutes() {

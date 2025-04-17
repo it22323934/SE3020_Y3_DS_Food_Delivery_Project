@@ -1,6 +1,6 @@
 package com.foodDelivery.userService.repository;
 
-import com.foodDelivery.userService.model.Role;
+import com.foodDelivery.userService.modal.Role;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;

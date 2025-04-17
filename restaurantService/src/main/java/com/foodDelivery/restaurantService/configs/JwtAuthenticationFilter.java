@@ -1,5 +1,6 @@
 package com.foodDelivery.restaurantService.configs;
 
+import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -16,7 +17,9 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Component
@@ -32,18 +35,32 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         try {
             String jwt = parseJwt(request);
             if (jwt != null && jwtUtils.validateJwtToken(jwt)) {
+                Claims claims = jwtUtils.getAllClaimsFromJwtToken(jwt);
+                logger.info("JWT Claims: {}", claims);
                 String username = jwtUtils.getUserNameFromJwtToken(jwt);
+                Long userId = jwtUtils.getUserIdFromJwtToken(jwt);
 
                 // Get roles directly from token
                 List<SimpleGrantedAuthority> authorities = jwtUtils.getRolesFromJwtToken(jwt).stream()
                         .map(SimpleGrantedAuthority::new)
                         .collect(Collectors.toList());
 
+                // Create custom authentication details with user ID
+                Map<String, Object> details = new HashMap<>();
+                details.put("userId", userId);
+
                 UsernamePasswordAuthenticationToken authentication =
                         new UsernamePasswordAuthenticationToken(username, null, authorities);
-                authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+
+                // Set both standard details and our custom details with userId
+                authentication.setDetails(details);
 
                 SecurityContextHolder.getContext().setAuthentication(authentication);
+
+                // Store userId in request attribute for easy access in controllers
+                if (userId != null) {
+                    request.setAttribute("userId", userId);
+                }
             }
         } catch (Exception e) {
             logger.error("Cannot set user authentication: {}", e);

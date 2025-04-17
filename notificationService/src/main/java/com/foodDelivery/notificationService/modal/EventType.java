@@ -1,0 +1,23 @@
+// notificationService/src/main/java/com/foodDelivery/notificationService/model/EventType.java
+package com.foodDelivery.notificationService.modal;
+
+public enum EventType {
+    USER_REGISTRATION,
+    ORDER_PLACED,
+    ORDER_CONFIRMED,
+    ORDER_READY,
+    ORDER_PICKED_UP,
+    ORDER_DELIVERED,
+    ORDER_CANCELLED,
+    PAYMENT_SUCCESSFUL,
+    PAYMENT_FAILED,
+    DRIVER_ASSIGNED,
+    GOOGLE_USER_REGISTRATION,
+    ADMIN_USER_REGISTRATION,
+    PROFILE_UPDATED_BY_ADMIN,
+    PASSWORD_RESET_REQUESTED,
+    RESTAURANT_CREATED,
+    RESTAURANT_UPDATED,
+    RESTAURANT_ADMIN_ADDED,
+    RESTAURANT_ADMIN_REMOVED
+}

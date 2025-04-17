@@ -20,7 +20,7 @@ import {
   FaStore,
   FaUtensils,
 } from "react-icons/fa";
-import { GiRecycle } from "react-icons/gi";
+import { GiCook, GiRecycle } from "react-icons/gi";
 import { RiGovernmentLine } from "react-icons/ri";
 import { MdLocalShipping } from "react-icons/md";
 import { authService } from "../service/authService";
@@ -54,8 +54,8 @@ export default function DashSideBar() {
       <Sidebar.Items>
         <Sidebar.ItemGroup className="flex flex-col gap-1">
           {currentUser &&
-            (currentUser.roles[0] === "ROLE_ADMIN" ||
-              currentUser.roles[0] === "ROLE_RESTAURANT_ADMIN") && (
+            (currentUser?.roles[0] === "ROLE_ADMIN" ||
+              currentUser?.roles[0] === "ROLE_RESTAURANT_ADMIN") && (
               <>
                 {/* Dashboard Tab - visible to both admin types */}
                 <Link to="/dashboard?tab=waste-management-dashboard">
@@ -89,7 +89,7 @@ export default function DashSideBar() {
                     labelColor="dark"
                     as="div"
                   >
-                    Menu Item 
+                    Menu Item
                   </Sidebar.Item>
                 </Link>
 
@@ -110,6 +110,20 @@ export default function DashSideBar() {
                 )}
               </>
             )}
+          {currentUser && currentUser?.roles[0] === "ROLE_ADMIN" && (
+            <>
+              <Link to="/dashboard?tab=cuisine-management">
+                <Sidebar.Item
+                  active={tab === "cuisine-management"}
+                  icon={GiCook}
+                  labelColor="dark"
+                  as="div"
+                >
+                  Cuisine Type
+                </Sidebar.Item>
+              </Link>
+            </>
+          )}
           <Link to="/dashboard?tab=profile">
             <Sidebar.Item
               active={tab === "profile"}

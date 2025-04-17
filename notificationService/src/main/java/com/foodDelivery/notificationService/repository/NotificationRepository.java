@@ -1,7 +1,7 @@
 // notificationService/src/main/java/com/foodDelivery/notificationService/repository/NotificationRepository.java
 package com.foodDelivery.notificationService.repository;
 
-import com.foodDelivery.notificationService.model.Notification;
+import com.foodDelivery.notificationService.modal.Notification;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import java.util.List;
 
