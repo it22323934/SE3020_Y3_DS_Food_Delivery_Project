@@ -16,11 +16,8 @@
     "@mui/material": "^7.0.2",
     "@react-google-maps/api": "^2.20.6",
     "@reduxjs/toolkit": "^2.2.1",
-<<<<<<< HEAD
     "axios": "^1.8.4",
-=======
     "caniuse-lite": "^1.0.30001712",
->>>>>>> e5da0b96f67355f32be670192ed4113650a51845
     "chart.js": "^4.4.5",
     "date-fns": "^4.1.0",
     "firebase": "^10.8.1",
