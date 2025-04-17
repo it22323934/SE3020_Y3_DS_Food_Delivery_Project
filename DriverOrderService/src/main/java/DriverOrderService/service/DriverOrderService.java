@@ -72,4 +72,12 @@ public class DriverOrderService {
         return driverOrderRepository.findByDriverIdAndIsOrderComplete(driverId, false);
     }
 
+    public List<DriverOrder> getOrdersByDriver(String driverId){
+        return driverOrderRepository.findByDriverId(driverId);
+    }
+
+    public List<DriverOrder> getOrderbyOrderId(String OrderId){
+        return driverOrderRepository.findByOrderId(OrderId);
+    }
+
 }

@@ -8,6 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -77,7 +78,7 @@ public class DeliveryDriverService {
 
     // UPDATE: Update a driver's information
     public DeliveryDriverResponse updateDeliveryDriver(String driverId, DeliveryDriverRequest driverRequest) {
-        Optional<DeliveryDriver> optionalDriver = deliveryDriverRepository.findById(driverId);
+        Optional<DeliveryDriver> optionalDriver = deliveryDriverRepository.findByDriverId(driverId);
 
         if (optionalDriver.isPresent()) {
             DeliveryDriver existingDriver = optionalDriver.get();
@@ -114,18 +115,24 @@ public class DeliveryDriverService {
     }
 
     // DELETE: Delete a driver
+    @Transactional
     public void deleteDeliveryDriver(String driverId) {
-        Optional<DeliveryDriver> optionalDriver = deliveryDriverRepository.findById(driverId);
+        Optional<DeliveryDriver> optionalDriver = deliveryDriverRepository.findByDriverId(driverId);
 
         if (optionalDriver.isPresent()) {
-            // Delete the driver from the database
-            deliveryDriverRepository.deleteById(driverId);
+            logger.info("Deleting delivery driver with ID: {}", driverId);
+
+            deliveryDriverRepository.deleteByDriverId(driverId); // use this instead
+
             logger.info("Deleted delivery driver with ID: {}", driverId);
         } else {
             logger.error("Driver with ID: {} not found for deletion", driverId);
             throw new IllegalArgumentException("Driver not found");
         }
     }
+
+
+
 
     public List<DeliveryDriverResponse> getDriversByWorkingCity(String workingCity) {
         List<DeliveryDriver> drivers = deliveryDriverRepository.findByWorkingCity(workingCity);

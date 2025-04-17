@@ -54,4 +54,15 @@ public class DriverOrderController {
         return driverOrderService.getIncompleteOrdersByDriver(driverId);
     }
 
+    @GetMapping("/orders/{driverId}")
+    public List<DriverOrder> getOrdersByDriver(@PathVariable String driverId){
+        return driverOrderService.getOrdersByDriver(driverId);
+    }
+
+    @GetMapping("/order-by-id/{orderId}")
+    public List<DriverOrder> getOrderByOrderId(@PathVariable String orderId) {
+        return driverOrderService.getOrderbyOrderId(orderId);
+    }
+
+
 }

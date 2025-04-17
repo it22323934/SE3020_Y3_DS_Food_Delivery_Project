@@ -12,6 +12,8 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/deliveryDriver")
+@CrossOrigin(origins = "*")
+
 public class DeliveryDriverController {
 
     private final DeliveryDriverService deliveryDriverService;

@@ -12,6 +12,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/deliveryReplication")
+@CrossOrigin(origins = "*") // Allow any origin to access this API
 public class DeliveryReplicationController {
 
     DeliveryReplication delivery = new DeliveryReplication();
