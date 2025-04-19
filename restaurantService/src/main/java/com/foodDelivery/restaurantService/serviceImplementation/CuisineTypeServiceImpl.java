@@ -12,7 +12,7 @@ import com.foodDelivery.restaurantService.repository.CuisineTypeRepository;
 import com.foodDelivery.restaurantService.repository.RestaurantRepository;
 import com.foodDelivery.restaurantService.serviceInterfaces.CuisineTypeService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -21,11 +21,14 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class CuisineTypeServiceImpl implements CuisineTypeService {
 
     private final CuisineTypeRepository cuisineTypeRepository;
     private final CuisineTypeMapper cuisineTypeMapper;
     private final RestaurantRepository restaurantRepository;
+
+    private static final int MAX_CUISINE_TYPES_PER_RESTAURANT = 5;
 
     @Override
     public CuisineTypeResponse createCuisineType(CuisineTypeCreateRequest request) {
@@ -93,7 +96,7 @@ public class CuisineTypeServiceImpl implements CuisineTypeService {
     @Override
     public CuisineTypeResponse updateCuisineType(String id, CuisineTypeUpdateRequest request) {
         CuisineType cuisineType = cuisineTypeRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Cuisine type not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Cuisine type not found with id: " + id));
 
         cuisineTypeMapper.updateEntityFromDto(request, cuisineType);
         cuisineType.setUpdatedAt(System.currentTimeMillis());
@@ -119,22 +122,94 @@ public class CuisineTypeServiceImpl implements CuisineTypeService {
             throw new BusinessValidationException("Restaurant is disabled and cannot be added to cuisine type");
         }
 
+        // Check if restaurant already has maximum number of cuisine types
+        int currentCuisineTypeCount = countCuisineTypesForRestaurant(restaurantId);
+        if (currentCuisineTypeCount >= MAX_CUISINE_TYPES_PER_RESTAURANT &&
+                !cuisineType.getRestaurantIds().contains(restaurantId)) {
+            throw new BusinessValidationException("Restaurant already has the maximum of " +
+                    MAX_CUISINE_TYPES_PER_RESTAURANT + " cuisine types");
+        }
+
+        // Update both sides of the relationship
+        boolean updated = false;
+
+        // Update cuisine type
         if (!cuisineType.getRestaurantIds().contains(restaurantId)) {
             cuisineType.getRestaurantIds().add(restaurantId);
-            cuisineType.setUpdatedAt(System.currentTimeMillis());
+            updated = true;
+        }
+
+        // Update restaurant
+        if (!restaurant.getCuisineTypeIds().contains(cuisineTypeId)) {
+            restaurant.getCuisineTypeIds().add(cuisineTypeId);
+            updated = true;
+        }
+
+        if (updated) {
+            long now = System.currentTimeMillis();
+            cuisineType.setUpdatedAt(now);
+            restaurant.setUpdatedAt(now);
             cuisineTypeRepository.save(cuisineType);
+            restaurantRepository.save(restaurant);
+            log.info("Added restaurant {} to cuisine type {}", restaurantId, cuisineTypeId);
         }
     }
 
     @Override
     public void removeRestaurantFromCuisineType(String cuisineTypeId, String restaurantId) {
         CuisineType cuisineType = cuisineTypeRepository.findById(cuisineTypeId)
-                .orElseThrow(() -> new RuntimeException("Cuisine type not found with id: " + cuisineTypeId));
+                .orElseThrow(() -> new ResourceNotFoundException("Cuisine type not found with id: " + cuisineTypeId));
 
+        Restaurant restaurant = restaurantRepository.findById(restaurantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found with id: " + restaurantId));
+
+        // Prevent removal if this would leave restaurant with fewer than MIN_CUISINE_TYPES_PER_RESTAURANT
+        final int MIN_CUISINE_TYPES_PER_RESTAURANT = 1; // Set to 1 as minimum requirement
+
+        if (restaurant.getCuisineTypeIds().size() <= MIN_CUISINE_TYPES_PER_RESTAURANT &&
+                restaurant.getCuisineTypeIds().contains(cuisineTypeId)) {
+            throw new BusinessValidationException("Restaurant must have at least " +
+                    MIN_CUISINE_TYPES_PER_RESTAURANT + " cuisine type");
+        }
+
+        // Update both sides of the relationship
+        boolean updated = false;
+
+        // Update cuisine type
         if (cuisineType.getRestaurantIds().contains(restaurantId)) {
             cuisineType.getRestaurantIds().remove(restaurantId);
-            cuisineType.setUpdatedAt(System.currentTimeMillis());
-            cuisineTypeRepository.save(cuisineType);
+            updated = true;
         }
+
+        // Update restaurant
+        if (restaurant.getCuisineTypeIds().contains(cuisineTypeId)) {
+            restaurant.getCuisineTypeIds().remove(cuisineTypeId);
+            updated = true;
+        }
+
+        if (updated) {
+            long now = System.currentTimeMillis();
+            cuisineType.setUpdatedAt(now);
+            restaurant.setUpdatedAt(now);
+            cuisineTypeRepository.save(cuisineType);
+            restaurantRepository.save(restaurant);
+            log.info("Removed restaurant {} from cuisine type {}", restaurantId, cuisineTypeId);
+        }
+    }
+
+    private int countCuisineTypesForRestaurant(String restaurantId) {
+        List<CuisineType> allCuisineTypes = cuisineTypeRepository.findAll();
+        return (int) allCuisineTypes.stream()
+                .filter(ct -> ct.getRestaurantIds() != null && ct.getRestaurantIds().contains(restaurantId))
+                .count();
+    }
+
+    @Override
+    public List<CuisineTypeResponse> getCuisineTypesByRestaurantId(String restaurantId) {
+        List<CuisineType> allCuisineTypes = cuisineTypeRepository.findAll();
+        return allCuisineTypes.stream()
+                .filter(ct -> ct.getRestaurantIds() != null && ct.getRestaurantIds().contains(restaurantId))
+                .map(cuisineTypeMapper::toDto)
+                .collect(Collectors.toList());
     }
 }

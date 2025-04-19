@@ -173,7 +173,7 @@ public class UserController {
     }
 
     @GetMapping("/by-role")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('RESTAURANT_ADMIN')")
     public ResponseEntity<List<UserProfileResponse>> getUsersByRole(@RequestParam String roleName) {
         log.info("Fetching users with role: {}", roleName);
         try {
@@ -190,10 +190,7 @@ public class UserController {
     @GetMapping("/getUserId")
     public ResponseEntity<Long> getUserId(@RequestHeader(HttpHeaders.AUTHORIZATION) String token) {
         try {
-            // Extract token without "Bearer " prefix
             String jwt = token.substring(7);
-
-            // Get username from token
             String username = jwtUtils.getUserNameFromJwtToken(jwt);
             log.info("Getting user ID for username: {}", username);
 

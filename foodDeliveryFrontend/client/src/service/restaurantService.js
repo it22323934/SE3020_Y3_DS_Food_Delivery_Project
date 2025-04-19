@@ -215,4 +215,15 @@ export const restaurantService = {
     );
     return res;
   },
+
+  getRestaurantsByUserId: async (userId, token) => {
+    const res = await fetch(`${API_URL}/restaurants/by-user/${userId}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return res;
+  }
 };

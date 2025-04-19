@@ -42,6 +42,9 @@ export default function DashRestaurantManagement() {
   const { currentUser } = useSelector((state) => state.user);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [selectedRestaurantId, setSelectedRestaurantId] = useState(null);
+  const [totalRestaurants,setTotalRestaurants] = useState(0);
+  const [activeRestaurants,setActiveRestaurants] = useState(0);
+  const [inactiveRestaurants,setInactiveRestaurants] = useState(0);
   const [viewModal, setViewModal] = useState(false);
 
   const fetchRestaurants = async () => {
@@ -51,6 +54,13 @@ export default function DashRestaurantManagement() {
       );
       if (response.status === 200) {
         const data = await response.json();
+        setTotalRestaurants(data.length);
+        setActiveRestaurants(
+          data.filter((restaurant) => restaurant.enabled).length
+        );
+        setInactiveRestaurants(
+          data.filter((restaurant) => !restaurant.enabled).length
+        );
         setRestaurants(data);
         setLoading(false);
       }
@@ -108,25 +118,16 @@ export default function DashRestaurantManagement() {
             </Button>
           </Table.Cell>
           <Table.Cell>
-            {
-              <Badge
-                color={
-                  restaurant.enabled === true
-                    ? "success"
-                    : restaurant.enabled === false
-                    ? "failure"
-                    : "yellow"
-                }
-                style={{
-                  fontSize: "1.2rem",
-                  padding: "0.5rem 1rem",
-                  borderRadius: "8px",
-                  display: "flex", // Use flexbox
-                  alignItems: "center", // Center vertically
-                  justifyContent: "center", // Center horizontally
-                }}
-              ></Badge>
-            }
+            <Badge
+              color={restaurant.enabled ? "success" : "failure"}
+              className="flex items-center justify-center px-3 py-2 rounded-lg"
+            >
+              {restaurant.enabled ? (
+                <FaCheckCircle color="green" size={16} className="mr-1" />
+              ) : (
+                <FaTimesCircle color="red" size={16} className="mr-1" />
+              )}
+            </Badge>
           </Table.Cell>
           <Table.Cell>
             <div className="flex items-center space-x-4">
@@ -175,7 +176,7 @@ export default function DashRestaurantManagement() {
                     <h3 className="text-gray-500 text-md uppercase">
                       Total Restaurants
                     </h3>
-                    <p className="text-2xl">{}</p>
+                    <p className="text-2xl">{totalRestaurants}</p>
                   </div>
                   <FaStore className="bg-yellow-500 text-white  text-5xl p-3 shadow-lg" />
                 </div>
@@ -186,7 +187,7 @@ export default function DashRestaurantManagement() {
                     <h3 className="text-gray-500 text-md uppercase">
                       Active Restaurants
                     </h3>
-                    <p className="text-2xl">{}</p>
+                    <p className="text-2xl">{activeRestaurants}</p>
                   </div>
                   <FaStore className="bg-green-500 text-white  text-5xl p-3 shadow-lg" />
                 </div>
@@ -197,7 +198,7 @@ export default function DashRestaurantManagement() {
                     <h3 className="text-gray-500 text-md uppercase">
                       Inactive Restaurants
                     </h3>
-                    <p className="text-2xl">{}</p>
+                    <p className="text-2xl">{inactiveRestaurants}</p>
                   </div>
                   <FaStore className="bg-red-500 text-white text-5xl p-3 shadow-lg" />
                 </div>
@@ -216,7 +217,7 @@ export default function DashRestaurantManagement() {
               </Button>
               <TextInput
                 type="text"
-                placeholder="Search by district name"
+                placeholder="Search by restaurant name"
                 onChange={(e) => setSearch(e.target.value)}
                 rightIcon={AiOutlineSearch}
                 className="ml-1 bg-gray-50 border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-80 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500 mb"
@@ -245,7 +246,7 @@ export default function DashRestaurantManagement() {
                 {isDownloading ? (
                   <Spinner className="animate-spin" color="white" size="sm" />
                 ) : (
-                  "Download District Report"
+                  "Download Restaurant Report"
                 )}
               </Button>
             </div>
