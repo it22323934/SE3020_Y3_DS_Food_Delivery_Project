@@ -24,11 +24,13 @@ import { GiCook, GiRecycle } from "react-icons/gi";
 import { RiGovernmentLine } from "react-icons/ri";
 import { MdLocalShipping } from "react-icons/md";
 import { authService } from "../service/authService";
+
 export default function DashSideBar() {
   const dispatch = useDispatch();
   const location = useLocation();
   const [tab, setTab] = useState("");
   const { currentUser } = useSelector((state) => state.user);
+  
   useEffect(() => {
     const urlParams = new URLSearchParams(location.search);
     const tabFromUrl = urlParams.get("tab");
@@ -49,13 +51,29 @@ export default function DashSideBar() {
       console.log(error.message);
     }
   };
+
+  // Helper function to check if user has a specific role
+  const hasRole = (role) => {
+    return currentUser?.roles?.includes(role);
+  };
+
+  // Determine the primary role for display
+  const getPrimaryRoleLabel = () => {
+    if (!currentUser?.roles || currentUser.roles.length === 0) return "User";
+    
+    if (hasRole("ROLE_ADMIN")) return "Admin";
+    if (hasRole("ROLE_RESTAURANT_ADMIN")) return "Restaurant Admin";
+    if (hasRole("ROLE_DRIVER")) return "Driver";
+    return "User";
+  };
+
   return (
     <Sidebar className="w-full md:w-56">
       <Sidebar.Items>
         <Sidebar.ItemGroup className="flex flex-col gap-1">
           {currentUser &&
-            (currentUser?.roles[0] === "ROLE_ADMIN" ||
-              currentUser?.roles[0] === "ROLE_RESTAURANT_ADMIN") && (
+            (hasRole("ROLE_ADMIN") ||
+             hasRole("ROLE_RESTAURANT_ADMIN")) && (
               <>
                 {/* Dashboard Tab - visible to both admin types */}
                 <Link to="/dashboard?tab=waste-management-dashboard">
@@ -94,7 +112,7 @@ export default function DashSideBar() {
                 </Link>
 
                 {/* Items that only the main admin should see */}
-                {currentUser.roles[0] === "ROLE_ADMIN" && (
+                {hasRole("ROLE_ADMIN") && (
                   <>
                     <Link to="/dashboard?tab=user-management">
                       <Sidebar.Item
@@ -110,150 +128,60 @@ export default function DashSideBar() {
                 )}
               </>
             )}
-          {currentUser && currentUser?.roles[0] === "ROLE_ADMIN" && (
-            <>
-              <Link to="/dashboard?tab=cuisine-management">
-                <Sidebar.Item
-                  active={tab === "cuisine-management"}
-                  icon={GiCook}
-                  labelColor="dark"
-                  as="div"
-                >
-                  Cuisine Type
-                </Sidebar.Item>
-              </Link>
-            </>
+          
+          {currentUser && hasRole("ROLE_ADMIN") && (
+            <Link to="/dashboard?tab=cuisine-management">
+              <Sidebar.Item
+                active={tab === "cuisine-management"}
+                icon={GiCook}
+                labelColor="dark"
+                as="div"
+              >
+                Cuisine Type
+              </Sidebar.Item>
+            </Link>
           )}
+
+          {currentUser && hasRole("ROLE_RESTAURANT_ADMIN") && (
+            <Link to="/dashboard?tab=my-restaurant">
+              <Sidebar.Item
+                active={tab === "my-restaurant"}
+                icon={FaStore}
+                labelColor="dark"
+                as="div"
+              >
+                My Restaurant
+              </Sidebar.Item>
+            </Link>
+          )}          
+          
+          {/* Cuisine management for restaurants */}
+          {currentUser && hasRole("ROLE_RESTAURANT") && (
+            <Link to="/dashboard?tab=cuisine-management">
+              <Sidebar.Item
+                active={tab === "cuisine-management"}
+                icon={GiCook}
+                labelColor="dark"
+                as="div"
+              >
+                Cuisine Type
+              </Sidebar.Item>
+            </Link>
+          )}
+          
+          {/* Profile link for all users */}
           <Link to="/dashboard?tab=profile">
             <Sidebar.Item
               active={tab === "profile"}
               icon={HiUser}
-              label={
-                currentUser.roles && currentUser.roles.length > 0
-                  ? currentUser.roles[0] === "ROLE_ADMIN"
-                    ? "Admin"
-                    : currentUser.roles[0] === "ROLE_RESTAURANT_ADMIN"
-                    ? "Restaurant Admin"
-                    : currentUser.roles[0] === "ROLE_DRIVER"
-                    ? "Driver"
-                    : "User"
-                  : "User"
-              }
+              label={getPrimaryRoleLabel()}
               labelColor="dark"
               as="div"
             >
               Profile
             </Sidebar.Item>
           </Link>
-          {/* {currentUser.isDriver && (
-            <Link to="/dashboard?tab=driver-requests">
-              <Sidebar.Item
-                active={tab === "driver-requests"}
-                icon={HiDocumentText}
-                as="div"
-              >
-                Waste Requests
-              </Sidebar.Item>
-            </Link>
-          )}
-          {currentUser.isAdmin && (
-            <>
-              <Link to="/dashboard?tab=users">
-                <Sidebar.Item
-                  active={tab === "users"}
-                  icon={HiOutlineUserGroup}
-                  as="div"
-                >
-                  Users
-                </Sidebar.Item>
-              </Link>
-              <Link to="/dashboard?tab=districts">
-                <Sidebar.Item
-                  active={tab === "districts"}
-                  icon={RiGovernmentLine} // Replace with chosen icon
-                  as="div"
-                >
-                  Districts
-                </Sidebar.Item>
-              </Link>
-              <Link to="/dashboard?tab=waste-categories">
-                <Sidebar.Item
-                  active={tab === "waste-categories"}
-                  icon={GiRecycle} // Replace with chosen icon
-                  as="div"
-                >
-                  Waste Category
-                </Sidebar.Item>
-              </Link>
-              <Link to="/dashboard?tab=waste-requests">
-                <Sidebar.Item
-                  active={tab === "waste-requests"}
-                  icon={FaTrashAlt} // Replace with chosen icon
-                  as="div"
-                >
-                  Waste Request
-                </Sidebar.Item>
-              </Link>
-              <Link to="/dashboard?tab=user-payments">
-                <Sidebar.Item
-                  active={tab === "user-payments"}
-                  icon={FaCreditCard} // Replace with chosen icon
-                  as="div"
-                >
-                  Payments
-                </Sidebar.Item>
-              </Link>
-              <Link to="/dashboard?tab=admin-waste-requests">
-                <Sidebar.Item
-                  active={tab === "admin-waste-requests"}
-                  label={currentUser.isAdmin ? "Admin" : "User"}
-                  labelColor="dark"
-                  icon={FaTrashAlt} // Replace with chosen icon
-                  as="div"
-                >
-                  Requests
-                </Sidebar.Item>
-              </Link>
-              <Link to="/dashboard?tab=admin-payments">
-                <Sidebar.Item
-                  active={tab === "admin-payments"}
-                  label={currentUser.isAdmin ? "Admin" : "User"}
-                  labelColor="dark"
-                  icon={FaCreditCard} // or FaMoneyBillAlt
-                  as="div"
-                >
-                  Payments
-                </Sidebar.Item>
-              </Link>
-              <Link to="/dashboard?tab=waste-drivers">
-                <Sidebar.Item
-                  active={tab === "waste-drivers"}
-                  icon={MdLocalShipping} // Replace with chosen icon
-                  as="div"
-                >
-                  Drivers
-                </Sidebar.Item>
-              </Link>
-              <Link to="/dashboard?tab=add-device">
-                <Sidebar.Item
-                  active={tab === "add-device"}
-                  icon={MdLocalShipping} // Replace with chosen icon
-                  as="div"
-                >
-                  Add Device
-                </Sidebar.Item>
-              </Link>
-              <Link to="#">
-                <Sidebar.Item
-                  active={tab === "comments"}
-                  icon={HiAnnotation}
-                  as="div"
-                >
-                  Inquiries
-                </Sidebar.Item>
-              </Link>
-            </>
-          )} */}
+          
           <Sidebar.Item
             icon={HiArrowSmRight}
             className="cursor-pointer"

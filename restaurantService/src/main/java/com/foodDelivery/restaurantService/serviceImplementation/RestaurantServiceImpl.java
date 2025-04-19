@@ -124,23 +124,33 @@ public class RestaurantServiceImpl implements RestaurantService {
 
     @Override
     public Restaurant updateRestaurant(String id, Restaurant restaurant, String token) {
-        long userID = 0;
-        Restaurant existingRestaurant = getRestaurantById(id);
         // Extract user ID from authentication
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String adminUser = authentication.getName();
 
+        Restaurant existingRestaurant = getRestaurantById(id);
+
         // Store original admin list for notification
         List<String> originalAdminIds = new ArrayList<>(existingRestaurant.getAdminIds());
 
-        // Check token for ROLE_ADMIN - allow admins to update any restaurant
+        // Check if current user is a system admin
         boolean isAdmin = userServiceClient.validateUserRole(adminUser, "ROLE_ADMIN", token);
 
-        if(!isAdmin){
+        Long userID = null;
+        if (!isAdmin) {
             userID = userServiceClient.getUserIdFromToken(token);
+            if (userID == null) {
+                throw new BusinessValidationException("Unable to validate user ID from token");
+            }
+
+            // Only check restaurant ownership if not an admin
+            if (!existingRestaurant.getAdminIds().contains(String.valueOf(userID))) {
+                throw new BusinessValidationException("You don't have permission to update this restaurant");
+            }
         }
+
         // Only check restaurant ownership if not an admin
-        if (!isAdmin && !existingRestaurant.getAdminIds().contains(userID)) {
+        if (!isAdmin && !existingRestaurant.getAdminIds().contains(userID.toString())) {
             throw new BusinessValidationException("You don't have permission to update this restaurant");
         }
         log.info("Cuisine ID: {}", restaurant.getCuisineTypeIds());
@@ -208,6 +218,7 @@ public class RestaurantServiceImpl implements RestaurantService {
         if (restaurant.getAdminIds() != null) {
             existingRestaurant.setAdminIds(restaurant.getAdminIds());
         }
+
 
         // Handle cuisine type changes
         if (restaurant.getCuisineTypeIds() != null) {

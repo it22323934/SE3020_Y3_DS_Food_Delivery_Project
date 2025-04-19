@@ -49,6 +49,7 @@ public class RestaurantController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'RESTAURANT_ADMIN')")
     public ResponseEntity<RestaurantResponse> updateRestaurant(
             @PathVariable String id,
             @Valid @RequestBody RestaurantRequest request,
@@ -78,18 +79,6 @@ public class RestaurantController {
     @GetMapping
     public ResponseEntity<List<RestaurantResponse>> getAllRestaurants() {
         List<Restaurant> restaurants = restaurantService.getAllRestaurants();
-        List<RestaurantResponse> responses = restaurants.stream()
-                .map(RestaurantTypeMapper::mapToResponse)
-                .collect(Collectors.toList());
-        return ResponseEntity.ok(responses);
-    }
-
-    @GetMapping("/my-restaurants")
-    public ResponseEntity<List<RestaurantResponse>> getMyRestaurants() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String userId = authentication.getName();
-
-        List<Restaurant> restaurants = restaurantService.getRestaurantsByAdminId(userId);
         List<RestaurantResponse> responses = restaurants.stream()
                 .map(RestaurantTypeMapper::mapToResponse)
                 .collect(Collectors.toList());

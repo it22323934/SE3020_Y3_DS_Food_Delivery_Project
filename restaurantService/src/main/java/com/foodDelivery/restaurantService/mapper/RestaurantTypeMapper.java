@@ -59,6 +59,7 @@ public class RestaurantTypeMapper {
         restaurant.setLatitude(request.getLatitude());
         restaurant.setLongitude(request.getLongitude());
         restaurant.setFormattedAddress(request.getFormattedAddress());
+        restaurant.setEnabled(request.isEnabled());
         restaurant.setAdminIds(request.getAdminIds());
         restaurant.setCuisineTypeIds(request.getCuisineTypeIds());
 

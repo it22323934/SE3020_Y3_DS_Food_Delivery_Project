@@ -45,6 +45,9 @@ public class RestaurantRequest {
     @NotEmpty(message = "At least one admin must be selected")
     private List<String> adminIds = new ArrayList<>();
 
+    @Valid
+    private boolean enabled;
+
     @Data
     public static class OpeningHourDto {
         @Min(value = 1, message = "Day of week must be between 1 and 7")
