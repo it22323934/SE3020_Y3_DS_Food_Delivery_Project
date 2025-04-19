@@ -63,6 +63,23 @@ public class RestaurantServiceImpl implements RestaurantService {
             }
         }
 
+        // Check for duplicate restaurant name
+        if (restaurant.getName() != null && restaurantRepository.existsByName(restaurant.getName())) {
+            throw new BusinessValidationException("Restaurant with name '" + restaurant.getName() + "' already exists");
+        }
+
+        // Check for duplicate email if provided
+        if (restaurant.getEmail() != null && !restaurant.getEmail().isEmpty() &&
+                restaurantRepository.existsByEmail(restaurant.getEmail())) {
+            throw new BusinessValidationException("Restaurant with email '" + restaurant.getEmail() + "' already exists");
+        }
+
+        // Check for duplicate phone number if provided
+        if (restaurant.getPhoneNumber() != null && !restaurant.getPhoneNumber().isEmpty() &&
+                restaurantRepository.existsByPhoneNumber(restaurant.getPhoneNumber())) {
+            throw new BusinessValidationException("Restaurant with phone number '" + restaurant.getPhoneNumber() + "' already exists");
+        }
+
         // Validate other restaurant data like cuisine types
         validateCuisineTypes(restaurant);
 
@@ -150,6 +167,26 @@ public class RestaurantServiceImpl implements RestaurantService {
             if (restaurant.getAdminIds().isEmpty()) {
                 throw new BusinessValidationException("Restaurant must have at least one admin");
             }
+        }
+
+        // Check for duplicate restaurant name if changed
+        if (restaurant.getName() != null && !restaurant.getName().equals(existingRestaurant.getName()) &&
+                restaurantRepository.existsByName(restaurant.getName())) {
+            throw new BusinessValidationException("Restaurant with name '" + restaurant.getName() + "' already exists");
+        }
+
+        // Check for duplicate email if changed and provided
+        if (restaurant.getEmail() != null && !restaurant.getEmail().isEmpty() &&
+                !restaurant.getEmail().equals(existingRestaurant.getEmail()) &&
+                restaurantRepository.existsByEmail(restaurant.getEmail())) {
+            throw new BusinessValidationException("Restaurant with email '" + restaurant.getEmail() + "' already exists");
+        }
+
+        // Check for duplicate phone number if changed and provided
+        if (restaurant.getPhoneNumber() != null && !restaurant.getPhoneNumber().isEmpty() &&
+                !restaurant.getPhoneNumber().equals(existingRestaurant.getPhoneNumber()) &&
+                restaurantRepository.existsByPhoneNumber(restaurant.getPhoneNumber())) {
+            throw new BusinessValidationException("Restaurant with phone number '" + restaurant.getPhoneNumber() + "' already exists");
         }
 
         // Update fields
