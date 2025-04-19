@@ -30,6 +30,7 @@ public class RestaurantServiceImpl implements RestaurantService {
     private final CuisineTypeRepository cuisineTypeRepository;
     private final UserServiceClient userServiceClient;
     private final KafkaProducerService kafkaProducerService;
+    private static final int MAX_CUISINE_TYPES_PER_RESTAURANT = 5;
 
     private static final String USER_SERVICE = "userService";
 
@@ -535,6 +536,12 @@ public class RestaurantServiceImpl implements RestaurantService {
     private void validateCuisineTypes(Restaurant restaurant) {
         if (restaurant.getCuisineTypeIds() == null || restaurant.getCuisineTypeIds().isEmpty()) {
             throw new BusinessValidationException("At least one cuisine type must be selected");
+        }
+
+        // Check if number of cuisine types exceeds limit
+        if (restaurant.getCuisineTypeIds().size() > MAX_CUISINE_TYPES_PER_RESTAURANT) {
+            throw new BusinessValidationException("Restaurant cannot have more than " +
+                    MAX_CUISINE_TYPES_PER_RESTAURANT + " cuisine types");
         }
 
         // Find all cuisines by ID

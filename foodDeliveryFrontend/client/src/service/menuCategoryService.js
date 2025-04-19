@@ -53,11 +53,12 @@ export const menuCategoryService = {
   },
 
   // Get menu categories by restaurant ID
-  getCategoriesByRestaurantId: async (restaurantId) => {
+  getCategoriesByRestaurantId: async (restaurantId,token) => {
     const res = await fetch(`${API_URL}/menu-categories/by-restaurant/${restaurantId}`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
       },
     });
     return res;

@@ -57,11 +57,20 @@ public class MenuCategoryServiceImpl implements MenuCategoryService {
             throw new BusinessValidationException("Restaurant has reached maximum limit of 50 categories");
         }
 
+        // Determine appropriate display order
+        int displayOrder;
+        if (request.getDisplayOrder() <= 0) {
+            // Auto-assign next sequential order
+            displayOrder = getNextDisplayOrder(request.getRestaurantId());
+        } else {
+            displayOrder = request.getDisplayOrder();
+        }
+
         MenuCategory category = new MenuCategory();
         category.setName(request.getName().trim());
         category.setDescription(request.getDescription() != null ? request.getDescription().trim() : null);
         category.setRestaurantId(request.getRestaurantId());
-        category.setDisplayOrder(request.getDisplayOrder());
+        category.setDisplayOrder(displayOrder);
         category.setActive(request.isActive());
 
         long currentTime = System.currentTimeMillis();
@@ -71,6 +80,20 @@ public class MenuCategoryServiceImpl implements MenuCategoryService {
         MenuCategory saved = menuCategoryRepository.save(category);
         log.debug("Created menu category with ID: {}", saved.getId());
         return saved;
+    }
+
+    private int getNextDisplayOrder(String restaurantId) {
+        List<MenuCategory> existingCategories = menuCategoryRepository.findByRestaurantIdOrderByDisplayOrderAsc(restaurantId);
+
+        if (existingCategories.isEmpty()) {
+            return 1; // First category starts at 1
+        }
+
+        // Find the maximum display order
+        return existingCategories.stream()
+                .mapToInt(MenuCategory::getDisplayOrder)
+                .max()
+                .orElse(0) + 1;
     }
 
     @Override
@@ -114,15 +137,50 @@ public class MenuCategoryServiceImpl implements MenuCategoryService {
         MenuCategory category = menuCategoryRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Menu category not found with id: " + id));
 
+        // Store the category's display order and restaurant ID before deletion
+        int deletedCategoryOrder = category.getDisplayOrder();
+        String restaurantId = category.getRestaurantId();
+
         // Find restaurant
-        Restaurant restaurant = restaurantRepository.findById(category.getRestaurantId())
-                .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found with id: " +
-                        category.getRestaurantId()));
+        Restaurant restaurant = restaurantRepository.findById(restaurantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found with id: " + restaurantId));
 
         // Check if user has permission
         validateUserPermission(restaurant, token);
 
+        // Check if category has menu items
+        if (category.getMenuItemIds() != null && !category.getMenuItemIds().isEmpty()) {
+            throw new BusinessValidationException(
+                    "Cannot delete category that contains menu items. Remove all menu items first.");
+        }
+
+        // Delete the category
         menuCategoryRepository.deleteById(id);
+        log.debug("Deleted menu category with ID: {}", id);
+
+        // Update the order of remaining categories
+        reorderCategoriesAfterDeletion(restaurantId, deletedCategoryOrder);
+    }
+
+
+    private void reorderCategoriesAfterDeletion(String restaurantId, int deletedOrder) {
+        // Get all categories for this restaurant
+        List<MenuCategory> remainingCategories = menuCategoryRepository.findByRestaurantIdOrderByDisplayOrderAsc(restaurantId);
+
+        // Update display order for categories that had a higher order than the deleted one
+        long currentTime = System.currentTimeMillis();
+        int updated = 0;
+
+        for (MenuCategory category : remainingCategories) {
+            if (category.getDisplayOrder() > deletedOrder) {
+                category.setDisplayOrder(category.getDisplayOrder() - 1);
+                category.setUpdatedAt(currentTime);
+                menuCategoryRepository.save(category);
+                updated++;
+            }
+        }
+
+        log.debug("Updated display order for {} categories after deletion", updated);
     }
 
     @Override
@@ -158,7 +216,7 @@ public class MenuCategoryServiceImpl implements MenuCategoryService {
                 throw new BusinessValidationException("Category " + categoryId + " does not belong to restaurant " + restaurantId);
             }
 
-            category.setDisplayOrder(i);
+            category.setDisplayOrder(i+1); // Set display order starting from 1
             category.setUpdatedAt(System.currentTimeMillis());
             menuCategoryRepository.save(category);
         }
