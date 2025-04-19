@@ -709,14 +709,6 @@ export default function DashMyRestaurant() {
                     key={admin.id}
                     className="flex items-center p-3 bg-gray-50 rounded-lg transition-all hover:bg-gray-100"
                   >
-                    <Avatar
-                      img={admin.profilePictureUrl}
-                      alt={admin.username}
-                      rounded
-                      bordered
-                      size="md"
-                      className="mr-3"
-                    />
                     <div>
                       <p className="font-medium">
                         {admin.firstName && admin.lastName
@@ -749,6 +741,7 @@ export default function DashMyRestaurant() {
             )}
           </Card>
 
+          {/** Cuisine Card */}
           <Card className="shadow-md">
             <h3 className="text-lg font-bold mb-4 flex items-center">
               <FaUtensils className="mr-3 text-blue-600" />

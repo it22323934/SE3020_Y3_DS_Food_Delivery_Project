@@ -9,6 +9,7 @@ import com.foodDelivery.restaurantService.repository.CuisineTypeRepository;
 import com.foodDelivery.restaurantService.repository.RestaurantRepository;
 import com.foodDelivery.restaurantService.serviceInterfaces.KafkaProducerService;
 import com.foodDelivery.restaurantService.serviceInterfaces.RestaurantService;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
@@ -18,7 +19,6 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -31,12 +31,14 @@ public class RestaurantServiceImpl implements RestaurantService {
     private final UserServiceClient userServiceClient;
     private final KafkaProducerService kafkaProducerService;
 
+    private static final String USER_SERVICE = "userService";
+
     @Override
+    @CircuitBreaker(name = USER_SERVICE, fallbackMethod = "createRestaurantFallback")
     public Restaurant createRestaurant(Restaurant restaurant, String token) {
         // Extract user ID from authentication
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String currentUserId = authentication.getName();
-
 
         // Check if current user is a system admin
         boolean isSystemAdmin = userServiceClient.validateUserRole(currentUserId, "ROLE_ADMIN", token);
@@ -63,6 +65,23 @@ public class RestaurantServiceImpl implements RestaurantService {
             }
         }
 
+        return saveRestaurant(restaurant);
+    }
+
+    public Restaurant createRestaurantFallback(Restaurant restaurant, String token, Exception e) {
+        log.warn("User service is down. Using fallback for restaurant creation with limited validation: {}", e.getMessage());
+
+        // Extract user ID from authentication to use as admin
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String currentUserId = authentication.getName();
+
+        // In fallback mode, just assign the current user as admin
+        restaurant.setAdminIds(List.of(currentUserId));
+
+        return saveRestaurant(restaurant);
+    }
+
+    private Restaurant saveRestaurant(Restaurant restaurant) {
         // Check for duplicate restaurant name
         if (restaurant.getName() != null && restaurantRepository.existsByName(restaurant.getName())) {
             throw new BusinessValidationException("Restaurant with name '" + restaurant.getName() + "' already exists");
@@ -94,51 +113,67 @@ public class RestaurantServiceImpl implements RestaurantService {
         Restaurant savedRestaurant = restaurantRepository.save(restaurant);
 
         // Update each cuisine type with the restaurant ID
-        for (String cuisineTypeId : savedRestaurant.getCuisineTypeIds()) {
-            CuisineType cuisineType = cuisineTypeRepository.findById(cuisineTypeId)
-                    .orElseThrow(() -> new ResourceNotFoundException("Cuisine type not found with id: " + cuisineTypeId));
-
-            if (cuisineType.getRestaurantIds() == null) {
-                cuisineType.setRestaurantIds(new ArrayList<>());
-            }
-
-            if (!cuisineType.getRestaurantIds().contains(savedRestaurant.getId())) {
-                cuisineType.getRestaurantIds().add(savedRestaurant.getId());
-                cuisineType.setUpdatedAt(System.currentTimeMillis());
-                cuisineTypeRepository.save(cuisineType);
-            }
-        }
+        updateCuisineTypesWithRestaurant(savedRestaurant);
 
         // Send notification event
-        kafkaProducerService.sendRestaurantCreatedEvent(
-                savedRestaurant.getId(),
-                savedRestaurant.getName(),
-                savedRestaurant.getEmail(),
-                savedRestaurant.getPhoneNumber(),
-                savedRestaurant.getAdminIds(),
-                savedRestaurant.getCuisineTypeIds()
-        );
+        sendRestaurantCreatedNotification(savedRestaurant);
 
         return savedRestaurant;
     }
 
+    private void updateCuisineTypesWithRestaurant(Restaurant restaurant) {
+        for (String cuisineTypeId : restaurant.getCuisineTypeIds()) {
+            try {
+                CuisineType cuisineType = cuisineTypeRepository.findById(cuisineTypeId)
+                        .orElseThrow(() -> new ResourceNotFoundException("Cuisine type not found with id: " + cuisineTypeId));
+
+                if (cuisineType.getRestaurantIds() == null) {
+                    cuisineType.setRestaurantIds(new ArrayList<>());
+                }
+
+                if (!cuisineType.getRestaurantIds().contains(restaurant.getId())) {
+                    cuisineType.getRestaurantIds().add(restaurant.getId());
+                    cuisineType.setUpdatedAt(System.currentTimeMillis());
+                    cuisineTypeRepository.save(cuisineType);
+                }
+            } catch (Exception e) {
+                log.error("Error updating cuisine type {}: {}", cuisineTypeId, e.getMessage());
+            }
+        }
+    }
+
+    private void sendRestaurantCreatedNotification(Restaurant restaurant) {
+        try {
+            kafkaProducerService.sendRestaurantCreatedEvent(
+                    restaurant.getId(),
+                    restaurant.getName(),
+                    restaurant.getEmail(),
+                    restaurant.getPhoneNumber(),
+                    restaurant.getAdminIds(),
+                    restaurant.getCuisineTypeIds()
+            );
+        } catch (Exception e) {
+            log.error("Failed to send restaurant creation notification: {}", e.getMessage());
+            // Continue execution - notification failure shouldn't stop restaurant creation
+        }
+    }
+
     @Override
+    @CircuitBreaker(name = USER_SERVICE, fallbackMethod = "updateRestaurantFallback")
     public Restaurant updateRestaurant(String id, Restaurant restaurant, String token) {
         // Extract user ID from authentication
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String adminUser = authentication.getName();
 
         Restaurant existingRestaurant = getRestaurantById(id);
-
-        // Store original admin list for notification
         List<String> originalAdminIds = new ArrayList<>(existingRestaurant.getAdminIds());
 
         // Check if current user is a system admin
         boolean isAdmin = userServiceClient.validateUserRole(adminUser, "ROLE_ADMIN", token);
 
-        Long userID = null;
+        // Verify permissions
         if (!isAdmin) {
-            userID = userServiceClient.getUserIdFromToken(token);
+            Long userID = userServiceClient.getUserIdFromToken(token);
             if (userID == null) {
                 throw new BusinessValidationException("Unable to validate user ID from token");
             }
@@ -149,28 +184,83 @@ public class RestaurantServiceImpl implements RestaurantService {
             }
         }
 
-        // Only check restaurant ownership if not an admin
-        if (!isAdmin && !existingRestaurant.getAdminIds().contains(userID.toString())) {
-            throw new BusinessValidationException("You don't have permission to update this restaurant");
+        return processRestaurantUpdate(id, restaurant, existingRestaurant, originalAdminIds, isAdmin, token);
+    }
+
+    public Restaurant updateRestaurantFallback(String id, Restaurant restaurant, String token, Exception e) {
+        log.warn("User service is down. Using fallback for restaurant update with limited validation: {}", e.getMessage());
+
+        // Extract user ID from authentication
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String adminUser = authentication.getName();
+
+        Restaurant existingRestaurant = getRestaurantById(id);
+        List<String> originalAdminIds = new ArrayList<>(existingRestaurant.getAdminIds());
+
+        // In fallback mode, only allow updates if user is already in admin list
+        if (!existingRestaurant.getAdminIds().contains(adminUser)) {
+            throw new BusinessValidationException("Cannot verify permissions while user service is unavailable");
         }
-        log.info("Cuisine ID: {}", restaurant.getCuisineTypeIds());
+
+        // Don't allow admin list modification in fallback mode
+        restaurant.setAdminIds(existingRestaurant.getAdminIds());
+
+        return processRestaurantUpdate(id, restaurant, existingRestaurant, originalAdminIds, false, token);
+    }
+
+    private Restaurant processRestaurantUpdate(String id, Restaurant restaurant,
+                                               Restaurant existingRestaurant,
+                                               List<String> originalAdminIds,
+                                               boolean isAdmin,
+                                               String token) {
+        // Validate cuisine types
         validateCuisineTypes(restaurant);
 
-        // Admin list handling
+        // Handle admin list updates
+        processAdminListUpdates(restaurant, existingRestaurant, isAdmin, token);
+
+        // Validate against duplicates
+        checkForDuplicateDetails(restaurant, existingRestaurant);
+
+        // Update basic fields
+        updateBasicFields(restaurant, existingRestaurant);
+
+        // Process cuisine type changes
+        processCuisineTypeChanges(id, restaurant, existingRestaurant);
+
+        // Calculate admin changes for notifications
+        List<String> addedAdmins = calculateAddedAdmins(existingRestaurant.getAdminIds(), originalAdminIds);
+        List<String> removedAdmins = calculateRemovedAdmins(existingRestaurant.getAdminIds(), originalAdminIds);
+
+        // Save restaurant
+        Restaurant savedRestaurant = restaurantRepository.save(existingRestaurant);
+
+        // Send notification event
+        sendRestaurantUpdateNotification(savedRestaurant, addedAdmins, removedAdmins);
+
+        log.info("Updated restaurant with id: {}", id);
+        return savedRestaurant;
+    }
+
+    private void processAdminListUpdates(Restaurant restaurant, Restaurant existingRestaurant, boolean isAdmin, String token) {
         if (!isAdmin) {
             // Non-admins cannot modify the admin list
             restaurant.setAdminIds(existingRestaurant.getAdminIds());
         } else if (restaurant.getAdminIds() != null) {
-            // Only system admins can modify the admin list
-            // Remove duplicates by converting to Set and back to List
+            // Remove duplicates
             restaurant.setAdminIds(new ArrayList<>(new HashSet<>(restaurant.getAdminIds())));
 
-            // Validate each admin has the correct role
-            for (String adminId : restaurant.getAdminIds()) {
-                if (!userServiceClient.validateUserRoleById(adminId, "ROLE_RESTAURANT_ADMIN", token)) {
-                    throw new BusinessValidationException("User " + adminId +
-                            " doesn't have required role to manage restaurants");
+            try {
+                // Validate each admin has the correct role if user service is available
+                for (String adminId : restaurant.getAdminIds()) {
+                    if (!userServiceClient.validateUserRoleById(adminId, "ROLE_RESTAURANT_ADMIN", token)) {
+                        throw new BusinessValidationException("User " + adminId +
+                                " doesn't have required role to manage restaurants");
+                    }
                 }
+            } catch (Exception e) {
+                log.warn("Could not validate admin roles - user service may be unavailable: {}", e.getMessage());
+                // Continue with updates but log warning
             }
 
             // Ensure at least one admin remains
@@ -178,7 +268,9 @@ public class RestaurantServiceImpl implements RestaurantService {
                 throw new BusinessValidationException("Restaurant must have at least one admin");
             }
         }
+    }
 
+    private void checkForDuplicateDetails(Restaurant restaurant, Restaurant existingRestaurant) {
         // Check for duplicate restaurant name if changed
         if (restaurant.getName() != null && !restaurant.getName().equals(existingRestaurant.getName()) &&
                 restaurantRepository.existsByName(restaurant.getName())) {
@@ -198,8 +290,9 @@ public class RestaurantServiceImpl implements RestaurantService {
                 restaurantRepository.existsByPhoneNumber(restaurant.getPhoneNumber())) {
             throw new BusinessValidationException("Restaurant with phone number '" + restaurant.getPhoneNumber() + "' already exists");
         }
+    }
 
-        // Update fields
+    private void updateBasicFields(Restaurant restaurant, Restaurant existingRestaurant) {
         existingRestaurant.setName(restaurant.getName());
         existingRestaurant.setDescription(restaurant.getDescription());
         existingRestaurant.setAddress(restaurant.getAddress());
@@ -218,97 +311,101 @@ public class RestaurantServiceImpl implements RestaurantService {
         if (restaurant.getAdminIds() != null) {
             existingRestaurant.setAdminIds(restaurant.getAdminIds());
         }
+    }
 
-
-        // Handle cuisine type changes
+    private void processCuisineTypeChanges(String id, Restaurant restaurant, Restaurant existingRestaurant) {
         if (restaurant.getCuisineTypeIds() != null) {
-            log.info("Processing cuisine types for restaurant: {}", id);
-
             // Ensure existing restaurant has initialized cuisine type list
             if (existingRestaurant.getCuisineTypeIds() == null) {
                 existingRestaurant.setCuisineTypeIds(new ArrayList<>());
-                log.info("Initialized empty cuisine type list for existing restaurant");
             }
 
             // Find cuisine types that were added and removed
             List<String> originalCuisineTypeIds = new ArrayList<>(existingRestaurant.getCuisineTypeIds());
-            log.info("Original cuisine types: {}", originalCuisineTypeIds);
-            log.info("New cuisine types: {}", restaurant.getCuisineTypeIds());
 
             List<String> addedCuisineTypes = new ArrayList<>(restaurant.getCuisineTypeIds());
             addedCuisineTypes.removeAll(originalCuisineTypeIds);
-            log.info("Added cuisine types: {}", addedCuisineTypes);
 
             List<String> removedCuisineTypes = new ArrayList<>(originalCuisineTypeIds);
             removedCuisineTypes.removeAll(restaurant.getCuisineTypeIds());
-            log.info("Removed cuisine types: {}", removedCuisineTypes);
 
             // Update each added cuisine type with this restaurant ID
-            for (String cuisineTypeId : addedCuisineTypes) {
-                try {
-                    CuisineType cuisineType = cuisineTypeRepository.findById(cuisineTypeId)
-                            .orElseThrow(() -> new ResourceNotFoundException("Cuisine type not found with id: " + cuisineTypeId));
-
-                    if (cuisineType.getRestaurantIds() == null) {
-                        cuisineType.setRestaurantIds(new ArrayList<>());
-                    }
-
-                    if (!cuisineType.getRestaurantIds().contains(id)) {
-                        cuisineType.getRestaurantIds().add(id);
-                        cuisineType.setUpdatedAt(System.currentTimeMillis());
-                        cuisineTypeRepository.save(cuisineType);
-                        log.info("Added restaurant {} to cuisine type {}", id, cuisineTypeId);
-                    }
-                } catch (Exception e) {
-                    log.error("Error processing cuisine type {}: {}", cuisineTypeId, e.getMessage(), e);
-                }
-            }
+            processCuisineTypeAdditions(id, addedCuisineTypes);
 
             // Remove this restaurant ID from removed cuisine types
-            for (String cuisineTypeId : removedCuisineTypes) {
-                try {
-                    CuisineType cuisineType = cuisineTypeRepository.findById(cuisineTypeId)
-                            .orElseThrow(() -> new ResourceNotFoundException("Cuisine type not found with id: " + cuisineTypeId));
-
-                    if (cuisineType.getRestaurantIds() != null && cuisineType.getRestaurantIds().contains(id)) {
-                        cuisineType.getRestaurantIds().remove(id);
-                        cuisineType.setUpdatedAt(System.currentTimeMillis());
-                        cuisineTypeRepository.save(cuisineType);
-                        log.info("Removed restaurant {} from cuisine type {}", id, cuisineTypeId);
-                    }
-                } catch (Exception e) {
-                    log.error("Error removing cuisine type {}: {}", cuisineTypeId, e.getMessage(), e);
-                }
-            }
+            processCuisineTypeRemovals(id, removedCuisineTypes);
 
             // Update restaurant's cuisine type list
             existingRestaurant.setCuisineTypeIds(restaurant.getCuisineTypeIds());
         }
+    }
 
-        // Calculate admin changes for notifications
-        List<String> addedAdmins = new ArrayList<>(existingRestaurant.getAdminIds());
-        addedAdmins.removeAll(originalAdminIds);
+    private void processCuisineTypeAdditions(String restaurantId, List<String> addedCuisineTypes) {
+        for (String cuisineTypeId : addedCuisineTypes) {
+            try {
+                CuisineType cuisineType = cuisineTypeRepository.findById(cuisineTypeId)
+                        .orElseThrow(() -> new ResourceNotFoundException("Cuisine type not found with id: " + cuisineTypeId));
 
-        List<String> removedAdmins = new ArrayList<>(originalAdminIds);
-        removedAdmins.removeAll(existingRestaurant.getAdminIds());
+                if (cuisineType.getRestaurantIds() == null) {
+                    cuisineType.setRestaurantIds(new ArrayList<>());
+                }
 
-        // Save restaurant and send notification
-        Restaurant savedRestaurant = restaurantRepository.save(existingRestaurant);
+                if (!cuisineType.getRestaurantIds().contains(restaurantId)) {
+                    cuisineType.getRestaurantIds().add(restaurantId);
+                    cuisineType.setUpdatedAt(System.currentTimeMillis());
+                    cuisineTypeRepository.save(cuisineType);
+                }
+            } catch (Exception e) {
+                log.error("Error processing cuisine type addition {}: {}", cuisineTypeId, e.getMessage());
+            }
+        }
+    }
 
-        // Send notification event with admin changes
-        kafkaProducerService.sendRestaurantUpdatedEvent(
-                savedRestaurant.getId(),
-                savedRestaurant.getName(),
-                savedRestaurant.getEmail(),
-                savedRestaurant.getPhoneNumber(),
-                savedRestaurant.getAdminIds(),
-                addedAdmins.isEmpty() ? null : addedAdmins,
-                removedAdmins.isEmpty() ? null : removedAdmins,
-                savedRestaurant.getCuisineTypeIds()
-        );
+    private void processCuisineTypeRemovals(String restaurantId, List<String> removedCuisineTypes) {
+        for (String cuisineTypeId : removedCuisineTypes) {
+            try {
+                CuisineType cuisineType = cuisineTypeRepository.findById(cuisineTypeId)
+                        .orElseThrow(() -> new ResourceNotFoundException("Cuisine type not found with id: " + cuisineTypeId));
 
-        log.info("Updated restaurant with id: {}", id);
-        return savedRestaurant;
+                if (cuisineType.getRestaurantIds() != null && cuisineType.getRestaurantIds().contains(restaurantId)) {
+                    cuisineType.getRestaurantIds().remove(restaurantId);
+                    cuisineType.setUpdatedAt(System.currentTimeMillis());
+                    cuisineTypeRepository.save(cuisineType);
+                }
+            } catch (Exception e) {
+                log.error("Error processing cuisine type removal {}: {}", cuisineTypeId, e.getMessage());
+            }
+        }
+    }
+
+    private List<String> calculateAddedAdmins(List<String> currentAdmins, List<String> originalAdmins) {
+        List<String> addedAdmins = new ArrayList<>(currentAdmins);
+        addedAdmins.removeAll(originalAdmins);
+        return addedAdmins;
+    }
+
+    private List<String> calculateRemovedAdmins(List<String> currentAdmins, List<String> originalAdmins) {
+        List<String> removedAdmins = new ArrayList<>(originalAdmins);
+        removedAdmins.removeAll(currentAdmins);
+        return removedAdmins;
+    }
+
+    private void sendRestaurantUpdateNotification(Restaurant restaurant, List<String> addedAdmins, List<String> removedAdmins) {
+        try {
+            kafkaProducerService.sendRestaurantUpdatedEvent(
+                    restaurant.getId(),
+                    restaurant.getName(),
+                    restaurant.getEmail(),
+                    restaurant.getPhoneNumber(),
+                    restaurant.getAdminIds(),
+                    addedAdmins.isEmpty() ? null : addedAdmins,
+                    removedAdmins.isEmpty() ? null : removedAdmins,
+                    restaurant.getCuisineTypeIds()
+            );
+        } catch (Exception e) {
+            log.error("Failed to send restaurant update notification: {}", e.getMessage());
+            // Continue execution - notification failure shouldn't stop restaurant update
+        }
     }
 
     @Override
@@ -323,6 +420,7 @@ public class RestaurantServiceImpl implements RestaurantService {
     }
 
     @Override
+    @CircuitBreaker(name = USER_SERVICE, fallbackMethod = "deleteRestaurantFallback")
     public void deleteRestaurant(String id, String userId, String token) {
         Restaurant restaurant = getRestaurantById(id);
 
@@ -336,12 +434,27 @@ public class RestaurantServiceImpl implements RestaurantService {
         restaurantRepository.delete(restaurant);
     }
 
+    public void deleteRestaurantFallback(String id, String userId, String token, Exception e) {
+        log.warn("User service is down. Using fallback for restaurant deletion: {}", e.getMessage());
+
+        Restaurant restaurant = getRestaurantById(id);
+
+        // In fallback mode, only allow deletion if user is in admin list
+        if (restaurant.getAdminIds().contains(userId)) {
+            log.info("Deleting restaurant with id: {} in fallback mode", id);
+            restaurantRepository.delete(restaurant);
+        } else {
+            throw new BusinessValidationException("Cannot verify permissions while user service is unavailable");
+        }
+    }
+
     @Override
     public List<Restaurant> getRestaurantsByAdminId(String adminId) {
         return restaurantRepository.findByAdminIdsContaining(adminId);
     }
 
     @Override
+    @CircuitBreaker(name = USER_SERVICE, fallbackMethod = "addAdminToRestaurantFallback")
     public Restaurant addAdminToRestaurant(String restaurantId, String adminId, String token) {
         Restaurant restaurant = getRestaurantById(restaurantId);
 
@@ -360,7 +473,13 @@ public class RestaurantServiceImpl implements RestaurantService {
         return restaurant;
     }
 
+    public Restaurant addAdminToRestaurantFallback(String restaurantId, String adminId, String token, Exception e) {
+        log.warn("User service is down. Cannot add admin to restaurant: {}", e.getMessage());
+        throw new BusinessValidationException("Cannot add admin while user service is unavailable");
+    }
+
     @Override
+    @CircuitBreaker(name = USER_SERVICE, fallbackMethod = "removeAdminFromRestaurantFallback")
     public Restaurant removeAdminFromRestaurant(String restaurantId, String adminId, String userId, String token) {
         Restaurant restaurant = getRestaurantById(restaurantId);
 
@@ -373,6 +492,35 @@ public class RestaurantServiceImpl implements RestaurantService {
         // Can't remove the last admin
         if (restaurant.getAdminIds().size() <= 1 && restaurant.getAdminIds().contains(adminId)) {
             throw new BusinessValidationException("Cannot remove the last admin from restaurant");
+        }
+
+        if (restaurant.getAdminIds().contains(adminId)) {
+            restaurant.getAdminIds().remove(adminId);
+            restaurant.setUpdatedAt(System.currentTimeMillis());
+            return restaurantRepository.save(restaurant);
+        }
+
+        return restaurant;
+    }
+
+    public Restaurant removeAdminFromRestaurantFallback(String restaurantId, String adminId, String userId, String token, Exception e) {
+        log.warn("User service is down. Using fallback for admin removal: {}", e.getMessage());
+
+        Restaurant restaurant = getRestaurantById(restaurantId);
+
+        // In fallback mode, only allow removal if current user is in admin list
+        if (!restaurant.getAdminIds().contains(userId)) {
+            throw new BusinessValidationException("Cannot verify permissions while user service is unavailable");
+        }
+
+        // Can't remove the last admin
+        if (restaurant.getAdminIds().size() <= 1) {
+            throw new BusinessValidationException("Cannot remove the last admin from restaurant");
+        }
+
+        // Can't remove yourself in fallback mode
+        if (adminId.equals(userId)) {
+            throw new BusinessValidationException("Cannot remove yourself as admin in fallback mode");
         }
 
         if (restaurant.getAdminIds().contains(adminId)) {

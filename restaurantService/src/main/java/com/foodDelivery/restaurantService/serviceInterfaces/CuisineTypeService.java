@@ -15,4 +15,5 @@ public interface CuisineTypeService {
     void deleteCuisineType(String id);
     void addRestaurantToCuisineType(String cuisineTypeId, String restaurantId);
     void removeRestaurantFromCuisineType(String cuisineTypeId, String restaurantId);
+    List<CuisineTypeResponse> getCuisineTypesByRestaurantId(String restaurantId);
 }

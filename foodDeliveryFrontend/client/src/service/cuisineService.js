@@ -10,7 +10,6 @@ export const cuisineTypeService = {
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
-        
       },
     });
     return res;
@@ -67,25 +66,35 @@ export const cuisineTypeService = {
 
   // Add restaurant to cuisine type (admin only)
   addRestaurantToCuisineType: async (cuisineTypeId, restaurantId, token) => {
-    const res = await fetch(`${API_URL}/cuisine-types/${cuisineTypeId}/restaurants/${restaurantId}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    const res = await fetch(
+      `${API_URL}/cuisine-types/${cuisineTypeId}/restaurants/${restaurantId}`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
     return res;
   },
 
   // Remove restaurant from cuisine type (admin only)
-  removeRestaurantFromCuisineType: async (cuisineTypeId, restaurantId, token) => {
-    const res = await fetch(`${API_URL}/cuisine-types/${cuisineTypeId}/restaurants/${restaurantId}`, {
-      method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-    });
+  removeRestaurantFromCuisineType: async (
+    cuisineTypeId,
+    restaurantId,
+    token
+  ) => {
+    const res = await fetch(
+      `${API_URL}/cuisine-types/${cuisineTypeId}/restaurants/${restaurantId}`,
+      {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
     return res;
   },
 };

@@ -22,7 +22,7 @@ import {
 } from "react-icons/fa";
 import { GiCook, GiRecycle } from "react-icons/gi";
 import { RiGovernmentLine } from "react-icons/ri";
-import { MdLocalShipping } from "react-icons/md";
+import { MdLocalShipping, MdRestaurantMenu } from "react-icons/md";
 import { authService } from "../service/authService";
 
 export default function DashSideBar() {
@@ -30,7 +30,7 @@ export default function DashSideBar() {
   const location = useLocation();
   const [tab, setTab] = useState("");
   const { currentUser } = useSelector((state) => state.user);
-  
+
   useEffect(() => {
     const urlParams = new URLSearchParams(location.search);
     const tabFromUrl = urlParams.get("tab");
@@ -60,7 +60,7 @@ export default function DashSideBar() {
   // Determine the primary role for display
   const getPrimaryRoleLabel = () => {
     if (!currentUser?.roles || currentUser.roles.length === 0) return "User";
-    
+
     if (hasRole("ROLE_ADMIN")) return "Admin";
     if (hasRole("ROLE_RESTAURANT_ADMIN")) return "Restaurant Admin";
     if (hasRole("ROLE_DRIVER")) return "Driver";
@@ -72,8 +72,7 @@ export default function DashSideBar() {
       <Sidebar.Items>
         <Sidebar.ItemGroup className="flex flex-col gap-1">
           {currentUser &&
-            (hasRole("ROLE_ADMIN") ||
-             hasRole("ROLE_RESTAURANT_ADMIN")) && (
+            (hasRole("ROLE_ADMIN") || hasRole("ROLE_RESTAURANT_ADMIN")) && (
               <>
                 {/* Dashboard Tab - visible to both admin types */}
                 <Link to="/dashboard?tab=waste-management-dashboard">
@@ -128,7 +127,7 @@ export default function DashSideBar() {
                 )}
               </>
             )}
-          
+
           {currentUser && hasRole("ROLE_ADMIN") && (
             <Link to="/dashboard?tab=cuisine-management">
               <Sidebar.Item
@@ -143,18 +142,30 @@ export default function DashSideBar() {
           )}
 
           {currentUser && hasRole("ROLE_RESTAURANT_ADMIN") && (
-            <Link to="/dashboard?tab=my-restaurant">
-              <Sidebar.Item
-                active={tab === "my-restaurant"}
-                icon={FaStore}
-                labelColor="dark"
-                as="div"
-              >
-                My Restaurant
-              </Sidebar.Item>
-            </Link>
-          )}          
-          
+            <>
+              <Link to="/dashboard?tab=menu-item-category-management">
+                <Sidebar.Item
+                  active={tab === "menu-item-category-management"}
+                  icon={MdRestaurantMenu}
+                  labelColor="dark"
+                  as="div"
+                >
+                  Menu Categories
+                </Sidebar.Item>
+              </Link>
+              <Link to="/dashboard?tab=my-restaurant">
+                <Sidebar.Item
+                  active={tab === "my-restaurant"}
+                  icon={FaStore}
+                  labelColor="dark"
+                  as="div"
+                >
+                  My Restaurant
+                </Sidebar.Item>
+              </Link>
+            </>
+          )}
+
           {/* Cuisine management for restaurants */}
           {currentUser && hasRole("ROLE_RESTAURANT") && (
             <Link to="/dashboard?tab=cuisine-management">
@@ -168,7 +179,7 @@ export default function DashSideBar() {
               </Sidebar.Item>
             </Link>
           )}
-          
+
           {/* Profile link for all users */}
           <Link to="/dashboard?tab=profile">
             <Sidebar.Item
@@ -181,7 +192,7 @@ export default function DashSideBar() {
               Profile
             </Sidebar.Item>
           </Link>
-          
+
           <Sidebar.Item
             icon={HiArrowSmRight}
             className="cursor-pointer"

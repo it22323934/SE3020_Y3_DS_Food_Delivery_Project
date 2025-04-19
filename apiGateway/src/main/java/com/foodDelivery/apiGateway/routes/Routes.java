@@ -102,6 +102,7 @@ public class Routes {
                 .build();
     }
 
+
     // Order service routes - require authentication
     @Bean
     public RouterFunction<ServerResponse> orderServiceRoutes() {
