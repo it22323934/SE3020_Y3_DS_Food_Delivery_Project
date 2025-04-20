@@ -39,6 +39,26 @@ public class MenuItemController {
         }
     }
 
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'RESTAURANT_ADMIN')")
+    public ResponseEntity<?> updateMenuItem(
+            @PathVariable String id,
+            @Valid @RequestBody MenuItemCreateRequest request,
+            @RequestHeader("Authorization") String token) {
+        try {
+            MenuItemResponse updated = menuItemService.updateMenuItem(id, request, token);
+            return ResponseEntity.ok(updated);
+        } catch (ResourceNotFoundException e) {
+            log.warn("Error updating menu item: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", e.getMessage()));
+        } catch (BusinessValidationException e) {
+            log.warn("Error updating menu item: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<?> getMenuItemById(@PathVariable String id) {
         try {
@@ -68,6 +88,24 @@ public class MenuItemController {
             return ResponseEntity.ok(menuItems);
         } catch (ResourceNotFoundException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'RESTAURANT_ADMIN')")
+    public ResponseEntity<?> deleteMenuItem(
+            @PathVariable String id) {
+        try {
+            menuItemService.deleteMenuItem(id);
+            return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+        } catch (ResourceNotFoundException e) {
+            log.warn("Error deleting menu item: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", e.getMessage()));
+        } catch (BusinessValidationException e) {
+            log.warn("Error deleting menu item: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("error", e.getMessage()));
         }
     }

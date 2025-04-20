@@ -362,23 +362,23 @@ export default function DashMenuItemCategoryManagement() {
               </Table.Head>
               <Table.Body className="divide-y">{displayCategories}</Table.Body>
             </Table>
-
-            {pageCount > 1 && (
-              <div className="mt-6">
+            {categories.length > 0 && pageCount > 1 && (
+              <div className="py-4 mt-4 border-t border-gray-200 dark:border-gray-700">
                 <ReactPaginate
                   previousLabel={"Previous"}
                   nextLabel={"Next"}
                   pageCount={pageCount}
                   onPageChange={handlePageChange}
-                  containerClassName={"pagination flex justify-center"}
-                  previousLinkClassName={
-                    "inline-flex items-center px-4 py-2 border border-gray-300 rounded-l-md bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-                  }
-                  nextLinkClassName={
-                    "inline-flex items-center px-4 py-2 border border-gray-300 rounded-r-md bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-                  }
-                  disabledClassName={"opacity-50 cursor-not-allowed"}
-                  activeClassName={"bg-indigo-500 text-white"}
+                  forcePage={pageNumber}
+                  containerClassName="flex justify-center items-center space-x-1"
+                  pageClassName="inline-flex"
+                  pageLinkClassName="px-3 py-2 leading-tight text-gray-500 bg-white border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+                  previousLinkClassName="px-3 py-2 leading-tight text-gray-500 bg-white border border-gray-300 rounded-l-lg hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+                  nextLinkClassName="px-3 py-2 leading-tight text-gray-500 bg-white border border-gray-300 rounded-r-lg hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+                  activeLinkClassName="!bg-blue-50 !text-blue-600 !border-blue-300 dark:!bg-gray-700 dark:!text-white"
+                  disabledLinkClassName="opacity-50 cursor-not-allowed"
+                  breakLabel="..."
+                  breakLinkClassName="px-3 py-2 leading-tight text-gray-500 bg-white border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
                 />
               </div>
             )}
@@ -424,11 +424,11 @@ export default function DashMenuItemCategoryManagement() {
               categoryData={selectedCategory}
               token={currentUser.token}
             />
-
             <ViewCategoryModal
               show={showViewModal}
               onClose={() => setShowViewModal(false)}
               categoryData={selectedCategory}
+              token={currentUser.token}
             />
           </>
         )}

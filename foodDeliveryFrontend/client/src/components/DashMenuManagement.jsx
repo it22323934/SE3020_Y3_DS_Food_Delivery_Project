@@ -26,6 +26,8 @@ import ViewMenuItemModal from "./sub-components/menu-item-management/ViewMenuIte
 import CreateMenuItemModal from "./sub-components/menu-item-management/CreateMenuItemModal";
 import { menuCategoryService } from "../service/menuCategoryService";
 import { menuItemService } from "../service/menuItemService";
+import DeleteMenuItemModal from "./sub-components/menu-item-management/DeleteMenuItemModal";
+import UpdateMenuItemModal from "./sub-components/menu-item-management/UpdateMenuItemModal";
 
 export default function DashMenuItems() {
   const { currentUser } = useSelector((state) => state.user);
@@ -46,8 +48,10 @@ export default function DashMenuItems() {
   const itemsPerPage = 8;
 
   const pageCount = Math.ceil(filteredMenuItems.length / itemsPerPage);
-  const displayMenuItems = filteredMenuItems
-    .slice(pageNumber * itemsPerPage, (pageNumber + 1) * itemsPerPage);
+  const displayMenuItems = filteredMenuItems.slice(
+    pageNumber * itemsPerPage,
+    (pageNumber + 1) * itemsPerPage
+  );
 
   const handlePageChange = ({ selected }) => {
     setPageNumber(selected);
@@ -73,27 +77,29 @@ export default function DashMenuItems() {
     if (!menuItems.length) return;
 
     let results = [...menuItems];
-    
+
     // Apply search
     if (search.trim()) {
       results = results.filter(
-        item => item.name.toLowerCase().includes(search.toLowerCase()) ||
-                (item.description && item.description.toLowerCase().includes(search.toLowerCase()))
+        (item) =>
+          item.name.toLowerCase().includes(search.toLowerCase()) ||
+          (item.description &&
+            item.description.toLowerCase().includes(search.toLowerCase()))
       );
     }
-    
+
     // Apply category filter
     if (categoryFilter) {
-      results = results.filter(item => item.categoryId === categoryFilter);
+      results = results.filter((item) => item.categoryId === categoryFilter);
     }
-    
+
     // Apply availability filter
     if (availabilityFilter === "available") {
-      results = results.filter(item => item.available);
+      results = results.filter((item) => item.available);
     } else if (availabilityFilter === "unavailable") {
-      results = results.filter(item => !item.available);
+      results = results.filter((item) => !item.available);
     }
-    
+
     setFilteredMenuItems(results);
     setPageNumber(0);
   }, [search, categoryFilter, availabilityFilter, menuItems]);
@@ -104,7 +110,7 @@ export default function DashMenuItems() {
         currentUser.id,
         currentUser.token
       );
-      
+
       if (response.ok) {
         const data = await response.json();
         if (data && data.length > 0) {
@@ -122,10 +128,13 @@ export default function DashMenuItems() {
 
   const fetchMenuItems = async () => {
     if (!restaurant?.id) return;
-    
+
     setLoading(true);
     try {
-      const response = await menuItemService.getMenuItemsByRestaurantId(restaurant.id,currentUser.token);
+      const response = await menuItemService.getMenuItemsByRestaurantId(
+        restaurant.id,
+        currentUser.token
+      );
       if (response.ok) {
         const data = await response.json();
         setMenuItems(data);
@@ -145,40 +154,42 @@ export default function DashMenuItems() {
     }
   };
 
-// Then replace the fetchCategories function with this corrected version
-const fetchCategories = async () => {
-  if (!restaurant?.id || !currentUser?.token) return;
-  
-  try {
-    const response = await menuCategoryService.getCategoriesByRestaurantId(
-      restaurant.id,
-      currentUser.token
-    );
+  // Then replace the fetchCategories function with this corrected version
+  const fetchCategories = async () => {
+    if (!restaurant?.id || !currentUser?.token) return;
 
-    if (response.ok) {
-      const data = await response.json();
-      
-      // If we have categories, use them
-      if (data && data.length > 0) {
-        setCategories(data);
+    try {
+      const response = await menuCategoryService.getCategoriesByRestaurantId(
+        restaurant.id,
+        currentUser.token
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+
+        // If we have categories, use them
+        if (data && data.length > 0) {
+          setCategories(data);
+        } else {
+          // No categories found
+          setCategories([]);
+          toast.info(
+            "No menu categories found for this restaurant. Create some categories to organize your menu."
+          );
+        }
       } else {
-        // No categories found
+        // Handle error response
+        const errorData = await response.json();
+        console.error("Failed to fetch categories:", errorData);
         setCategories([]);
-        toast.info("No menu categories found for this restaurant. Create some categories to organize your menu.");
+        toast.warning("Failed to load menu categories");
       }
-    } else {
-      // Handle error response
-      const errorData = await response.json();
-      console.error("Failed to fetch categories:", errorData);
+    } catch (error) {
+      console.error("Error fetching categories:", error);
       setCategories([]);
-      toast.warning("Failed to load menu categories");
+      toast.error("Error loading menu categories");
     }
-  } catch (error) {
-    console.error("Error fetching categories:", error);
-    setCategories([]);
-    toast.error("Error loading menu categories");
-  }
-};
+  };
   const handleCreateMenuItem = () => {
     setShowCreateModal(true);
   };
@@ -261,7 +272,7 @@ const fetchCategories = async () => {
   return (
     <div className="p-6 max-w-7xl mx-auto">
       <ToastContainer position="top-right" autoClose={3000} />
-      
+
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-center mb-6">
         <div>
@@ -297,26 +308,31 @@ const fetchCategories = async () => {
                 className="w-full"
               />
             </div>
-            
+
             <div className="flex flex-wrap gap-3">
               <div>
                 <Dropdown
                   label={
                     <div className="flex items-center">
                       <HiFilter className="mr-2" />
-                      {categoryFilter 
-                        ? `Category: ${categories.find(c => c.id === categoryFilter)?.name || 'Selected'}` 
-                        : 'Filter by Category'}
+                      {categoryFilter
+                        ? `Category: ${
+                            categories.find((c) => c.id === categoryFilter)
+                              ?.name || "Selected"
+                          }`
+                        : "Filter by Category"}
                     </div>
                   }
                   color="light"
                   size="sm"
                 >
-                  <Dropdown.Item onClick={() => setCategoryFilter("")}>All Categories</Dropdown.Item>
+                  <Dropdown.Item onClick={() => setCategoryFilter("")}>
+                    All Categories
+                  </Dropdown.Item>
                   <Dropdown.Divider />
-                  {categories.map(category => (
-                    <Dropdown.Item 
-                      key={category.id} 
+                  {categories.map((category) => (
+                    <Dropdown.Item
+                      key={category.id}
                       onClick={() => setCategoryFilter(category.id)}
                     >
                       {category.name}
@@ -324,29 +340,39 @@ const fetchCategories = async () => {
                   ))}
                 </Dropdown>
               </div>
-              
+
               <div>
                 <Dropdown
                   label={
                     <div className="flex items-center">
                       <HiFilter className="mr-2" />
-                      {availabilityFilter === "available" 
-                        ? "Available Items" 
-                        : availabilityFilter === "unavailable" 
-                          ? "Unavailable Items" 
-                          : "Filter by Availability"}
+                      {availabilityFilter === "available"
+                        ? "Available Items"
+                        : availabilityFilter === "unavailable"
+                        ? "Unavailable Items"
+                        : "Filter by Availability"}
                     </div>
                   }
                   color="light"
                   size="sm"
                 >
-                  <Dropdown.Item onClick={() => setAvailabilityFilter("")}>All Items</Dropdown.Item>
+                  <Dropdown.Item onClick={() => setAvailabilityFilter("")}>
+                    All Items
+                  </Dropdown.Item>
                   <Dropdown.Divider />
-                  <Dropdown.Item onClick={() => setAvailabilityFilter("available")}>Available Only</Dropdown.Item>
-                  <Dropdown.Item onClick={() => setAvailabilityFilter("unavailable")}>Unavailable Only</Dropdown.Item>
+                  <Dropdown.Item
+                    onClick={() => setAvailabilityFilter("available")}
+                  >
+                    Available Only
+                  </Dropdown.Item>
+                  <Dropdown.Item
+                    onClick={() => setAvailabilityFilter("unavailable")}
+                  >
+                    Unavailable Only
+                  </Dropdown.Item>
                 </Dropdown>
               </div>
-              
+
               {(search || categoryFilter || availabilityFilter) && (
                 <Button color="light" size="sm" onClick={resetFilters}>
                   Clear Filters
@@ -377,7 +403,10 @@ const fetchCategories = async () => {
                 </Table.Head>
                 <Table.Body className="divide-y">
                   {displayMenuItems.map((item) => (
-                    <Table.Row key={item.id} className="bg-white dark:border-gray-700 dark:bg-gray-800">
+                    <Table.Row
+                      key={item.id}
+                      className="bg-white dark:border-gray-700 dark:bg-gray-800"
+                    >
                       <Table.Cell>
                         <div className="h-14 w-14 rounded-md overflow-hidden">
                           {item.imageUrl ? (
@@ -398,26 +427,43 @@ const fetchCategories = async () => {
                       </Table.Cell>
                       <Table.Cell>${item.price.toFixed(2)}</Table.Cell>
                       <Table.Cell>
-                        {categories.find(c => c.id === item.categoryId)?.name || "Uncategorized"}
+                        {categories.find((c) => c.id === item.categoryId)
+                          ?.name || "Uncategorized"}
                       </Table.Cell>
                       <Table.Cell>
                         {item.available ? (
-                          <Badge color="success" className="px-3 py-1.5">Available</Badge>
+                          <Badge color="success" className="px-3 py-1.5">
+                            Available
+                          </Badge>
                         ) : (
-                          <Badge color="failure" className="px-3 py-1.5">Unavailable</Badge>
+                          <Badge color="failure" className="px-3 py-1.5">
+                            Unavailable
+                          </Badge>
                         )}
                       </Table.Cell>
                       <Table.Cell>
                         <div className="flex gap-2">
-                          <Button size="xs" color="info" onClick={() => handleViewMenuItem(item)}>
+                          <Button
+                            size="xs"
+                            color="info"
+                            onClick={() => handleViewMenuItem(item)}
+                          >
                             <HiOutlineEye className="mr-1" />
                             View
                           </Button>
-                          <Button size="xs" color="success" onClick={() => handleEditMenuItem(item)}>
+                          <Button
+                            size="xs"
+                            color="success"
+                            onClick={() => handleEditMenuItem(item)}
+                          >
                             <HiOutlinePencilAlt className="mr-1" />
                             Edit
                           </Button>
-                          <Button size="xs" color="failure" onClick={() => handleDeleteMenuItem(item)}>
+                          <Button
+                            size="xs"
+                            color="failure"
+                            onClick={() => handleDeleteMenuItem(item)}
+                          >
                             <HiOutlineTrash className="mr-1" />
                             Delete
                           </Button>
@@ -427,7 +473,7 @@ const fetchCategories = async () => {
                   ))}
                 </Table.Body>
               </Table>
-              
+
               {/* Pagination */}
               {pageCount > 1 && (
                 <div className="flex items-center justify-center p-4">
@@ -451,7 +497,9 @@ const fetchCategories = async () => {
           ) : (
             <div className="flex flex-col items-center justify-center py-12">
               <FaUtensils className="text-gray-400 text-5xl mb-4" />
-              <h3 className="text-xl font-semibold text-gray-700 mb-2">No menu items found</h3>
+              <h3 className="text-xl font-semibold text-gray-700 mb-2">
+                No menu items found
+              </h3>
               <p className="text-gray-500 mb-6">
                 {search || categoryFilter || availabilityFilter
                   ? "No items match your filter criteria"
@@ -482,7 +530,28 @@ const fetchCategories = async () => {
         show={showViewModal}
         onClose={() => setShowViewModal(false)}
         menuItem={selectedMenuItem}
-        categoryName={selectedMenuItem && categories.find(c => c.id === selectedMenuItem?.categoryId)?.name}
+        categoryName={
+          selectedMenuItem &&
+          categories.find((c) => c.id === selectedMenuItem?.categoryId)?.name
+        }
+      />
+
+      {/* Delete Menu Item Modal */}
+      <DeleteMenuItemModal
+        show={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        menuItem={selectedMenuItem}
+        onConfirm={confirmDelete}
+        isDeleting={false} // You could add a loading state for deletion if desired
+      />
+
+      <UpdateMenuItemModal
+        show={showUpdateModal}
+        onClose={() => setShowUpdateModal(false)}
+        onSuccess={handleMenuItemUpdated}
+        menuItem={selectedMenuItem}
+        token={currentUser.token}
+        categories={categories}
       />
     </div>
   );

@@ -34,6 +34,7 @@ public class MenuItem {
     private boolean glutenFree = false;
 
     // Grocery specific attributes
+    private String unit; // e.g., kg, g, lb, oz
     private double quantity;
     private Long expiryDate; // timestamp
 
@@ -47,7 +48,24 @@ public class MenuItem {
     private boolean spicy = false;
     private int popularityScore = 0;
 
+    // Add-ons for customization
+    private List<AddOn> addOns = new ArrayList<>();
+
     // Tracking
     private long createdAt;
     private long updatedAt;
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class AddOn {
+        private String id;
+        private String name;
+        private String description;
+        private double price;
+        private boolean available = true;
+        private boolean multiple = false; // Can select multiple of this add-on
+        private boolean required = false; // Is this add-on required
+        private int maxQuantity = 1; // Maximum quantity allowed
+    }
 }
