@@ -224,7 +224,6 @@ export default function DashCuisineManagement() {
   const handleRestaurantsUpdated = () => {
     fetchCuisines();
     setShowManageRestaurantsModal(false);
-    toast.success("Restaurant associations updated successfully!");
   };
 
   return (

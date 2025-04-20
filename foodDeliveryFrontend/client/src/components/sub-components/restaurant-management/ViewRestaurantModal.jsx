@@ -158,7 +158,6 @@ export const ViewRestaurantModal = ({ show, onClose, restaurant, token }) => {
       onClose={onClose}
       size="6xl"
       popup={false}
-      className="max-h-[90vh] overflow-y-auto"
     >
       <Modal.Header className="border-b border-gray-200 bg-gray-50">
         <div className="flex items-center">
