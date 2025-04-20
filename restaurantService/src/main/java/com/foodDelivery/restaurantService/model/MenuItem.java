@@ -29,14 +29,13 @@ public class MenuItem {
 
     // Dietary preferences
     private boolean vegetarian = false;
+    private boolean nonVegetarian = false;
     private boolean vegan = false;
     private boolean glutenFree = false;
 
     // Grocery specific attributes
-    private String unit; // e.g., kg, grams, pieces
     private double quantity;
     private Long expiryDate; // timestamp
-    private String brand;
 
     // Promotional information
     private boolean onPromotion = false;
