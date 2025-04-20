@@ -268,6 +268,10 @@ public class RestaurantServiceImpl implements RestaurantService {
             if (restaurant.getAdminIds().isEmpty()) {
                 throw new BusinessValidationException("Restaurant must have at least one admin");
             }
+
+            // Validate that admins are not assigned to other restaurants
+            validateUniqueAdmins(restaurant.getAdminIds(), existingRestaurant.getId());
+
         }
     }
 
@@ -531,6 +535,28 @@ public class RestaurantServiceImpl implements RestaurantService {
         }
 
         return restaurant;
+    }
+
+    private void validateUniqueAdmins(List<String> adminIds, String currentRestaurantId) {
+        if (adminIds == null || adminIds.isEmpty()) {
+            return;
+        }
+
+        for (String adminId : adminIds) {
+            List<Restaurant> restaurants = restaurantRepository.findByAdminIdsContaining(adminId);
+
+            for (Restaurant restaurant : restaurants) {
+                // Skip if it's the current restaurant we're updating
+                if (currentRestaurantId != null && restaurant.getId().equals(currentRestaurantId)) {
+                    continue;
+                }
+
+                throw new BusinessValidationException(
+                        "User with ID " + adminId + " is already an admin for restaurant '" +
+                                restaurant.getName() + "'. An admin can only manage one restaurant."
+                );
+            }
+        }
     }
 
     private void validateCuisineTypes(Restaurant restaurant) {

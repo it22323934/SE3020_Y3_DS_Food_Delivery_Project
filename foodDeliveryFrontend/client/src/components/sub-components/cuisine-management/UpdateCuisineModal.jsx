@@ -7,38 +7,44 @@ import {
   Textarea,
   ToggleSwitch,
   Spinner,
-  Alert
+  Alert,
 } from "flowbite-react";
 import { toast } from "react-toastify";
 import { cuisineTypeService } from "../../../service/cuisineService";
-import { 
-  HiX, 
+import {
+  HiX,
   HiUpload,
   HiPhotograph,
   HiMenuAlt2,
   HiDocumentText,
   HiCheck,
-  HiPencil
+  HiPencil,
 } from "react-icons/hi";
 import {
   getDownloadURL,
   getStorage,
   ref,
-  uploadBytesResumable
+  uploadBytesResumable,
 } from "firebase/storage";
 import { app } from "../../../firebase";
 import { CircularProgressbar } from "react-circular-progressbar";
 import "react-circular-progressbar/dist/styles.css";
 import { GiCook } from "react-icons/gi";
 
-export const UpdateCuisineModal = ({ show, onClose, onSuccess, cuisineData, token }) => {
+export const UpdateCuisineModal = ({
+  show,
+  onClose,
+  onSuccess,
+  cuisineData,
+  token,
+}) => {
   const [formData, setFormData] = useState({
     name: "",
     description: "",
     iconUrl: "",
-    active: true
+    active: true,
   });
-  
+
   const [file, setFile] = useState(null);
   const [fileUploadProgress, setFileUploadProgress] = useState(0);
   const [fileUploadError, setFileUploadError] = useState(null);
@@ -57,7 +63,7 @@ export const UpdateCuisineModal = ({ show, onClose, onSuccess, cuisineData, toke
         iconUrl: cuisineData.iconUrl || "",
         active: cuisineData.active !== undefined ? cuisineData.active : true,
       });
-      
+
       // Set image preview from existing iconUrl
       if (cuisineData.iconUrl) {
         setImagePreview(cuisineData.iconUrl);
@@ -69,14 +75,14 @@ export const UpdateCuisineModal = ({ show, onClose, onSuccess, cuisineData, toke
     const { name, value } = e.target;
     setFormData({
       ...formData,
-      [name]: value
+      [name]: value,
     });
   };
 
   const handleToggleActive = () => {
     setFormData({
       ...formData,
-      active: !formData.active
+      active: !formData.active,
     });
   };
 
@@ -99,7 +105,7 @@ export const UpdateCuisineModal = ({ show, onClose, onSuccess, cuisineData, toke
 
       setFile(selectedFile);
       setFileUploadError(null);
-      
+
       // Create image preview
       const reader = new FileReader();
       reader.onload = () => {
@@ -121,7 +127,7 @@ export const UpdateCuisineModal = ({ show, onClose, onSuccess, cuisineData, toke
       setFileUploadError("Please select a file to upload");
       return;
     }
-    
+
     setFileUploading(true);
     const storage = getStorage(app);
     const fileName = new Date().getTime() + file.name;
@@ -131,7 +137,8 @@ export const UpdateCuisineModal = ({ show, onClose, onSuccess, cuisineData, toke
     uploadTask.on(
       "state_changed",
       (snapshot) => {
-        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+        const progress =
+          (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
         setFileUploadProgress(Math.round(progress));
       },
       (error) => {
@@ -142,7 +149,7 @@ export const UpdateCuisineModal = ({ show, onClose, onSuccess, cuisineData, toke
         getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
           setFormData({
             ...formData,
-            iconUrl: downloadURL
+            iconUrl: downloadURL,
           });
           setFileUploading(false);
           toast.success("Image uploaded successfully");
@@ -164,7 +171,7 @@ export const UpdateCuisineModal = ({ show, onClose, onSuccess, cuisineData, toke
       newErrors.description = "Description is required";
       valid = false;
     }
-    
+
     if (!formData.iconUrl) {
       newErrors.iconUrl = "Please upload an image for the cuisine type";
       valid = false;
@@ -176,7 +183,7 @@ export const UpdateCuisineModal = ({ show, onClose, onSuccess, cuisineData, toke
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
@@ -188,27 +195,33 @@ export const UpdateCuisineModal = ({ show, onClose, onSuccess, cuisineData, toke
       if (!cuisineData || !cuisineData.id) {
         throw new Error("Cuisine ID is missing");
       }
-      
-      const response = await cuisineTypeService.updateCuisineType(cuisineData.id, formData, token);
-      
+
+      const response = await cuisineTypeService.updateCuisineType(
+        cuisineData.id,
+        formData,
+        token
+      );
+
       if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.message || "Failed to update cuisine type");
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to update restaurant");
       }
-      
+
       setSuccess(true);
       toast.success("Cuisine type updated successfully");
-      
+
       // Reset and close after a short delay
       setTimeout(() => {
         setSuccess(false);
-        
+
         // Call the onSuccess callback to refresh cuisine list
         onSuccess();
         onClose();
       }, 1500);
     } catch (error) {
-      toast.error(error.message || "An error occurred while updating cuisine type");
+      toast.error(
+        error.message || "An error occurred while updating cuisine type"
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -227,21 +240,18 @@ export const UpdateCuisineModal = ({ show, onClose, onSuccess, cuisineData, toke
   };
 
   return (
-    <Modal
-      show={show}
-      onClose={handleClose}
-      size="lg"
-      popup={false}
-    >
+    <Modal show={show} onClose={handleClose} size="lg" popup={false}>
       <Modal.Header className="border-b border-gray-200 bg-gray-50">
         <div className="flex items-center">
           <div className="p-2 bg-blue-100 rounded-full mr-3">
             <HiPencil className="text-blue-600" size={24} />
           </div>
-          <h3 className="text-xl font-bold text-gray-900">Update Cuisine Type</h3>
+          <h3 className="text-xl font-bold text-gray-900">
+            Update Cuisine Type
+          </h3>
         </div>
       </Modal.Header>
-      
+
       <Modal.Body className="px-6">
         {fileUploadError && (
           <Alert color="failure" className="mb-4">
@@ -275,21 +285,26 @@ export const UpdateCuisineModal = ({ show, onClose, onSuccess, cuisineData, toke
                           left: 0,
                         },
                         path: {
-                          stroke: `rgba(59, 130, 246, ${fileUploadProgress / 100})`,
+                          stroke: `rgba(59, 130, 246, ${
+                            fileUploadProgress / 100
+                          })`,
                         },
                         text: {
-                          fill: '#3b82f6',
-                          fontSize: '20px',
-                          fontWeight: 'bold'
+                          fill: "#3b82f6",
+                          fontSize: "20px",
+                          fontWeight: "bold",
                         },
                       }}
                     />
                   )}
                   <img
-                    src={imagePreview || "https://via.placeholder.com/200?text=Cuisine+Image"}
+                    src={
+                      imagePreview ||
+                      "https://via.placeholder.com/200?text=Cuisine+Image"
+                    }
                     alt="Cuisine"
                     className={`rounded-lg w-full h-full object-cover border-4 ${
-                      imagePreview ? 'border-blue-200' : 'border-gray-200'
+                      imagePreview ? "border-blue-200" : "border-gray-200"
                     } shadow-md ${fileUploading && "opacity-60"}`}
                   />
                 </div>
@@ -305,21 +320,27 @@ export const UpdateCuisineModal = ({ show, onClose, onSuccess, cuisineData, toke
                     htmlFor="image"
                     className="flex items-center justify-center px-4 py-2 bg-blue-50 text-blue-700 rounded-lg cursor-pointer hover:bg-blue-100 dark:bg-gray-700 dark:text-blue-400 dark:hover:bg-gray-600 w-full transition-all duration-200"
                   >
-                    <HiPhotograph className="mr-2" size={20} /> 
+                    <HiPhotograph className="mr-2" size={20} />
                     {file ? "Change Image" : "Change Image"}
                   </label>
                   {errors.iconUrl && (
-                    <p className="text-red-500 text-sm mt-1">{errors.iconUrl}</p>
+                    <p className="text-red-500 text-sm mt-1">
+                      {errors.iconUrl}
+                    </p>
                   )}
                 </div>
               </div>
             </div>
-            
+
             {/* Right Column - Form Fields */}
             <div className="space-y-4">
               <div>
                 <div className="mb-2 block">
-                  <Label htmlFor="name" value="Cuisine Name" className="font-medium" />
+                  <Label
+                    htmlFor="name"
+                    value="Cuisine Name"
+                    className="font-medium"
+                  />
                 </div>
                 <TextInput
                   id="name"
@@ -331,12 +352,18 @@ export const UpdateCuisineModal = ({ show, onClose, onSuccess, cuisineData, toke
                   required
                   className="w-full"
                 />
-                {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
+                {errors.name && (
+                  <p className="text-red-500 text-sm mt-1">{errors.name}</p>
+                )}
               </div>
-              
+
               <div>
                 <div className="mb-2 block">
-                  <Label htmlFor="description" value="Description" className="font-medium" />
+                  <Label
+                    htmlFor="description"
+                    value="Description"
+                    className="font-medium"
+                  />
                 </div>
                 <Textarea
                   id="description"
@@ -349,10 +376,12 @@ export const UpdateCuisineModal = ({ show, onClose, onSuccess, cuisineData, toke
                   className="w-full focus:border-blue-500"
                 />
                 {errors.description && (
-                  <p className="text-red-500 text-sm mt-1">{errors.description}</p>
+                  <p className="text-red-500 text-sm mt-1">
+                    {errors.description}
+                  </p>
                 )}
               </div>
-              
+
               <div className="flex items-center gap-2 pt-2">
                 <ToggleSwitch
                   id="active"
@@ -360,8 +389,12 @@ export const UpdateCuisineModal = ({ show, onClose, onSuccess, cuisineData, toke
                   onChange={handleToggleActive}
                   label="Active Status"
                 />
-                <span className={`ml-2 text-sm font-medium ${formData.active ? 'text-green-600' : 'text-red-600'}`}>
-                  {formData.active ? 'Active' : 'Inactive'}
+                <span
+                  className={`ml-2 text-sm font-medium ${
+                    formData.active ? "text-green-600" : "text-red-600"
+                  }`}
+                >
+                  {formData.active ? "Active" : "Inactive"}
                 </span>
               </div>
             </div>

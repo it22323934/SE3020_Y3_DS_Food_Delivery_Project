@@ -39,31 +39,26 @@ export const ManageRestaurantsModal = ({
       if (!response.ok) {
         throw new Error("Failed to fetch restaurants");
       }
-
+  
       const allRestaurants = await response.json();
-
+  
       // Filter only enabled restaurants
-      const enabledRestaurants = allRestaurants.filter(
-        (r) => r.enabled === true
-      );
-
+      const enabledRestaurants = allRestaurants.filter((r) => r.enabled === true);
+  
       // Set associated restaurants from cuisineData
       const currentRestaurants = cuisineData.restaurants || [];
-
+  
       // Ensure we have complete restaurant objects for associated restaurants
       const completeAssociatedRestaurants = currentRestaurants.map((r) => {
-        // If the restaurant is in the enabled list, use that object to ensure all properties
         const fullRestaurant = enabledRestaurants.find((er) => er.id === r.id);
         return fullRestaurant || r;
       });
-
+  
       setAssociatedRestaurants(completeAssociatedRestaurants);
-
+  
       // Filter out restaurants that are already associated with the cuisine
       const currentIds = new Set(currentRestaurants.map((r) => r.id));
-      const availableRests = enabledRestaurants.filter(
-        (r) => !currentIds.has(r.id)
-      );
+      const availableRests = enabledRestaurants.filter((r) => !currentIds.has(r.id));
       setAvailableRestaurants(availableRests);
     } catch (error) {
       console.error("Error fetching restaurants:", error);
@@ -72,91 +67,82 @@ export const ManageRestaurantsModal = ({
       setLoading(false);
     }
   };
-
+  
   const handleAddRestaurant = async (restaurantId) => {
-    // Mark this restaurant as processing
     setProcessingRestaurantIds((prev) => [...prev, restaurantId]);
-
+  
     try {
       const response = await cuisineTypeService.addRestaurantToCuisineType(
         cuisineData.id,
         restaurantId,
         token
       );
-
+  
       if (response.ok) {
         toast.success("Restaurant added to cuisine type successfully");
-
-        // Find the complete restaurant object
-        const restaurant = availableRestaurants.find(
-          (r) => r.id === restaurantId
-        );
-
-        // Update the UI optimistically
-        setAssociatedRestaurants((prev) => [...prev, restaurant]);
-        setAvailableRestaurants((prev) =>
-          prev.filter((r) => r.id !== restaurantId)
-        );
-
+  
+        // Find the restaurant in availableRestaurants
+        const restaurant = availableRestaurants.find((r) => r.id === restaurantId);
+  
+        if (restaurant) {
+          // Update the UI optimistically
+          setAssociatedRestaurants((prev) => [...prev, restaurant]);
+          setAvailableRestaurants((prev) => prev.filter((r) => r.id !== restaurantId));
+        }
+  
         if (onSuccess) {
           onSuccess();
         }
       } else {
-        throw new Error("Failed to add restaurant to cuisine type");
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to add restaurant");
       }
     } catch (error) {
       console.error("Error adding restaurant:", error);
       toast.error(error.message || "Failed to add restaurant");
     } finally {
-      // Remove from processing list
-      setProcessingRestaurantIds((prev) =>
-        prev.filter((id) => id !== restaurantId)
-      );
+      setProcessingRestaurantIds((prev) => prev.filter((id) => id !== restaurantId));
     }
   };
-
+  
   const handleRemoveRestaurant = async (restaurantId) => {
-    // Mark this restaurant as processing
     setProcessingRestaurantIds((prev) => [...prev, restaurantId]);
-
+  
     try {
       const response = await cuisineTypeService.removeRestaurantFromCuisineType(
         cuisineData.id,
         restaurantId,
         token
       );
-
+  
       if (response.ok) {
         toast.success("Restaurant removed from cuisine type successfully");
-
-        // Find the complete restaurant object with all properties
-        const restaurant = associatedRestaurants.find(
-          (r) => r.id === restaurantId
-        );
-
-        if (restaurant && restaurant.enabled !== false) {
+  
+        // Find the restaurant in associatedRestaurants
+        const restaurant = associatedRestaurants.find((r) => r.id === restaurantId);
+  
+        if (restaurant) {
+          // Update the UI optimistically
+          setAssociatedRestaurants((prev) => prev.filter((r) => r.id !== restaurantId));
+  
           // Only move to available if the restaurant is enabled
-          setAvailableRestaurants((prev) => [...prev, restaurant]);
+          if (restaurant.enabled) {
+            setAvailableRestaurants((prev) => [...prev, restaurant]);
+          }
         }
-
-        setAssociatedRestaurants((prev) =>
-          prev.filter((r) => r.id !== restaurantId)
-        );
-
+  
         if (onSuccess) {
           onSuccess();
         }
       } else {
-        throw new Error("Failed to remove restaurant from cuisine type");
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to remove restaurant");
       }
     } catch (error) {
       console.error("Error removing restaurant:", error);
       toast.error(error.message || "Failed to remove restaurant");
     } finally {
-      // Remove from processing list
-      setProcessingRestaurantIds((prev) =>
-        prev.filter((id) => id !== restaurantId)
-      );
+      setProcessingRestaurantIds((prev) => prev.filter((id) => id !== restaurantId));
     }
   };
 
@@ -256,7 +242,7 @@ export const ManageRestaurantsModal = ({
       </Card>
     );
   };
-
+  
   return (
     <Modal show={show} onClose={onClose} size="6xl" popup={false}>
       <Modal.Header className="border-b border-gray-200 bg-gray-50">

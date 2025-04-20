@@ -169,8 +169,8 @@ export const CreateCuisineModal = ({ show, onClose, onSuccess, token }) => {
       const response = await cuisineTypeService.createCuisineType(formData, token);
       
       if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.message || "Failed to create cuisine type");
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to update restaurant");
       }
       
       setSuccess(true);
