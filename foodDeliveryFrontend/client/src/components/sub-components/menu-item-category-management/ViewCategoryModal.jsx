@@ -48,16 +48,8 @@ export const ViewCategoryModal = ({ show, onClose, categoryData }) => {
             <div className="bg-gray-50 p-4 rounded-md">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm text-gray-500">Category ID</p>
-                  <p className="font-medium">{categoryData.id}</p>
-                </div>
-                <div>
                   <p className="text-sm text-gray-500">Display Order</p>
                   <p className="font-medium">{categoryData.displayOrder || 'Not set'}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Restaurant</p>
-                  <p className="font-medium">{categoryData.restaurantName || 'Unknown'}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Menu Items</p>

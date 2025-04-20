@@ -131,11 +131,11 @@ export const UpdateRestaurantModal = ({
     }
   }, [show, restaurant]);
 
-  // Fetch cuisine types and admin users when component mounts
+  // Fetch admin users only after form data is initialized
   useEffect(() => {
     if (show) {
       fetchCuisineTypes();
-      fetchAdminUsers();
+      fetchAdminUsers(); // Call this immediately when modal opens, not dependent on formData
     }
   }, [show, token]);
 
@@ -173,22 +173,26 @@ export const UpdateRestaurantModal = ({
 
       // Extract admin IDs properly
       let adminIds = [];
-      if (restaurant.admins) {
-        // If admins is an array of objects with id properties
-        if (
-          Array.isArray(restaurant.admins) &&
-          restaurant.admins.length > 0 &&
-          typeof restaurant.admins[0] === "object" &&
-          restaurant.admins[0].id
-        ) {
-          adminIds = restaurant.admins.map((admin) => admin.id);
+      if (restaurant.adminIds) {
+        // If adminIds is already an array of IDs
+        if (Array.isArray(restaurant.adminIds)) {
+          adminIds = restaurant.adminIds.map((id) => id.toString());
         }
-        // If admins is already an array of IDs
-        else if (Array.isArray(restaurant.admins)) {
-          adminIds = restaurant.admins;
+      } else if (restaurant.admins) {
+        // Alternative property name: if 'admins' exists instead of 'adminIds'
+        if (Array.isArray(restaurant.admins)) {
+          if (
+            restaurant.admins.length > 0 &&
+            typeof restaurant.admins[0] === "object" &&
+            restaurant.admins[0].id
+          ) {
+            // Array of objects with id property
+            adminIds = restaurant.admins.map((admin) => admin.id.toString());
+          } else {
+            // Array of direct ID values
+            adminIds = restaurant.admins.map((id) => id.toString());
+          }
         }
-      } else if (restaurant.adminIds) {
-        adminIds = restaurant.adminIds;
       }
 
       setFormData({
@@ -276,22 +280,25 @@ export const UpdateRestaurantModal = ({
       toast.error("Error loading cuisine types");
     }
   };
-
-  // Fetch admin users from API
+  // Fetch admin users from API - modified to use restaurant.adminIds directly
   const fetchAdminUsers = async () => {
     try {
-      const response = await authService.getRestaurantAdmins(token);
-      if (response.ok) {
-        const data = await response.json();
+      // Get all restaurant admin users
+      const adminResponse = await authService.getRestaurantAdmins(token);
+      if (!adminResponse.ok) {
+        toast.error("Failed to load admin users");
+        return;
+      }
 
-        // Filter only enabled admins
-        const enabledAdmins = data.filter(
+      const adminData = await adminResponse.json();
+
+      // Transform data for react-select - include ALL admin users
+      const adminOptions = adminData
+        .filter(
           (user) =>
             user.enabled === true && !user.disabled && user.verified === true
-        );
-
-        // Transform data for react-select
-        const adminOptions = enabledAdmins.map((user) => ({
+        )
+        .map((user) => ({
           value: user.id,
           label: user.username || `${user.firstName} ${user.lastName}`,
           image: user.profilePictureUrl,
@@ -299,16 +306,12 @@ export const UpdateRestaurantModal = ({
           phone: user.phoneNumber,
         }));
 
-        setAdminUsers(adminOptions);
-      } else {
-        toast.error("Failed to load admin users");
-      }
+      setAdminUsers(adminOptions);
     } catch (error) {
       console.error("Error fetching admin users:", error);
       toast.error("Error loading admin users");
     }
   };
-
   // Basic input change handler
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -589,7 +592,7 @@ export const UpdateRestaurantModal = ({
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to update restaurant");
+        throw new Error(errorData.error || "Failed to update restaurant");
       }
 
       setSuccess(true);
@@ -660,13 +663,7 @@ export const UpdateRestaurantModal = ({
   };
 
   return (
-    <Modal
-      show={show}
-      onClose={onClose}
-      size="6xl"
-      popup={false}
-      className="max-h-[90vh] overflow-y-auto"
-    >
+    <Modal show={show} onClose={onClose} size="6xl" popup={false}>
       <Modal.Header className="border-b border-gray-200 bg-gray-50">
         <div className="flex items-center">
           <div className="p-2 bg-blue-100 rounded-full mr-3">

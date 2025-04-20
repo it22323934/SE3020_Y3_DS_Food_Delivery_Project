@@ -4,6 +4,7 @@ import com.foodDelivery.notificationService.client.RestaurantServiceClient;
 import com.foodDelivery.notificationService.client.UserServiceClient;
 import com.foodDelivery.notificationService.dto.CuisineTypeResponse;
 import com.foodDelivery.notificationService.dto.UserProfileResponse;
+import com.foodDelivery.notificationService.emailTemplates.RestaurantEmailTemplates;
 import com.foodDelivery.notificationService.interfaces.EmailService;
 import com.foodDelivery.notificationService.interfaces.SmsService;
 import com.foodDelivery.notificationService.modal.Notification;
@@ -32,6 +33,7 @@ public class RestaurantNotificationService {
     private final NotificationRepository notificationRepository;
     private final UserServiceClient userServiceClient;
     private final RestaurantServiceClient restaurantServiceClient;
+    private final RestaurantEmailTemplates restaurantEmailTemplates;
     @KafkaListener(topics = "restaurant-notifications", containerFactory = "kafkaListenerContainerFactoryBroker2")
     public void handleRestaurantEvent(RestaurantEvent event) {
         log.info("Received restaurant event: {} for restaurant: {}", event.getEventType(), event.getRestaurantName());
@@ -55,7 +57,7 @@ public class RestaurantNotificationService {
 
         // Notify the restaurant's business email
         if (event.getRestaurantEmail() != null && !event.getRestaurantEmail().isEmpty()) {
-            String emailContent = createRestaurantCreationEmail(event, cuisineNames);
+            String emailContent = restaurantEmailTemplates.createRestaurantCreationEmail(event, cuisineNames);
             log.info("Sending creation email to restaurant email: {}", event.getRestaurantEmail());
             try {
                 emailService.sendEmail(
@@ -109,7 +111,7 @@ public class RestaurantNotificationService {
 
         // Notify restaurant about the update
         if (event.getRestaurantEmail() != null && !event.getRestaurantEmail().isEmpty()) {
-            String emailContent = createRestaurantUpdateEmail(event, cuisineNames);
+            String emailContent = restaurantEmailTemplates.createRestaurantUpdateEmail(event, cuisineNames);
             emailService.sendEmail(
                     event.getRestaurantEmail(),
                     "Restaurant Updated: " + event.getRestaurantName(),
@@ -158,8 +160,8 @@ public class RestaurantNotificationService {
                         "Admin Access Removed: " + restaurantName;
 
                 String emailContent = isAdded ?
-                        createAdminAddedEmail(admin.getUsername(), restaurantName, cuisineNames) :
-                        createAdminRemovedEmail(admin.getUsername(), restaurantName);
+                        restaurantEmailTemplates.createAdminAddedEmail(admin.getUsername(), restaurantName, cuisineNames) :
+                        restaurantEmailTemplates.createAdminRemovedEmail(admin.getUsername(), restaurantName);
 
                 try {
                     emailService.sendEmail(admin.getEmail(), subject, emailContent, true);
@@ -210,146 +212,6 @@ public class RestaurantNotificationService {
         }
 
         return cuisineNames.isEmpty() ? List.of("Not specified") : cuisineNames;
-    }
-
-    private String createRestaurantCreationEmail(RestaurantEvent event, List<String> cuisineNames) {
-        return """
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <style>
-                    body { font-family: Arial, sans-serif; line-height: 1.6; }
-                    .header { background-color: #FF4500; color: white; padding: 20px; text-align: center; }
-                    .content { padding: 20px; }
-                    .footer { background-color: #f4f4f4; padding: 10px; text-align: center; font-size: 12px; }
-                </style>
-            </head>
-            <body>
-                <div class="header">
-                    <h1>Restaurant Successfully Created</h1>
-                </div>
-                <div class="content">
-                    <p>Congratulations!</p>
-                    <p>Your restaurant "%s" has been successfully created on FlavorFleet.</p>
-                    <p>You can now log in to manage your restaurant, add menu items, and start accepting orders.</p>
-                    <p>Restaurant ID: %s</p>
-                    <p>Cuisine Types: %s</p>
-                </div>
-                <div class="footer">
-                    <p>&copy; %d FlavorFleet. All rights reserved.</p>
-                </div>
-            </body>
-            </html>
-            """.formatted(
-                event.getRestaurantName(),
-                event.getRestaurantId(),
-                String.join(", ", cuisineNames),
-                java.time.Year.now().getValue()
-        );
-    }
-
-    private String createRestaurantUpdateEmail(RestaurantEvent event, List<String> cuisineNames) {
-        return """
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <style>
-                    body { font-family: Arial, sans-serif; line-height: 1.6; }
-                    .header { background-color: #FF4500; color: white; padding: 20px; text-align: center; }
-                    .content { padding: 20px; }
-                    .footer { background-color: #f4f4f4; padding: 10px; text-align: center; font-size: 12px; }
-                </style>
-            </head>
-            <body>
-                <div class="header">
-                    <h1>Restaurant Successfully Updated</h1>
-                </div>
-                <div class="content">
-                    <p>Hello,</p>
-                    <p>Your restaurant "%s" has been successfully updated on FlavorFleet.</p>
-                    <p>Cuisine Types: %s</p>
-                    <p>Log in to review the changes and continue managing your restaurant.</p>
-                </div>
-                <div class="footer">
-                    <p>&copy; %d FlavorFleet. All rights reserved.</p>
-                </div>
-            </body>
-            </html>
-            """.formatted(
-                event.getRestaurantName(),
-                String.join(", ", cuisineNames),
-                java.time.Year.now().getValue()
-        );
-    }
-
-    private String createAdminAddedEmail(String adminName, String restaurantName, List<String> cuisineNames) {
-        return """
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <style>
-                    body { font-family: Arial, sans-serif; line-height: 1.6; }
-                    .header { background-color: #FF4500; color: white; padding: 20px; text-align: center; }
-                    .content { padding: 20px; }
-                    .footer { background-color: #f4f4f4; padding: 10px; text-align: center; font-size: 12px; }
-                </style>
-            </head>
-            <body>
-                <div class="header">
-                    <h1>You're Now a Restaurant Admin</h1>
-                </div>
-                <div class="content">
-                    <p>Hello %s,</p>
-                    <p>You have been added as an administrator for the restaurant '%s'.</p>
-                    <p>Cuisine Types: %s</p>
-                    <p>As an administrator, you can now manage the restaurant details, menu items, and orders.</p>
-                    <p>Log in to your account to start managing the restaurant.</p>
-                </div>
-                <div class="footer">
-                    <p>&copy; %d FlavorFleet. All rights reserved.</p>
-                </div>
-            </body>
-            </html>
-            """.formatted(
-                adminName,
-                restaurantName,
-                String.join(", ", cuisineNames),
-                java.time.Year.now().getValue()
-        );
-    }
-
-    private String createAdminRemovedEmail(String adminName, String restaurantName) {
-        return """
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <style>
-                    body { font-family: Arial, sans-serif; line-height: 1.6; }
-                    .header { background-color: #FF4500; color: white; padding: 20px; text-align: center; }
-                    .content { padding: 20px; }
-                    .footer { background-color: #f4f4f4; padding: 10px; text-align: center; font-size: 12px; }
-                </style>
-            </head>
-            <body>
-                <div class="header">
-                    <h1>Administrator Access Removed</h1>
-                </div>
-                <div class="content">
-                    <p>Hello %s,</p>
-                    <p>This is to inform you that your administrator access for the restaurant '%s' has been removed.</p>
-                    <p>You will no longer be able to manage this restaurant's details, menu items, or orders.</p>
-                    <p>If you believe this was done in error, please contact the restaurant owner or our support team.</p>
-                </div>
-                <div class="footer">
-                    <p>&copy; %d FlavorFleet. All rights reserved.</p>
-                </div>
-            </body>
-            </html>
-            """.formatted(
-                adminName,
-                restaurantName,
-                java.time.Year.now().getValue()
-        );
     }
 
     private void saveNotification(String referenceId, String templateId, String content,
