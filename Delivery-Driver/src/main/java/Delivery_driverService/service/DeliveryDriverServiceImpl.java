@@ -178,14 +178,14 @@ import java.util.List;
 import java.util.Optional;
 
 @Service
-public class DeliveryDriverService implements IDeliveryDriverService {
+public class DeliveryDriverServiceImpl implements IDeliveryDriverService {
 
-    private static final Logger logger = LoggerFactory.getLogger(DeliveryDriverService.class);
+    private static final Logger logger = LoggerFactory.getLogger(DeliveryDriverServiceImpl.class);
 
     private final DeliveryDriverRepository deliveryDriverRepository;
 
     @Autowired
-    public DeliveryDriverService(DeliveryDriverRepository deliveryDriverRepository) {
+    public DeliveryDriverServiceImpl(DeliveryDriverRepository deliveryDriverRepository) {
         this.deliveryDriverRepository = deliveryDriverRepository;
     }
 

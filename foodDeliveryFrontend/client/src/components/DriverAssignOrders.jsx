@@ -18,8 +18,10 @@ import {
 } from "@mui/material";
 import UpdateIcon from "@mui/icons-material/Update";
 import { useNavigate } from "react-router-dom";
+import MapIcon from "@mui/icons-material/Map"; // Add this import
 
-const DeliveryAssignOrders = ({ driverId = "DR001" }) => {
+
+const DeliveryAssignOrders = ({ driverId = "DRV123" }) => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -79,6 +81,8 @@ const DeliveryAssignOrders = ({ driverId = "DR001" }) => {
                       <TableCell sx={{ color: "#fff" }}>Completed</TableCell>
                       <TableCell sx={{ color: "#fff" }}>Remarks</TableCell>
                       <TableCell sx={{ color: "#fff" }}>Delivery Update</TableCell>
+                      <TableCell sx={{ color: "#fff" }}>Share Location</TableCell>
+
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -124,6 +128,36 @@ const DeliveryAssignOrders = ({ driverId = "DR001" }) => {
                             </Button>
                           )}
                         </TableCell>
+
+
+                        <TableCell>
+                        {!order.orderComplete && (
+                          <Button
+                            variant="contained"
+                            size="small"
+                            startIcon={<MapIcon />}
+                            onClick={() => navigate(`/location-map/${order.orderId}`)}
+                            sx={{
+                              textTransform: "none",
+                              fontWeight: "bold",
+                              borderRadius: 2,
+                              boxShadow: 1,
+                              backgroundColor: "#52be80",
+                              "&:hover": {
+                                backgroundColor: "#45a163",
+                              },
+                            }}
+                          >
+                            Map
+                          </Button>
+                        )}
+                      </TableCell>
+
+
+
+
+
+
                       </TableRow>
                     ))}
                   </TableBody>

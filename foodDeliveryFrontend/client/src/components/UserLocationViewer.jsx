@@ -10,11 +10,13 @@ const containerStyle = {
 function UserLocationViewer({ userId = 'R1' }) {
   const [location, setLocation] = useState(null);
   const [status, setStatus] = useState('Loading...');
-  userId="R1";
+  
+  userId="R2";
+  var orderId="R00";
   useEffect(() => {
     const fetchLocation = async () => {
       try {
-        const response = await axios.get(`http://localhost:8083/api/location/user/${userId}`);
+        const response = await axios.get(`http://localhost:8083/api/location/user/${userId}/order/${orderId}`);
         const locations = response.data;
 
         if (Array.isArray(locations) && locations.length > 0) {

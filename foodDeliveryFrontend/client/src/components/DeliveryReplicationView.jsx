@@ -67,7 +67,7 @@ const DeliveryReplicationView = () => {
           <TableBody>
             {deliveries.map((delivery) => (
               <TableRow key={delivery.orderId}>
-                <TableCell style={getOrderIdStyle(delivery.assignDriver, delivery.orderDeliveredComplete)}>
+                <TableCell style={getOrderIdStyle(delivery.isAssignDriver, delivery.orderDeliveredComplete)}>
                   {delivery.orderId}
                 </TableCell>
                 <TableCell>{delivery.userName}</TableCell>
@@ -78,7 +78,7 @@ const DeliveryReplicationView = () => {
                 <TableCell>{delivery.price}</TableCell>
                 <TableCell>{delivery.orderDate}</TableCell>
                 <TableCell>{delivery.orderTime}</TableCell>
-                <TableCell>{delivery.assignDriver ? "Yes" : "No"}</TableCell>
+                <TableCell>{delivery.isAssignDriver ? "Yes" : "No"}</TableCell> 
                 <TableCell>{delivery.driverName}</TableCell>
                 <TableCell>{delivery.driverPhoneNo}</TableCell>
                 <TableCell>{delivery.orderDeliveredComplete ? "Yes" : "No"}</TableCell>

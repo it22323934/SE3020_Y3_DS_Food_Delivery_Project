@@ -34,7 +34,7 @@ export default function App() {
         <Route path="/DeliveryReplicationView" element={<DeliveryReplicationView />} />
         <Route path="/DeliveryAssignOrders" element={<DeliveryAssignOrders />} />
         <Route path="/update-order/:orderId" element={<UpdateOrderPage />} />
-        <Route path="/LocationMap" element={<LocationMap />} />
+        <Route path="/location-map/:orderId" element={<LocationMap />} />
         <Route path="/UserLocationViewer" element={<UserLocationViewer />} />
 
 

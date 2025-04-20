@@ -30,4 +30,12 @@ public class LocationController {
     public List<Location> getLocationsByUserId(@PathVariable String userId) {
         return locationRepository.findByUserId(userId);
     }
+
+    @GetMapping("/user/{userId}/order/{orderId}")
+    public List<Location> getLocationsByUserIdWithOrderId(@PathVariable String userId, @PathVariable String orderId) {
+        return locationRepository.findByUserIdAndOrderId(userId, orderId);
+    }
+
+
+
 }

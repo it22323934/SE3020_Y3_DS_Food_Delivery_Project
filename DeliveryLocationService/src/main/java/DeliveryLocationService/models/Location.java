@@ -13,6 +13,7 @@ public class Location {
     private Double latitude;
     private Double longitude;
     private String userId;
+    private String orderId;
 
     private LocalDateTime timestamp = LocalDateTime.now(); // Automatically assigns the current timestamp
 
@@ -56,5 +57,13 @@ public class Location {
 
     public void setTimestamp(LocalDateTime timestamp) {
         this.timestamp = timestamp;
+    }
+
+    public void setOrderId(String orderId) {
+        this.orderId = orderId;
+    }
+
+    public String getOrderId() {
+        return orderId;
     }
 }

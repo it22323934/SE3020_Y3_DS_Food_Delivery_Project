@@ -32,7 +32,7 @@ public class DriverOrder {
     @Column(name = "delivery_address")
     private String deliveryAddress;
 
-    @Column(name = "order_items")
+   @Column(name = "order_items")
     private String[] orderItems;
 
     @Column(name = "price")

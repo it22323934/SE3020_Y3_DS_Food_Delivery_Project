@@ -7,6 +7,10 @@ import {
   CircularProgress,
   Box,
   Paper,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
 } from "@mui/material";
 import axios from "axios";
 import { useParams, useNavigate } from "react-router-dom";
@@ -17,8 +21,8 @@ const UpdateOrderPage = () => {
 
   const [loading, setLoading] = useState(true);
   const [remark, setRemark] = useState("");
-  const [orderComplete, setOrderComplete] = useState(false);
-  const [orderData, setOrderData] = useState(null); // store full order
+  const [status, setStatus] = useState("still_ordering"); // new status field
+  const [orderData, setOrderData] = useState(null);
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -29,7 +33,13 @@ const UpdateOrderPage = () => {
         if (currentOrder) {
           setOrderData(currentOrder);
           setRemark(currentOrder.remarks || "");
-          setOrderComplete(currentOrder.orderComplete || false);
+
+          // Map boolean or status field to string status
+          if (currentOrder.status) {
+            setStatus(currentOrder.status); // assuming API already returns string status
+          } else {
+            setStatus(currentOrder.isOrderComplete ? "completed" : "still_ordering");
+          }
         }
       } catch (err) {
         console.error("Failed to fetch order:", err);
@@ -41,33 +51,137 @@ const UpdateOrderPage = () => {
     fetchOrder();
   }, [orderId]);
 
+  // const handleUpdate = async () => {
+  //   if (!orderData) return;
+
+  //   const updatedOrder = {
+  //     ...orderData,
+  //     remarks: remark,
+  //     status: status, // updated with selected value
+  //     isOrderComplete: status === "completed", // optional backward compatibility
+  //   };
+
+  //   try {
+  //     await axios.put(`http://localhost:8081/api/driver-orders/${orderId}`, updatedOrder);
+  //     alert("Order updated successfully");
+  //     navigate("/DeliveryAssignOrders");
+  //   } catch (error) {
+  //     console.error("Error updating order:", error);
+  //     alert("Failed to update order");
+  //   }
+  // };
+
+  // const handleUpdate = async () => {
+  //   if (!orderData) return;
+  
+  //   let updatedOrder = {
+  //     ...orderData,
+  //     remarks: remark,
+  //     status: status,
+  //     isOrderComplete: status === "completed",
+  //   };
+  
+  //   // If status is NOT "completed", fetch and update deliveryReplication
+  //   if (status !== "completed") {
+  //     try {
+  //       const replicationRes = await axios.get(`http://localhost:9001/api/deliveryReplication/${orderId}`);
+  //       const replicationData = replicationRes.data;
+  
+  //       console.log("Replication data:", replicationData);
+  
+  //       // Modify replication fields based on status
+  //       let updatedReplication = { 
+  //         ...replicationData,  // Spread all original data first
+  //         driverRemark: status === "completed" ? remark : replicationData.driverRemark,
+  //         isAssignDriver: status === "cant_deliver" ? false : replicationData.isAssignDriver,
+  //         driverName: status === "cant_deliver" ? null : replicationData.driverName,
+  //         driverPhoneNo: status === "cant_deliver" ? null : replicationData.driverPhoneNo,
+  //         isOrderDeliveredComplete: status === "completed" ? true : replicationData.isOrderDeliveredComplete
+  //       };
+        
+  
+  //       // PUT update to deliveryReplication service
+  //       await axios.put(`http://localhost:9001/api/deliveryReplication/${orderId}`, {
+  //         $set: updatedReplication
+  //       });
+  //       console.log("UpdateReplication Data:"+updatedReplication);
+  //       console.log("Replication updated");
+  
+  //       // Copy needed fields into driver order update
+  //       updatedOrder.isAssignDriver = updatedReplication.isAssignDriver;
+  //       updatedOrder.isOrderDeliveredComplete = updatedReplication.isOrderDeliveredComplete;
+  //     } catch (error) {
+  //       console.error("Failed to fetch/update delivery replication data:", error);
+  //       alert("Could not update delivery replication data");
+  //       return;
+  //     }
+  //   }
+  
+  //   // Update driver order
+  //   try {
+  //     await axios.put(`http://localhost:8081/api/driver-orders/${orderId}`, updatedOrder);
+  //     alert("Order updated successfully");
+  //     // navigate("/DeliveryAssignOrders");
+  //   } catch (error) {
+  //     console.error("Error updating driver order:", error);
+  //     alert("Failed to update order");
+  //   }
+  // };
+
   const handleUpdate = async () => {
     if (!orderData) return;
-
+  
+    // 1. Update the driver order first
     const updatedOrder = {
-      driverId: orderData.driverId,
-      orderId: orderData.orderId,
-      userId: orderData.userId,
-      userName: orderData.userName,
-      restaurantId: orderData.restaurantId,
-      deliveryAddress: orderData.deliveryAddress,
-      orderItems: orderData.orderItems,
-      price: orderData.price,
-      orderDate: orderData.orderDate,
-      orderTime: orderData.orderTime,
-      isOrderComplete: true,
+      ...orderData,
       remarks: remark,
+      status: status,
+      isOrderComplete: status === "completed",
     };
-
+  
     try {
       await axios.put(`http://localhost:8081/api/driver-orders/${orderId}`, updatedOrder);
-      alert("Order updated successfully");
-      navigate("/DeliveryAssignOrders"); // Change route if needed
-    } catch (error) {
-      console.error("Error updating order:", error);
+  
+      // 2. Handle replication update
+      try {
+        const replicationRes = await axios.get(`http://localhost:9001/api/deliveryReplication/${orderId}`);
+        const currentReplication = replicationRes.data;
+        console.log(replicationRes.data);
+  
+        // Create update payload - preserve ALL existing fields
+        const replicationUpdate = {
+          ...currentReplication, // Keep all existing data
+          driverRemark: remark, // Update remark
+          assignDriver: status === "cant_deliver" ? false : currentReplication.isAssignDriver,
+          isOrderDeliveredComplete: status === "completed",
+          ...(status === "cant_deliver" ? { // Only clear driver info if status is "can't deliver"
+            driverId: "NA",
+            driverName: "NA",
+            driverPhoneNo: "NA"
+          } : {})
+          
+        };
+  
+        // Remove MongoDB-specific fields that shouldn't be sent back
+        delete replicationUpdate._id;
+        delete replicationUpdate._class;
+  
+        console.log("Sending replication update:", JSON.stringify(replicationUpdate, null, 2));
+        
+        await axios.put(`http://localhost:9001/api/deliveryReplication/driver/${orderId}`, replicationUpdate);
+        
+        alert("Order updated successfully with all data preserved");
+        navigate("/DeliveryAssignOrders");
+      } catch (replicationError) {
+        console.error("Replication update failed:", replicationError.response?.data || replicationError.message);
+        alert("Order updated but replication failed - check console");
+      }
+    } catch (orderError) {
+      console.error("Order update failed:", orderError.response?.data || orderError.message);
       alert("Failed to update order");
     }
   };
+  
 
   if (loading) {
     return (
@@ -83,6 +197,20 @@ const UpdateOrderPage = () => {
         <Typography variant="h5" gutterBottom>
           Update Order #{orderId}
         </Typography>
+
+        <FormControl fullWidth margin="normal">
+          <InputLabel>Status</InputLabel>
+          <Select
+            value={status}
+            onChange={(e) => setStatus(e.target.value)}
+            label="Status"
+          >
+            <MenuItem value="completed">Completed</MenuItem>
+            <MenuItem value="still_ordering">Still Ordering</MenuItem>
+            <MenuItem value="cant_deliver">Can't Deliver</MenuItem>
+          </Select>
+        </FormControl>
+
         <TextField
           fullWidth
           label="Remarks"
@@ -90,6 +218,7 @@ const UpdateOrderPage = () => {
           onChange={(e) => setRemark(e.target.value)}
           margin="normal"
         />
+
         <Button
           fullWidth
           variant="contained"
@@ -97,7 +226,7 @@ const UpdateOrderPage = () => {
           onClick={handleUpdate}
           sx={{ mt: 2 }}
         >
-          Mark as Complete
+          Update Order
         </Button>
       </Paper>
     </Container>

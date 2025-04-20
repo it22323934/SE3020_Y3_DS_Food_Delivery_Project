@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { GoogleMap, LoadScript, Marker } from '@react-google-maps/api';
 import axios from 'axios';
+import { useParams } from "react-router-dom";
 
 const containerStyle = {
   width: '100%',
@@ -9,8 +10,11 @@ const containerStyle = {
 
 function LocationMap() {
   const [currentLocation, setCurrentLocation] = useState(null);
+ const { orderId } = useParams();
+  
 
   useEffect(() => {
+    console.log("Order ID:"+orderId);
     const watchId = navigator.geolocation.watchPosition(
       (position) => {
         setCurrentLocation({
@@ -46,6 +50,7 @@ function LocationMap() {
         latitude: currentLocation.lat,
         longitude: currentLocation.lng,
         userId:"R1",
+        orderId:orderId,
       });
 
       if (response.status === 200) {
