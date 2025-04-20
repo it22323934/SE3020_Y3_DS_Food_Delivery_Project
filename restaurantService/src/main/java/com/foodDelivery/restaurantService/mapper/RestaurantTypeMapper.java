@@ -30,7 +30,6 @@ public class RestaurantTypeMapper {
         response.setTotalRatings(restaurant.getTotalRatings());
         response.setCreatedAt(restaurant.getCreatedAt());
         response.setUpdatedAt(restaurant.getUpdatedAt());
-        response.setLocation(restaurant.getLocation());
         if (restaurant.getOpeningHours() != null) {
             response.setOpeningHours(restaurant.getOpeningHours().stream()
                     .map(info -> {
