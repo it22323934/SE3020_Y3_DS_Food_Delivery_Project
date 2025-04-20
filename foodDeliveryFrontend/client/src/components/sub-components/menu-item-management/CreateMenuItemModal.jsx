@@ -63,7 +63,7 @@ export default function CreateMenuItemModal({
     spicy: false,
     quantity: "",
     unit: "ITEMS",
-    expirationDate: "",
+    expiryDate: "",
     onPromotion: false,
     discountedPrice: "",
     addOns: [],
@@ -105,7 +105,7 @@ export default function CreateMenuItemModal({
         spicy: false,
         quantity: "",
         unit: "ITEMS",
-        expirationDate: "",
+        expiryDate: "",
         onPromotion: false,
         discountedPrice: "",
         addOns: [],
@@ -302,14 +302,14 @@ export default function CreateMenuItemModal({
         errors.quantity = "Quantity must be a positive number";
       }
 
-      if (!formData.expirationDate) {
-        errors.expirationDate = "Expiration date is required for grocery items";
+      if (!formData.expiryDate) {
+        errors.expiryDate = "Expiration date is required for grocery items";
       } else {
         const today = new Date();
         today.setHours(0, 0, 0, 0); // Reset time to start of day
-        const expDate = new Date(formData.expirationDate);
+        const expDate = new Date(formData.expiryDate);
         if (expDate < today) {
-          errors.expirationDate = "Expiration date cannot be in the past";
+          errors.expiryDate = "Expiration date cannot be in the past";
         }
       }
     }
@@ -356,12 +356,12 @@ export default function CreateMenuItemModal({
       if (formData.itemType === "GROCERY") {
         submitData.quantity = parseInt(formData.quantity);
         submitData.unit = formData.unit;
-        submitData.expirationDate = formData.expirationDate;
+        submitData.expiryDate = formData.expiryDate;
 
-        if (!formData.expirationDate) {
+        if (!formData.expiryDate) {
           setFormErrors((prev) => ({
             ...prev,
-            expirationDate: "Expiration date is required for grocery items",
+            expiryDate: "Expiration date is required for grocery items",
           }));
           toast.error("Expiration date is required for grocery items");
           setSubmitting(false);
@@ -370,12 +370,12 @@ export default function CreateMenuItemModal({
 
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-        const expDate = new Date(formData.expirationDate);
+        const expDate = new Date(formData.expiryDate);
 
         if (expDate < today) {
           setFormErrors((prev) => ({
             ...prev,
-            expirationDate: "Expiration date cannot be in the past",
+            expiryDate: "Expiration date cannot be in the past",
           }));
           toast.error("Expiration date cannot be in the past");
           setSubmitting(false);
@@ -384,7 +384,7 @@ export default function CreateMenuItemModal({
       } else {
         delete submitData.quantity;
         delete submitData.unit;
-        delete submitData.expirationDate;
+        delete submitData.expiryDate;
       }
 
       if (formData.dietaryType === "VEGETARIAN") {
@@ -693,23 +693,23 @@ export default function CreateMenuItemModal({
                 </div>
 
                 <div>
-                  <Label htmlFor="expirationDate" value="Expiration Date *" className="text-gray-700 font-medium flex items-center gap-1">
+                  <Label htmlFor="expiryDate" value="Expiration Date *" className="text-gray-700 font-medium flex items-center gap-1">
                     <HiOutlineCalendar size={18} className="text-amber-500" />
                   </Label>
                   <TextInput
-                    id="expirationDate"
-                    name="expirationDate"
+                    id="expiryDate"
+                    name="expiryDate"
                     type="date"
                     min={new Date().toISOString().split("T")[0]}
-                    value={formData.expirationDate}
+                    value={formData.expiryDate}
                     onChange={handleInputChange}
                     required
-                    color={formErrors.expirationDate ? "failure" : undefined}
+                    color={formErrors.expiryDate ? "failure" : undefined}
                     className="mt-1"
                   />
-                  {formErrors.expirationDate && (
+                  {formErrors.expiryDate && (
                     <p className="mt-1 text-sm text-red-600">
-                      {formErrors.expirationDate}
+                      {formErrors.expiryDate}
                     </p>
                   )}
                 </div>

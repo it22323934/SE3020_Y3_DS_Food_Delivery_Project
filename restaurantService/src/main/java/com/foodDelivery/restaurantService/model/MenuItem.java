@@ -1,5 +1,6 @@
 package com.foodDelivery.restaurantService.model;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -7,6 +8,7 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 @Document(collection = "menuItems")
@@ -36,7 +38,8 @@ public class MenuItem {
     // Grocery specific attributes
     private String unit; // e.g., kg, g, lb, oz
     private double quantity;
-    private Long expiryDate; // timestamp
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
+    private Date expiryDate; // timestamp
 
     // Promotional information
     private boolean onPromotion = false;

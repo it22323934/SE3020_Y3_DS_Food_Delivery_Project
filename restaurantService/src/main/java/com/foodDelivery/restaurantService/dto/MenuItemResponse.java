@@ -1,9 +1,11 @@
 package com.foodDelivery.restaurantService.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 @Data
@@ -25,7 +27,8 @@ public class MenuItemResponse {
     private boolean glutenFree;
     private String unit;
     private double quantity;
-    private Long expiryDate;
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
+    private Date expiryDate;
     private boolean onPromotion;
     private double discountPercentage;
     private double discountedPrice;

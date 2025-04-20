@@ -1,5 +1,6 @@
 package com.foodDelivery.restaurantService.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -12,6 +13,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 @Data
@@ -44,7 +46,8 @@ public class MenuItemCreateRequest {
     private Boolean glutenFree = false;
     private String unit;
     private Double quantity;
-    private Long expiryDate;
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
+    private Date expiryDate;
     private Boolean onPromotion = false;
     private Double discountPercentage = 0.0;
     private Double discountedPrice;
