@@ -11,4 +11,7 @@ public interface RestaurantRepository extends MongoRepository<Restaurant, String
     List<Restaurant> findByAdminIdsContaining(String adminId);
     List<Restaurant> findByCuisineTypeIdsContaining(String cuisineTypeId);
     List<Restaurant> findByEnabled(boolean enabled);
+    boolean existsByName(String name);
+    boolean existsByEmail(String email);
+    boolean existsByPhoneNumber(String phoneNumber);
 }

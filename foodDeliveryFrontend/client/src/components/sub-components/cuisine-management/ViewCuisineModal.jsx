@@ -155,10 +155,10 @@ export const ViewCuisineModal = ({ show, onClose, cuisineData }) => {
                           </Table.Cell>
                           <Table.Cell>
                             <Badge
-                              color={restaurant.status ? "success" : "failure"}
+                              color={restaurant.enabled ? "success" : "failure"}
                               className="px-2 py-1 text-xs"
                             >
-                              {restaurant.status ? "Active" : "Inactive"}
+                              {restaurant.enabled ? "Active" : "Inactive"}
                             </Badge>
                           </Table.Cell>
                         </Table.Row>

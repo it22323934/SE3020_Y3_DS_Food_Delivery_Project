@@ -3,6 +3,7 @@ package com.foodDelivery.restaurantService.controller;
 import com.foodDelivery.restaurantService.dto.RestaurantRequest;
 import com.foodDelivery.restaurantService.dto.RestaurantResponse;
 import com.foodDelivery.restaurantService.exception.BusinessValidationException;
+import com.foodDelivery.restaurantService.mapper.RestaurantTypeMapper;
 import com.foodDelivery.restaurantService.model.Restaurant;
 import com.foodDelivery.restaurantService.serviceInterfaces.RestaurantService;
 import jakarta.validation.Valid;
@@ -10,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
@@ -35,10 +37,10 @@ public class RestaurantController {
         String userId = authentication.getName();
 
         try {
-            Restaurant restaurant = mapToEntity(request);
+            Restaurant restaurant = RestaurantTypeMapper.mapToEntity(request);
             Restaurant created = restaurantService.createRestaurant(restaurant, token);
             return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(mapToResponse(created));
+                    .body(RestaurantTypeMapper.mapToResponse(created));
         } catch (BusinessValidationException e) {
             log.warn("Validation error: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -47,14 +49,15 @@ public class RestaurantController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'RESTAURANT_ADMIN')")
     public ResponseEntity<RestaurantResponse> updateRestaurant(
             @PathVariable String id,
             @Valid @RequestBody RestaurantRequest request,
             @RequestHeader("Authorization") String token) {
         try {
-            Restaurant restaurant = mapToEntity(request);
+            Restaurant restaurant = RestaurantTypeMapper.mapToEntity(request);
             Restaurant updated = restaurantService.updateRestaurant(id, restaurant, token);
-            return ResponseEntity.ok(mapToResponse(updated));
+            return ResponseEntity.ok(RestaurantTypeMapper.mapToResponse(updated));
         } catch (BusinessValidationException e) {
             log.warn("Validation error: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -66,7 +69,7 @@ public class RestaurantController {
     public ResponseEntity<RestaurantResponse> getRestaurant(@PathVariable String id) {
         try {
             Restaurant restaurant = restaurantService.getRestaurantById(id);
-            return ResponseEntity.ok(mapToResponse(restaurant));
+            return ResponseEntity.ok(RestaurantTypeMapper.mapToResponse(restaurant));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(new RestaurantResponse());
@@ -77,19 +80,7 @@ public class RestaurantController {
     public ResponseEntity<List<RestaurantResponse>> getAllRestaurants() {
         List<Restaurant> restaurants = restaurantService.getAllRestaurants();
         List<RestaurantResponse> responses = restaurants.stream()
-                .map(this::mapToResponse)
-                .collect(Collectors.toList());
-        return ResponseEntity.ok(responses);
-    }
-
-    @GetMapping("/my-restaurants")
-    public ResponseEntity<List<RestaurantResponse>> getMyRestaurants() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String userId = authentication.getName();
-
-        List<Restaurant> restaurants = restaurantService.getRestaurantsByAdminId(userId);
-        List<RestaurantResponse> responses = restaurants.stream()
-                .map(this::mapToResponse)
+                .map(RestaurantTypeMapper::mapToResponse)
                 .collect(Collectors.toList());
         return ResponseEntity.ok(responses);
     }
@@ -111,71 +102,28 @@ public class RestaurantController {
         }
     }
 
-    private Restaurant mapToEntity(RestaurantRequest request) {
-        Restaurant restaurant = new Restaurant();
-        restaurant.setName(request.getName());
-        restaurant.setDescription(request.getDescription());
-        restaurant.setAddress(request.getAddress());
-        restaurant.setRestaurantImageUrl(request.getRestaurantImageUrl());
-        restaurant.setBannerImageUrl(request.getBannerImageUrl());
-        restaurant.setPhoneNumber(request.getPhoneNumber());
-        restaurant.setEmail(request.getEmail());
-        restaurant.setLatitude(request.getLatitude());
-        restaurant.setLongitude(request.getLongitude());
-        restaurant.setFormattedAddress(request.getFormattedAddress());
-        restaurant.setAdminIds(request.getAdminIds());
-        restaurant.setCuisineTypeIds(request.getCuisineTypeIds());
+    @GetMapping("/by-user/{userId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'RESTAURANT_ADMIN')")
+    public ResponseEntity<List<RestaurantResponse>> getRestaurantsByUserId(@PathVariable String userId) {
+        try {
+            log.info("Fetching restaurants for user ID: {}", userId);
+            List<Restaurant> restaurants = restaurantService.getRestaurantsByAdminId(userId);
 
-        if (request.getOpeningHours() != null) {
-            restaurant.setOpeningHours(request.getOpeningHours().stream()
-                    .map(dto -> {
-                        Restaurant.OpeningHourInfo info = new Restaurant.OpeningHourInfo();
-                        info.setDayOfWeek(dto.getDayOfWeek());
-                        info.setOpenTime(dto.getOpenTime());
-                        info.setCloseTime(dto.getCloseTime());
-                        info.setClosed(dto.isClosed());
-                        return info;
-                    })
-                    .collect(Collectors.toList()));
+            if (restaurants.isEmpty()) {
+                log.info("No restaurants found for user ID: {}", userId);
+                return ResponseEntity.ok(new ArrayList<>());
+            }
+
+            List<RestaurantResponse> responses = restaurants.stream()
+                    .map(RestaurantTypeMapper::mapToResponse)
+                    .collect(Collectors.toList());
+
+            log.info("Found {} restaurants for user ID: {}", responses.size(), userId);
+            return ResponseEntity.ok(responses);
+        } catch (Exception e) {
+            log.error("Error fetching restaurants for user ID {}: {}", userId, e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ArrayList<>());
         }
-
-        return restaurant;
     }
 
-    private RestaurantResponse mapToResponse(Restaurant restaurant) {
-        RestaurantResponse response = new RestaurantResponse();
-        response.setId(restaurant.getId());
-        response.setName(restaurant.getName());
-        response.setDescription(restaurant.getDescription());
-        response.setRestaurantImageUrl(restaurant.getRestaurantImageUrl());
-        response.setBannerImageUrl(restaurant.getBannerImageUrl());
-        response.setAddress(restaurant.getAddress());
-        response.setPhoneNumber(restaurant.getPhoneNumber());
-        response.setEmail(restaurant.getEmail());
-        response.setLatitude(restaurant.getLatitude());
-        response.setAdminIds(restaurant.getAdminIds());
-        response.setCuisineTypeIds(restaurant.getCuisineTypeIds());
-        response.setLongitude(restaurant.getLongitude());
-        response.setFormattedAddress(restaurant.getFormattedAddress());
-        response.setEnabled(restaurant.isEnabled());
-        response.setAvgRating(restaurant.getAvgRating());
-        response.setTotalRatings(restaurant.getTotalRatings());
-        response.setCreatedAt(restaurant.getCreatedAt());
-        response.setUpdatedAt(restaurant.getUpdatedAt());
-
-        if (restaurant.getOpeningHours() != null) {
-            response.setOpeningHours(restaurant.getOpeningHours().stream()
-                    .map(info -> {
-                        RestaurantResponse.OpeningHourDto dto = new RestaurantResponse.OpeningHourDto();
-                        dto.setDayOfWeek(info.getDayOfWeek());
-                        dto.setOpenTime(info.getOpenTime());
-                        dto.setCloseTime(info.getCloseTime());
-                        dto.setClosed(info.isClosed());
-                        return dto;
-                    })
-                    .collect(Collectors.toList()));
-        }
-
-        return response;
-    }
 }

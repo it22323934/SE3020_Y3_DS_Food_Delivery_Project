@@ -63,22 +63,32 @@ public class UserServiceClient {
     }
 
     public Long getUserIdFromToken(String token) {
+        if (token == null || token.isEmpty()) {
+            log.error("Token is null or empty");
+            return null;
+        }
+
+        // Make sure we handle Bearer prefix correctly
+        String tokenValue = token;
+        if (token.startsWith("Bearer ")) {
+            tokenValue = token.substring(7);
+        }
+
         try {
+            log.info("Fetching user ID from token");
+
             Long userId = webClientBuilder.build()
                     .get()
                     .uri(userServiceBaseUrl + "/api/users/getUserId")
-                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenValue)
                     .retrieve()
                     .bodyToMono(Long.class)
-                    .onErrorResume(e -> {
-                        log.error("Error retrieving user ID: {}", e.getMessage());
-                        return Mono.empty();
-                    })
-                    .block();
+                    .block();  // This is blocking and should be used carefully
 
+            log.info("User ID retrieved: {}", userId);
             return userId;
         } catch (Exception e) {
-            log.error("Failed to retrieve user ID from user service", e);
+            log.error("Failed to retrieve user ID from user service: {}", e.getMessage(), e);
             return null;
         }
     }

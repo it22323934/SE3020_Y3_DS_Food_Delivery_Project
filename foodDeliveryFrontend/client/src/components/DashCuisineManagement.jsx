@@ -31,6 +31,8 @@ import { useSelector } from "react-redux";
 import { CreateCuisineModal } from "./sub-components/cuisine-management/CreateCuisineModal";
 import { UpdateCuisineModal } from "./sub-components/cuisine-management/UpdateCuisineModal";
 import { ViewCuisineModal } from "./sub-components/cuisine-management/ViewCuisineModal";
+import { ManageRestaurantsModal } from "./sub-components/cuisine-management/ManageRestaurantsModal";
+
 export default function DashCuisineManagement() {
   const [loading, setLoading] = useState(true);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -49,10 +51,20 @@ export default function DashCuisineManagement() {
   const [selectedViewCuisine, setSelectedViewCuisine] = useState(null);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [selectedCuisine, setSelectedCuisine] = useState(null);
+  // Add new state for restaurant management modal
+  const [showManageRestaurantsModal, setShowManageRestaurantsModal] = useState(false);
+  
   const handleUpdateClick = (cuisine) => {
     setSelectedCuisine(cuisine);
     setShowUpdateModal(true);
   };
+  
+  // Add handler for manage restaurants button
+  const handleManageRestaurantsClick = (cuisine) => {
+    setSelectedCuisine(cuisine);
+    setShowManageRestaurantsModal(true);
+  };
+  
   const fetchCuisines = async () => {
     setLoading(true);
     try {
@@ -105,7 +117,7 @@ export default function DashCuisineManagement() {
   };
 
   const displayCuisines = cuisines
-    .slice(pageNumber * cuisines, (pageNumber + 1) * cuisinesPerPage)
+    .slice(pageNumber * cuisinesPerPage, (pageNumber + 1) * cuisinesPerPage)
     .map((cuisine) => (
       <Table.Body className="divide-y" key={cuisine.id}>
         <Table.Row
@@ -137,15 +149,15 @@ export default function DashCuisineManagement() {
                   fontSize: "1.2rem",
                   padding: "0.5rem 1rem",
                   borderRadius: "8px",
-                  display: "flex", // Use flexbox
-                  alignItems: "center", // Center vertically
-                  justifyContent: "center", // Center horizontally
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
                 }}
               >
                 {cuisine.active ? (
-                  <FaCheckCircle color="green" size={20} /> // Checkmark icon for verified
+                  <FaCheckCircle color="green" size={20} />
                 ) : (
-                  <FaTimesCircle color="red" size={20} /> // Cross icon for not verified
+                  <FaTimesCircle color="red" size={20} />
                 )}
               </Badge>
             }
@@ -174,7 +186,12 @@ export default function DashCuisineManagement() {
                 <FaClipboardList className="mr-2 h-5 w-5" />
                 Update
               </Button>
-              <Button color="blue" type="button" outline>
+              <Button 
+                color="blue" 
+                type="button" 
+                outline
+                onClick={() => handleManageRestaurantsClick(cuisine)}
+              >
                 <FaStore className="mr-2 h-5 w-5" />
                 Manage Restaurants
               </Button>
@@ -193,6 +210,10 @@ export default function DashCuisineManagement() {
   };
 
   const handleCuisineUpdated = () => {
+    fetchCuisines();
+  };
+
+  const handleRestaurantsUpdated = () => {
     fetchCuisines();
   };
 
@@ -341,6 +362,15 @@ export default function DashCuisineManagement() {
             show={showViewModal}
             onClose={() => setShowViewModal(false)}
             cuisineData={selectedViewCuisine}
+          />
+
+          {/** Manage Restaurants Modal */}
+          <ManageRestaurantsModal
+            show={showManageRestaurantsModal}
+            onClose={() => setShowManageRestaurantsModal(false)}
+            cuisineData={selectedCuisine}
+            token={currentUser.token}
+            onSuccess={handleRestaurantsUpdated}
           />
         </>
       )}
