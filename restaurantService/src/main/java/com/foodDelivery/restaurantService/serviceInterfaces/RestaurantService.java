@@ -1,5 +1,6 @@
 package com.foodDelivery.restaurantService.serviceInterfaces;
 
+import com.foodDelivery.restaurantService.dto.RestaurantResponse;
 import com.foodDelivery.restaurantService.model.Restaurant;
 import java.util.List;
 
@@ -10,6 +11,7 @@ public interface RestaurantService {
     List<Restaurant> getAllRestaurants();
     void deleteRestaurant(String id, String userId, String token);
     List<Restaurant> getRestaurantsByAdminId(String adminId);
+    List<RestaurantResponse> getNearbyRestaurants(double latitude, double longitude, double radius);
     Restaurant addAdminToRestaurant(String restaurantId, String adminId, String token);
     Restaurant removeAdminFromRestaurant(String restaurantId, String adminId, String userId, String token);
 }
