@@ -34,13 +34,13 @@ public class CuisineTypeServiceImpl implements CuisineTypeService {
     public CuisineTypeResponse createCuisineType(CuisineTypeCreateRequest request) {
         // Validate the request
         if (request.getName() == null || request.getName().trim().isEmpty()) {
-            throw new IllegalArgumentException("Cuisine type name is required");
+            throw new BusinessValidationException("Cuisine type name is required");
         }
 
         // Check if a cuisine type with the same name already exists
         Optional<CuisineType> existingCuisineType = cuisineTypeRepository.findByName(request.getName());
         if (existingCuisineType.isPresent()) {
-            throw new IllegalArgumentException("Cuisine type with name " + request.getName() + " already exists");
+            throw new BusinessValidationException("Cuisine type with name '" + request.getName() + "' already exists");
         }
 
         // Create and save the cuisine type

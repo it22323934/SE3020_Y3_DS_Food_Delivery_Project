@@ -27,7 +27,7 @@ public class MenuCategoryController {
 
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'RESTAURANT_ADMIN')")
-    public ResponseEntity<MenuCategoryResponse> createCategory(
+    public ResponseEntity<?> createCategory(
             @Valid @RequestBody MenuCategoryRequest request,
             @RequestHeader("Authorization") String token) {
         try {
@@ -35,13 +35,14 @@ public class MenuCategoryController {
             return ResponseEntity.status(HttpStatus.CREATED).body(MenuCategoryTypeMapper.mapToResponse(created));
         } catch (BusinessValidationException e) {
             log.warn("Validation error: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
         }
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'RESTAURANT_ADMIN')")
-    public ResponseEntity<MenuCategoryResponse> updateCategory(
+    public ResponseEntity<?> updateCategory(
             @PathVariable String id,
             @Valid @RequestBody MenuCategoryRequest request,
             @RequestHeader("Authorization") String token) {
@@ -50,7 +51,8 @@ public class MenuCategoryController {
             return ResponseEntity.status(HttpStatus.OK).body(MenuCategoryTypeMapper.mapToResponse(updated));
         } catch (BusinessValidationException e) {
             log.warn("Validation error: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
         }
     }
 
@@ -64,17 +66,19 @@ public class MenuCategoryController {
             return ResponseEntity.noContent().build();
         } catch (BusinessValidationException e) {
             log.warn("Validation error: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", e.getMessage()));
         }
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<MenuCategory> getCategoryById(@PathVariable String id) {
+    public ResponseEntity<?> getCategoryById(@PathVariable String id) {
         try {
             MenuCategory category = menuCategoryService.getCategoryById(id);
             return ResponseEntity.ok(category);
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", e.getMessage()));
         }
     }
 
@@ -92,7 +96,7 @@ public class MenuCategoryController {
             @RequestHeader("Authorization") String token) {
         try {
             if (!request.containsKey("categoryIds")) {
-                return ResponseEntity.badRequest().body("Missing categoryIds field");
+                return ResponseEntity.badRequest().body(Map.of("error", "Missing categoryIds field"));
             }
 
             menuCategoryService.reorderCategories(restaurantId, request.get("categoryIds"), token);
@@ -100,7 +104,7 @@ public class MenuCategoryController {
         } catch (BusinessValidationException e) {
             log.warn("Validation error: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(e.getMessage());
+                    .body(Map.of("error", e.getMessage()));
         }
     }
 }

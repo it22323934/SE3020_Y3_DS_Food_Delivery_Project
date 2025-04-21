@@ -709,6 +709,7 @@ export default function DashMyRestaurant() {
                     key={admin.id}
                     className="flex items-center p-3 bg-gray-50 rounded-lg transition-all hover:bg-gray-100"
                   >
+
                     <div>
                       <p className="font-medium">
                         {admin.firstName && admin.lastName

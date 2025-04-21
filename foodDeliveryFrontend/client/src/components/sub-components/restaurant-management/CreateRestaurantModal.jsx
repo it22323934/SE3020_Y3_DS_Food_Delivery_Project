@@ -152,33 +152,65 @@ export const CreateRestaurantModal = ({ show, onClose, onSuccess, token }) => {
     }
   };
 
-  // Fetch admin users from API
+  // Fetch admin users from API - updated to filter out admins already assigned to restaurants
   const fetchAdminUsers = async () => {
     try {
-      const response = await authService.getRestaurantAdmins(token);
-      if (response.ok) {
-        const data = await response.json();
+      // First, get all restaurant admin users
+      const adminResponse = await authService.getRestaurantAdmins(token);
 
-        // Filter only enabled admins
-        const enabledAdmins = data.filter(
-          (user) =>
-            user.enabled === true && !user.disabled && user.verified === true
-        );
-
-        // Transform data for react-select
-        const adminOptions = enabledAdmins.map((user) => ({
-          value: user.id,
-          label: user.username || `${user.firstName} ${user.lastName}`,
-          image: user.profilePictureUrl,
-          // Include additional data that might be useful for displaying
-          email: user.email,
-          phone: user.phoneNumber,
-        }));
-
-        setAdminUsers(adminOptions);
-      } else {
+      if (!adminResponse.ok) {
         toast.error("Failed to load admin users");
+        return;
       }
+
+      // Second, get all restaurants to check which admins are already assigned
+      const restaurantResponse = await restaurantService.getAllRestaurants(
+        token
+      );
+
+      if (!restaurantResponse.ok) {
+        toast.error("Failed to check restaurant assignments");
+        return;
+      }
+
+      const adminData = await adminResponse.json();
+      const restaurantData = await restaurantResponse.json();
+
+      // Extract all admin IDs that are already assigned to restaurants
+      const assignedAdminIds = new Set();
+      restaurantData.forEach((restaurant) => {
+        if (restaurant.adminIds && Array.isArray(restaurant.adminIds)) {
+          restaurant.adminIds.forEach((adminId) =>
+            assignedAdminIds.add(adminId)
+          );
+        }
+      });
+
+      // Filter only enabled admins AND those not already assigned to restaurants
+      const availableAdmins = adminData.filter(
+        (user) =>
+          user.enabled === true &&
+          !user.disabled &&
+          user.verified === true &&
+          !assignedAdminIds.has(user.id) // Only include admins not already assigned
+      );
+
+      if (availableAdmins.length === 0) {
+        toast.warning(
+          "No available admins found. You need to create new admin users first."
+        );
+      }
+
+      // Transform data for react-select
+      const adminOptions = availableAdmins.map((user) => ({
+        value: user.id,
+        label: user.username || `${user.firstName} ${user.lastName}`,
+        image: user.profilePictureUrl,
+        email: user.email,
+        phone: user.phoneNumber,
+      }));
+
+      setAdminUsers(adminOptions);
     } catch (error) {
       console.error("Error fetching admin users:", error);
       toast.error("Error loading admin users");
@@ -467,7 +499,7 @@ export const CreateRestaurantModal = ({ show, onClose, onSuccess, token }) => {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to create restaurant");
+        throw new Error(errorData.error || "Failed to update restaurant");
       }
 
       setSuccess(true);
@@ -477,7 +509,7 @@ export const CreateRestaurantModal = ({ show, onClose, onSuccess, token }) => {
       setTimeout(() => {
         onSuccess?.();
         onClose();
-      }, 1500);
+      }, 200);
     } catch (error) {
       toast.error(
         error.message || "An error occurred while creating the restaurant"
@@ -564,13 +596,7 @@ export const CreateRestaurantModal = ({ show, onClose, onSuccess, token }) => {
   };
 
   return (
-    <Modal
-      show={show}
-      onClose={handleClose}
-      size="6xl"
-      popup={false}
-      className="max-h-[90vh] overflow-y-auto"
-    >
+    <Modal show={show} onClose={handleClose} size="6xl" popup={false}>
       <Modal.Header className="border-b border-gray-200 bg-gray-50">
         <div className="flex items-center">
           <div className="p-2 bg-green-100 rounded-full mr-3">
@@ -902,6 +928,10 @@ export const CreateRestaurantModal = ({ show, onClose, onSuccess, token }) => {
                     value="Select Restaurant Admins *"
                     className="font-medium"
                   />
+                  <p className="text-xs text-gray-500 mb-1">
+                    Only admins who aren't already managing a restaurant are
+                    shown.
+                  </p>
                 </div>
                 <Select
                   isMulti
@@ -909,14 +939,28 @@ export const CreateRestaurantModal = ({ show, onClose, onSuccess, token }) => {
                   options={adminUsers}
                   className="basic-multi-select"
                   classNamePrefix="select"
-                  placeholder="Select restaurant admins..."
+                  placeholder={
+                    adminUsers.length > 0
+                      ? "Select restaurant admins..."
+                      : "No available admins found"
+                  }
                   onChange={handleAdminChange}
                   components={{
                     Option: CustomAdminOption,
                   }}
+                  noOptionsMessage={() =>
+                    "No available admin users found. Create new admin users first."
+                  }
                 />
                 {errors.admins && (
                   <p className="text-red-500 text-sm mt-1">{errors.admins}</p>
+                )}
+                {adminUsers.length === 0 && (
+                  <div className="mt-2 p-2 bg-yellow-50 text-yellow-800 rounded-md text-sm flex items-center">
+                    <HiX className="mr-2 text-yellow-600" />
+                    No available admin users found. All admins are already
+                    assigned to restaurants. Create new admin users first.
+                  </div>
                 )}
               </div>
 

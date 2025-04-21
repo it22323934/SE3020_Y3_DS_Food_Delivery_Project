@@ -1,5 +1,6 @@
 package com.foodDelivery.restaurantService.model;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -7,6 +8,7 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 @Document(collection = "menuItems")
@@ -29,14 +31,15 @@ public class MenuItem {
 
     // Dietary preferences
     private boolean vegetarian = false;
+    private boolean nonVegetarian = false;
     private boolean vegan = false;
     private boolean glutenFree = false;
 
     // Grocery specific attributes
-    private String unit; // e.g., kg, grams, pieces
+    private String unit; // e.g., kg, g, lb, oz
     private double quantity;
-    private Long expiryDate; // timestamp
-    private String brand;
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
+    private Date expiryDate; // timestamp
 
     // Promotional information
     private boolean onPromotion = false;
@@ -48,7 +51,24 @@ public class MenuItem {
     private boolean spicy = false;
     private int popularityScore = 0;
 
+    // Add-ons for customization
+    private List<AddOn> addOns = new ArrayList<>();
+
     // Tracking
     private long createdAt;
     private long updatedAt;
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class AddOn {
+        private String id;
+        private String name;
+        private String description;
+        private double price;
+        private boolean available = true;
+        private boolean multiple = false; // Can select multiple of this add-on
+        private boolean required = false; // Is this add-on required
+        private int maxQuantity = 1; // Maximum quantity allowed
+    }
 }

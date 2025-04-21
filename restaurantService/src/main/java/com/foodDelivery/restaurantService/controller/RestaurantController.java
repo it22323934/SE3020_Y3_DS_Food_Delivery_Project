@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
@@ -29,7 +30,7 @@ public class RestaurantController {
     private final RestaurantService restaurantService;
 
     @PostMapping
-    public ResponseEntity<RestaurantResponse> createRestaurant(
+    public ResponseEntity<?> createRestaurant(
             @Valid @RequestBody RestaurantRequest request,
             @RequestHeader("Authorization") String token) {
 
@@ -44,13 +45,13 @@ public class RestaurantController {
         } catch (BusinessValidationException e) {
             log.warn("Validation error: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(new RestaurantResponse());
+                    .body(Map.of("error", e.getMessage()));
         }
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'RESTAURANT_ADMIN')")
-    public ResponseEntity<RestaurantResponse> updateRestaurant(
+    public ResponseEntity<?> updateRestaurant(
             @PathVariable String id,
             @Valid @RequestBody RestaurantRequest request,
             @RequestHeader("Authorization") String token) {
@@ -61,7 +62,24 @@ public class RestaurantController {
         } catch (BusinessValidationException e) {
             log.warn("Validation error: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(new RestaurantResponse());
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteRestaurant(
+            @PathVariable String id,
+            @RequestHeader("Authorization") String token) {
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String userId = authentication.getName();
+
+        try {
+            restaurantService.deleteRestaurant(id, userId, token);
+            return ResponseEntity.noContent().build();
+        } catch (BusinessValidationException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", e.getMessage()));
         }
     }
 
@@ -83,23 +101,6 @@ public class RestaurantController {
                 .map(RestaurantTypeMapper::mapToResponse)
                 .collect(Collectors.toList());
         return ResponseEntity.ok(responses);
-    }
-
-    @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteRestaurant(
-            @PathVariable String id,
-            @RequestHeader("Authorization") String token) {
-
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String userId = authentication.getName();
-
-        try {
-            restaurantService.deleteRestaurant(id, userId, token);
-            return ResponseEntity.noContent().build();
-        } catch (BusinessValidationException e) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(new RestaurantResponse());
-        }
     }
 
     @GetMapping("/by-user/{userId}")

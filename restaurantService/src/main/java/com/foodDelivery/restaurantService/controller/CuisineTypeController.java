@@ -3,6 +3,7 @@ package com.foodDelivery.restaurantService.controller;
 import com.foodDelivery.restaurantService.dto.CuisineTypeCreateRequest;
 import com.foodDelivery.restaurantService.dto.CuisineTypeResponse;
 import com.foodDelivery.restaurantService.dto.CuisineTypeUpdateRequest;
+import com.foodDelivery.restaurantService.exception.BusinessValidationException;
 import com.foodDelivery.restaurantService.serviceInterfaces.CuisineTypeService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -12,6 +13,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/restaurants/cuisine-types")
@@ -38,15 +40,21 @@ public class CuisineTypeController {
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<CuisineTypeResponse> createCuisineType(@RequestBody CuisineTypeCreateRequest request) {
+    public ResponseEntity<?> createCuisineType(@RequestBody CuisineTypeCreateRequest request) {
         log.info("Creating new cuisine type: {}", request.getName());
-        CuisineTypeResponse created = cuisineTypeService.createCuisineType(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+        try {
+            CuisineTypeResponse created = cuisineTypeService.createCuisineType(request);
+            return ResponseEntity.status(HttpStatus.CREATED).body(created);
+        } catch (BusinessValidationException | IllegalArgumentException e) {
+            log.warn("Error creating cuisine type: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
+        }
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<CuisineTypeResponse> updateCuisineType(
+    public ResponseEntity<?> updateCuisineType(
             @PathVariable String id,
             @RequestBody CuisineTypeUpdateRequest request) {
         log.info("Updating cuisine type with id: {}", id);
@@ -55,26 +63,28 @@ public class CuisineTypeController {
             return ResponseEntity.ok(updated);
         } catch (RuntimeException e) {
             log.error("Error updating cuisine type: {}", e.getMessage());
-            return ResponseEntity.notFound().build();
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", e.getMessage()));
         }
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Void> deleteCuisineType(@PathVariable String id) {
+    public ResponseEntity<?> deleteCuisineType(@PathVariable String id) {
         log.info("Deleting cuisine type with id: {}", id);
         try {
             cuisineTypeService.deleteCuisineType(id);
             return ResponseEntity.noContent().build();
         } catch (RuntimeException e) {
             log.error("Error deleting cuisine type: {}", e.getMessage());
-            return ResponseEntity.notFound().build();
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", e.getMessage()));
         }
     }
 
     @PutMapping("/{cuisineTypeId}/restaurants/{restaurantId}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Void> addRestaurantToCuisineType(
+    public ResponseEntity<?> addRestaurantToCuisineType(
             @PathVariable String cuisineTypeId,
             @PathVariable String restaurantId) {
         log.info("Adding restaurant {} to cuisine type {}", restaurantId, cuisineTypeId);
@@ -83,13 +93,14 @@ public class CuisineTypeController {
             return ResponseEntity.noContent().build();
         } catch (RuntimeException e) {
             log.error("Error adding restaurant to cuisine type: {}", e.getMessage());
-            return ResponseEntity.notFound().build();
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", e.getMessage()));
         }
     }
 
     @DeleteMapping("/{cuisineTypeId}/restaurants/{restaurantId}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Void> removeRestaurantFromCuisineType(
+    public ResponseEntity<?> removeRestaurantFromCuisineType(
             @PathVariable String cuisineTypeId,
             @PathVariable String restaurantId) {
         log.info("Removing restaurant {} from cuisine type {}", restaurantId, cuisineTypeId);
@@ -98,7 +109,8 @@ public class CuisineTypeController {
             return ResponseEntity.noContent().build();
         } catch (RuntimeException e) {
             log.error("Error removing restaurant from cuisine type: {}", e.getMessage());
-            return ResponseEntity.notFound().build();
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", e.getMessage()));
         }
     }
 }
