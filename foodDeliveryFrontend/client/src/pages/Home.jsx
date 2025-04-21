@@ -199,7 +199,7 @@ export default function Home() {
       
       const matchesCuisine = !selectedCuisine || 
                             (restaurant.cuisineTypeIds && 
-                            restaurant.cuisineTypeIds.some(cuisine => cuisine._id === selectedCuisine));
+                            restaurant.cuisineTypeIds.some(cuisine => cuisine.id === selectedCuisine));
       
       return matchesSearch && matchesCuisine;
     });

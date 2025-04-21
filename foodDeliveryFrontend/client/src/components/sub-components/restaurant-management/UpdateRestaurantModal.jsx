@@ -596,8 +596,6 @@ export const UpdateRestaurantModal = ({
       }
 
       setSuccess(true);
-      toast.success("Restaurant updated successfully");
-
       // Reset form after success
       setTimeout(() => {
         onSuccess?.();

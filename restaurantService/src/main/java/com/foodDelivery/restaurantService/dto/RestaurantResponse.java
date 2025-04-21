@@ -17,6 +17,7 @@ public class RestaurantResponse {
     private String email;
     private Double latitude;
     private Double longitude;
+    private double[] location;
     private String formattedAddress;
     private List<OpeningHourDto> openingHours = new ArrayList<>();
     private List<String> cuisineTypeIds = new ArrayList<>();

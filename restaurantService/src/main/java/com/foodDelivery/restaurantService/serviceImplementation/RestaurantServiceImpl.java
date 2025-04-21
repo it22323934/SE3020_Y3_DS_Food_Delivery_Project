@@ -111,6 +111,10 @@ public class RestaurantServiceImpl implements RestaurantService {
         restaurant.setEnabled(true);
         restaurant.setAvgRating(0.0);
         restaurant.setTotalRatings(0);
+        if (restaurant.getLatitude() != null && restaurant.getLongitude() != null) {
+            double[] location = new double[] {restaurant.getLongitude(), restaurant.getLatitude()};
+            restaurant.setLocation(location);
+        }
 
         log.info("Creating new restaurant: {} with {} admins", restaurant.getName(), restaurant.getAdminIds().size());
         Restaurant savedRestaurant = restaurantRepository.save(restaurant);
@@ -307,13 +311,14 @@ public class RestaurantServiceImpl implements RestaurantService {
         existingRestaurant.setBannerImageUrl(restaurant.getBannerImageUrl());
         existingRestaurant.setPhoneNumber(restaurant.getPhoneNumber());
         existingRestaurant.setEmail(restaurant.getEmail());
+        double[] location = new double[] {restaurant.getLongitude(), restaurant.getLatitude()};
+        existingRestaurant.setLocation(location);
         existingRestaurant.setLatitude(restaurant.getLatitude());
         existingRestaurant.setLongitude(restaurant.getLongitude());
         existingRestaurant.setFormattedAddress(restaurant.getFormattedAddress());
         existingRestaurant.setOpeningHours(restaurant.getOpeningHours());
         existingRestaurant.setEnabled(restaurant.isEnabled());
         existingRestaurant.setUpdatedAt(System.currentTimeMillis());
-
         // Only update adminIds if it was changed
         if (restaurant.getAdminIds() != null) {
             existingRestaurant.setAdminIds(restaurant.getAdminIds());

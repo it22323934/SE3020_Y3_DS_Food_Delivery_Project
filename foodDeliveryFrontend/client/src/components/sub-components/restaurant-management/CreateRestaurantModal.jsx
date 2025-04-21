@@ -504,7 +504,6 @@ export const CreateRestaurantModal = ({ show, onClose, onSuccess, token }) => {
 
       setSuccess(true);
       toast.success("Restaurant created successfully");
-
       // Reset form after success
       setTimeout(() => {
         onSuccess?.();
