@@ -381,7 +381,7 @@ public class DeliveryReplicationService implements IDeliveryReplicationService {
     public void FetchDriverOrders(String driverId,DeliveryReplication delivery) {
         logger.info("🟡 Received driverId from Kafka: {}", driverId);
 
-        String url = "http://localhost:8081/api/driver-orders/orders/incomplete/" + driverId;
+        String url = "http://localhost:9005/api/driver-orders/orders/incomplete/" + driverId;
 
         try {
             ResponseEntity<DriverOrderDTO[]> response =
@@ -410,7 +410,7 @@ public class DeliveryReplicationService implements IDeliveryReplicationService {
                     driverOrderDTO.setOrderTime(delivery.getOrderTime());
                     driverOrderDTO.setOrderComplete(false);
                     driverOrderDTO.setRemarks("null");
-                    String url1 = "http://localhost:8081/api/driver-orders";
+                    String url1 = "http://localhost:9005/api/driver-orders";
                     ResponseEntity<String> postResponse = restTemplate.postForEntity(
                             url1,
                             driverOrderDTO,
