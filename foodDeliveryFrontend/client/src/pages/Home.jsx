@@ -232,11 +232,11 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-gradient-to-r from-orange-500 to-red-600 text-white py-16">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
+      <header className="bg-gradient-to-r from-orange-500 to-red-600 dark:from-orange-700 dark:to-red-800 text-white py-16 relative">
         <div className="container mx-auto px-4">
           <h1 className="text-4xl md:text-5xl font-bold text-center mb-4">
-            Food Delivery
+            Flavour Fleet
           </h1>
           <p className="text-xl text-center mb-8">
             Order delicious food from the best restaurants near you
@@ -251,7 +251,7 @@ export default function Home() {
               value={searchQuery}
               onChange={handleSearchChange}
               icon={FaSearch}
-              className="w-full"
+              className="w-full dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400"
             />
           </div>
         </div>
@@ -263,7 +263,9 @@ export default function Home() {
           <div className="flex-1">
             {cuisines.length > 0 && (
               <div className="mb-4">
-                <h2 className="text-lg font-semibold mb-3">Filter by Cuisine</h2>
+                <h2 className="text-lg font-semibold mb-3 text-gray-900 dark:text-white">
+                  Filter by Cuisine
+                </h2>
                 <div className="flex flex-wrap gap-2">
                   {cuisines.map(cuisine => (
                     <Button
@@ -271,6 +273,7 @@ export default function Home() {
                       color={selectedCuisine === cuisine.id ? "success" : "light"}
                       size="sm"
                       onClick={() => handleCuisineChange(cuisine.id)}
+                      className="dark:border-gray-700"
                     >
                       {cuisine.name}
                     </Button>
@@ -284,7 +287,7 @@ export default function Home() {
           <div className="flex-none">
             <Button
               color={showNearby ? "success" : "light"}
-              className="flex items-center"
+              className="flex items-center dark:border-gray-700"
               onClick={toggleNearbyFilter}
               disabled={locationLoading}
             >
@@ -302,24 +305,28 @@ export default function Home() {
             </Button>
             
             {locationError && (
-              <div className="mt-2 text-xs text-red-600">{locationError}</div>
+              <div className="mt-2 text-xs text-red-600 dark:text-red-400">
+                {locationError}
+              </div>
             )}
           </div>
         </div>
         
         {/* Distance Radius Slider (only show when viewing nearby restaurants) */}
         {showNearby && userLocation && (
-          <div className="mb-8 bg-white p-4 rounded-lg shadow">
-            <h3 className="text-lg font-medium mb-2">Distance: {distanceRadius} km</h3>
+          <div className="mb-8 bg-white dark:bg-gray-800 p-4 rounded-lg shadow dark:shadow-gray-700">
+            <h3 className="text-lg font-medium mb-2 text-gray-900 dark:text-white">
+              Distance: {distanceRadius} km
+            </h3>
             <input
               type="range"
               min="1"
               max="20"
               value={distanceRadius}
               onChange={(e) => handleRadiusChange(parseInt(e.target.value))}
-              className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+              className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer"
             />
-            <div className="flex justify-between text-xs text-gray-500 mt-1">
+            <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1">
               <span>1 km</span>
               <span>10 km</span>
               <span>20 km</span>
@@ -330,14 +337,14 @@ export default function Home() {
         {/* Loading State */}
         {loading && (
           <div className="flex justify-center items-center py-12">
-            <Spinner size="xl" />
-            <span className="ml-2">Loading restaurants...</span>
+            <Spinner size="xl" className="text-blue-600 dark:text-blue-400" />
+            <span className="ml-2 text-gray-700 dark:text-gray-300">Loading restaurants...</span>
           </div>
         )}
         
         {/* Error State */}
         {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+          <div className="bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-300 px-4 py-3 rounded mb-4">
             <p>Error: {error}</p>
           </div>
         )}
@@ -345,9 +352,11 @@ export default function Home() {
         {/* No Results */}
         {!loading && !error && filteredRestaurants.length === 0 && (
           <div className="text-center py-12">
-            <FaUtensils className="mx-auto text-gray-400 text-5xl mb-4" />
-            <h2 className="text-2xl font-bold text-gray-600">No restaurants found</h2>
-            <p className="text-gray-500 mt-2">
+            <FaUtensils className="mx-auto text-gray-400 dark:text-gray-600 text-5xl mb-4" />
+            <h2 className="text-2xl font-bold text-gray-600 dark:text-gray-300">
+              No restaurants found
+            </h2>
+            <p className="text-gray-500 dark:text-gray-400 mt-2">
               {showNearby 
                 ? "No restaurants found within the selected radius. Try increasing the distance." 
                 : searchQuery 
@@ -373,7 +382,7 @@ export default function Home() {
             return (
               <Card 
                 key={restaurant.id}
-                className="hover:shadow-lg transition-shadow cursor-pointer"
+                className="hover:shadow-lg transition-shadow cursor-pointer dark:border-gray-700 dark:bg-gray-800"
                 onClick={() => handleRestaurantClick(restaurant.id)}
               >
                 {/* Restaurant Image */}
@@ -401,7 +410,7 @@ export default function Home() {
                   </div>
                   
                   {/* Address and Distance */}
-                  <div className="mt-2 text-sm text-gray-500">
+                  <div className="mt-2 text-sm text-gray-500 dark:text-gray-400">
                     {restaurant.address && (
                       <div className="flex items-center">
                         <FaMapMarkerAlt className="mr-1" />
@@ -411,7 +420,7 @@ export default function Home() {
                     
                     {/* Show distance if available */}
                     {distance !== null && (
-                      <div className="flex items-center mt-1 text-blue-600">
+                      <div className="flex items-center mt-1 text-blue-600 dark:text-blue-400">
                         <FaDirections className="mr-1" />
                         <span>{distance.toFixed(1)} km away</span>
                       </div>
@@ -421,20 +430,20 @@ export default function Home() {
                   {/* Rating & Delivery Time */}
                   <div className="flex justify-between mt-3">
                     <div className="flex items-center">
-                      <FaStar className="text-yellow-400 mr-1" />
-                      <span className="font-medium">
+                      <FaStar className="text-yellow-400 dark:text-yellow-300 mr-1" />
+                      <span className="font-medium text-gray-900 dark:text-white">
                         {restaurant.rating ? restaurant.rating.toFixed(1) : "New"}
                       </span>
                     </div>
-                    <div className="flex items-center">
-                      <FaClock className="text-gray-500 mr-1" />
+                    <div className="flex items-center text-gray-500 dark:text-gray-400">
+                      <FaClock className="mr-1" />
                       <span>{restaurant.deliveryTime || "30-45"} min</span>
                     </div>
                   </div>
                   
                   {/* Description */}
                   {restaurant.description && (
-                    <p className="mt-3 text-gray-600 line-clamp-2">
+                    <p className="mt-3 text-gray-600 dark:text-gray-300 line-clamp-2">
                       {restaurant.description}
                     </p>
                   )}

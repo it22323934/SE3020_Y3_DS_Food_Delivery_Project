@@ -58,21 +58,21 @@ export default function RestaurantDetail() {
   
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
-        <Spinner size="xl" />
-        <span className="ml-2">Loading restaurant details...</span>
+      <div className="flex justify-center items-center min-h-screen bg-gray-50 dark:bg-gray-900">
+        <Spinner size="xl" className="text-blue-600 dark:text-blue-400" />
+        <span className="ml-2 text-gray-700 dark:text-gray-300">Loading restaurant details...</span>
       </div>
     );
   }
   
   if (error || !restaurant) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+      <div className="container mx-auto px-4 py-8 bg-gray-50 dark:bg-gray-900">
+        <div className="bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-300 px-4 py-3 rounded mb-4">
           <p>Error: {error || "Restaurant not found"}</p>
         </div>
         <Link to="/">
-          <Button color="gray">
+          <Button color="gray" className="dark:bg-gray-700 dark:text-white">
             <FaArrowLeft className="mr-2" />
             Back to Home
           </Button>
@@ -82,7 +82,7 @@ export default function RestaurantDetail() {
   }
   
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
       {/* Restaurant Banner */}
       <div 
         className="h-64 bg-cover bg-center flex items-end relative"
@@ -91,7 +91,7 @@ export default function RestaurantDetail() {
         <div className="absolute inset-0 bg-black bg-opacity-50"></div>
         <div className="container mx-auto px-4 pb-4 relative">
           <Link to="/">
-            <Button color="light" className="z-10">
+            <Button color="light" className="z-10 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600">
               <FaArrowLeft className="mr-2" />
               Back to Home
             </Button>
@@ -101,10 +101,10 @@ export default function RestaurantDetail() {
       
       <div className="container mx-auto px-4 py-8">
         {/* Restaurant Info */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-gray-700 p-6 mb-6">
           <div className="flex flex-col md:flex-row md:justify-between md:items-center">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">{restaurant.name}</h1>
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">{restaurant.name}</h1>
               
               {/* Cuisine Tags */}
               <div className="flex flex-wrap gap-1 mb-3">
@@ -115,36 +115,36 @@ export default function RestaurantDetail() {
                 ))}
               </div>
               
-              <p className="text-gray-600">{restaurant.description}</p>
+              <p className="text-gray-600 dark:text-gray-300">{restaurant.description}</p>
             </div>
             
             <div className="mt-4 md:mt-0 md:text-right">
               <div className="flex items-center justify-end">
-                <FaStar className="text-yellow-400 mr-1" />
-                <span className="font-medium text-lg">
+                <FaStar className="text-yellow-400 dark:text-yellow-300 mr-1" />
+                <span className="font-medium text-lg text-gray-900 dark:text-white">
                   {restaurant.rating ? restaurant.rating.toFixed(1) : "New"}
                 </span>
               </div>
               
               <div className="flex items-center justify-end mt-2">
-                <FaClock className="text-gray-500 mr-1" />
-                <span>{restaurant.deliveryTime || "30-45"} min delivery</span>
+                <FaClock className="text-gray-500 dark:text-gray-400 mr-1" />
+                <span className="text-gray-700 dark:text-gray-300">{restaurant.deliveryTime || "30-45"} min delivery</span>
               </div>
             </div>
           </div>
           
-          <hr className="my-4" />
+          <hr className="my-4 border-gray-200 dark:border-gray-700" />
           
           {/* Additional Info */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="flex items-center">
-              <FaMapMarkerAlt className="text-red-500 mr-2" />
+            <div className="flex items-center text-gray-700 dark:text-gray-300">
+              <FaMapMarkerAlt className="text-red-500 dark:text-red-400 mr-2" />
               <span>{restaurant.address || "Address not provided"}</span>
             </div>
             
             {restaurant.phoneNumber && (
-              <div className="flex items-center">
-                <FaPhoneAlt className="text-blue-500 mr-2" />
+              <div className="flex items-center text-gray-700 dark:text-gray-300">
+                <FaPhoneAlt className="text-blue-500 dark:text-blue-400 mr-2" />
                 <span>{restaurant.phoneNumber}</span>
               </div>
             )}
@@ -152,36 +152,39 @@ export default function RestaurantDetail() {
         </div>
         
         {/* Menu Categories */}
-        <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center">
+        <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-4 flex items-center">
           <FaUtensils className="mr-2" />
           Menu
         </h2>
         
         {categories.length === 0 ? (
-          <div className="bg-gray-100 rounded-lg p-6 text-center">
-            <p className="text-gray-600">No menu categories available</p>
+          <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-6 text-center">
+            <p className="text-gray-600 dark:text-gray-400">No menu categories available</p>
           </div>
         ) : (
-          <Tabs style="underline">
-            {categories.filter(cat => cat.active).map(category => (
-              <Tabs.Item 
-                key={category.id} 
-                title={category.name} 
-                active={categories.indexOf(category) === 0}
-              >
-                <div className="p-4">
-                  {category.description && (
-                    <p className="text-gray-600 mb-4">{category.description}</p>
-                  )}
-                  
-                  <MenuItemsByCategorySection 
-                    categoryId={category.id} 
-                    token={currentUser?.token}
-                  />
-                </div>
-              </Tabs.Item>
-            ))}
-          </Tabs>
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-700">
+            <Tabs style="underline" className="dark:border-gray-700">
+              {categories.filter(cat => cat.active).map(category => (
+                <Tabs.Item 
+                  key={category.id} 
+                  title={category.name} 
+                  active={categories.indexOf(category) === 0}
+                  className="dark:text-white"
+                >
+                  <div className="p-4">
+                    {category.description && (
+                      <p className="text-gray-600 dark:text-gray-300 mb-4">{category.description}</p>
+                    )}
+                    
+                    <MenuItemsByCategorySection 
+                      categoryId={category.id} 
+                      token={currentUser?.token}
+                    />
+                  </div>
+                </Tabs.Item>
+              ))}
+            </Tabs>
+          </div>
         )}
       </div>
     </div>
@@ -220,15 +223,15 @@ function MenuItemsByCategorySection({ categoryId, token }) {
   if (loading) {
     return (
       <div className="flex justify-center py-8">
-        <Spinner />
-        <span className="ml-2">Loading menu items...</span>
+        <Spinner className="text-blue-600 dark:text-blue-400" />
+        <span className="ml-2 text-gray-700 dark:text-gray-300">Loading menu items...</span>
       </div>
     );
   }
   
   if (error) {
     return (
-      <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+      <div className="bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-300 px-4 py-3 rounded mb-4">
         <p>Error: {error}</p>
       </div>
     );
@@ -237,7 +240,7 @@ function MenuItemsByCategorySection({ categoryId, token }) {
   if (menuItems.length === 0) {
     return (
       <div className="text-center py-6">
-        <p className="text-gray-500">No menu items in this category</p>
+        <p className="text-gray-500 dark:text-gray-400">No menu items in this category</p>
       </div>
     );
   }
@@ -245,7 +248,7 @@ function MenuItemsByCategorySection({ categoryId, token }) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
       {menuItems.map(item => (
-        <Card key={item.id} className="hover:shadow-md">
+        <Card key={item.id} className="hover:shadow-md dark:bg-gray-800 dark:border-gray-700">
           <div className="flex">
             {item.imageUrl && (
               <div className="w-24 h-24 flex-shrink-0">
@@ -257,13 +260,13 @@ function MenuItemsByCategorySection({ categoryId, token }) {
               </div>
             )}
             <div className={item.imageUrl ? "ml-4 flex-1" : "flex-1"}>
-              <h5 className="text-lg font-semibold">{item.name}</h5>
+              <h5 className="text-lg font-semibold text-gray-900 dark:text-white">{item.name}</h5>
               {item.description && (
-                <p className="text-gray-600 text-sm line-clamp-2">{item.description}</p>
+                <p className="text-gray-600 dark:text-gray-300 text-sm line-clamp-2">{item.description}</p>
               )}
               <div className="mt-2 font-bold flex items-center">
-                <FaDollarSign className="text-green-600" />
-                {parseFloat(item.price).toFixed(2)}
+                <FaDollarSign className="text-green-600 dark:text-green-400" />
+                <span className="text-gray-800 dark:text-gray-100">{parseFloat(item.price).toFixed(2)}</span>
               </div>
             </div>
           </div>

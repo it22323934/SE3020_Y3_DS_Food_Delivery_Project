@@ -24,6 +24,7 @@ public class RestaurantTypeMapper {
         response.setAdminIds(restaurant.getAdminIds());
         response.setCuisineTypeIds(restaurant.getCuisineTypeIds());
         response.setLongitude(restaurant.getLongitude());
+        response.setLocation(restaurant.getLocation());
         response.setFormattedAddress(restaurant.getFormattedAddress());
         response.setEnabled(restaurant.isEnabled());
         response.setAvgRating(restaurant.getAvgRating());
