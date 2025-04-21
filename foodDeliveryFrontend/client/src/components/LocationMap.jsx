@@ -46,7 +46,8 @@ function LocationMap() {
         return;
       }
 
-      const response = await axios.post('http://localhost:8083/api/location', {
+      //  const response = await axios.post('http://localhost:8083/api/location', {
+      const response = await axios.post('http://localhost:8089/api/location', {
         latitude: currentLocation.lat,
         longitude: currentLocation.lng,
         userId:"R1",

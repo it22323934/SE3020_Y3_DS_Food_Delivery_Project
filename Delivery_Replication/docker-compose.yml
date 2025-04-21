@@ -1,15 +1,17 @@
+version: '3.8'
+
 services:
   mongodb:
     image: mongo:5.0
     container_name: Delivery_Management_mongodb
     ports:
-      - "27300:27017"  # Changed 27018 to 27017 (MongoDB default port)
+      - "27300:27017"
     environment:
       MONGO_INITDB_ROOT_USERNAME: "root"
       MONGO_INITDB_ROOT_PASSWORD: "example"
       MONGO_INITDB_DATABASE: "Delivery_Replication"
     volumes:
-      - ./data:/data/db
+      - mongodata:/data/db
     restart: unless-stopped
     command: ["mongod", "--bind_ip_all"]
     deploy:
@@ -17,3 +19,6 @@ services:
         limits:
           cpus: "1.0"
           memory: 2G
+
+volumes:
+  mongodata:

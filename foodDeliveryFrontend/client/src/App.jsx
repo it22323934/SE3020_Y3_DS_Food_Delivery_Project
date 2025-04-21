@@ -18,6 +18,7 @@ import DeliveryAssignOrders from "./components/DriverAssignOrders";
 import UpdateOrderPage from "./components/UpdateOrder";
 import LocationMap from "./components/LocationMap";
 import UserLocationViewer from "./components/UserLocationViewer";
+import { CreateUserModal } from "./components/sub-components/user-management/CreateUserModal";
 export default function App() {
   return (
     <BrowserRouter>
@@ -36,6 +37,7 @@ export default function App() {
         <Route path="/update-order/:orderId" element={<UpdateOrderPage />} />
         <Route path="/location-map/:orderId" element={<LocationMap />} />
         <Route path="/UserLocationViewer" element={<UserLocationViewer />} />
+        <Route path="/CreateUserModal" element={<CreateUserModal />} />
 
 
 

@@ -19,7 +19,8 @@ export default function RegisterDeliveryDriver() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await axios.post("http://localhost:9002/api/deliveryDriver", formData);
+    //       const response = await axios.post("http://localhost:9002/api/deliveryDriver", formData);  
+      const response = await axios.post("http://localhost:8089/api/deliveryDriver", formData);
       alert("Driver Registered: " + response.data);
     } catch (error) {
       console.error("Error registering driver:", error);

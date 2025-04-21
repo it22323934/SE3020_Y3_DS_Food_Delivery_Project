@@ -11,7 +11,8 @@ export default function ViewDeliveryDrivers() {
 
   const fetchDrivers = async () => {
     try {
-      const response = await axios.get("http://localhost:9002/api/deliveryDriver");
+      //      const response = await axios.get("http://localhost:9002/api/deliveryDriver");
+      const response = await axios.get("http://localhost:8089/api/deliveryDriver");
       setDrivers(response.data);
     } catch (error) {
       console.error("Error fetching drivers:", error);
@@ -20,7 +21,8 @@ export default function ViewDeliveryDrivers() {
 
   const handleDelete = async (driverId) => {
     try {
-      await axios.delete(`http://localhost:9002/api/deliveryDriver/${driverId}`);
+    //  await axios.delete(`http://localhost:9002/api/deliveryDriver/${driverId}`);
+      await axios.delete(`http://localhost:8089/api/deliveryDriver/${driverId}`);
       alert("Driver Deleted!");
       fetchDrivers(); // Refresh the list after deleting
     } catch (error) {

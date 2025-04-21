@@ -6,16 +6,24 @@ const DeliveryReplicationView = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Fetch delivery replication data from backend
-    fetch("http://localhost:9001/api/deliveryReplication")
-      .then((response) => response.json())
+    fetch("http://localhost:8089/api/deliveryReplication")
+      .then((response) => {
+        if (!response.ok) {
+          // Handle HTTP errors
+          return response.text().then(text => {
+            throw new Error(`HTTP error! Status: ${response.status}, Message: ${text}`);
+          });
+        }
+        return response.json();
+      })
       .then((data) => {
-        setDeliveries(data); // Set the data to state
-        setLoading(false); // Stop loading
+        setDeliveries(data);
+        setLoading(false);
       })
       .catch((error) => {
         console.error("Error fetching data:", error);
         setLoading(false);
+        // Optionally show error to user
       });
   }, []);
 

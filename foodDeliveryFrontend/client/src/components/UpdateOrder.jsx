@@ -27,7 +27,8 @@ const UpdateOrderPage = () => {
   useEffect(() => {
     const fetchOrder = async () => {
       try {
-        const res = await axios.get(`http://localhost:8081/api/driver-orders/order-by-id/${orderId}`);
+        //         const res = await axios.get(`http://localhost:8081/api/driver-orders/order-by-id/${orderId}`);
+        const res = await axios.get(`http://localhost:8089/api/driver-orders/order-by-id/${orderId}`);
         const currentOrder = res.data[0];
 
         if (currentOrder) {
@@ -140,11 +141,13 @@ const UpdateOrderPage = () => {
     };
   
     try {
-      await axios.put(`http://localhost:8081/api/driver-orders/${orderId}`, updatedOrder);
+      //      await axios.put(`http://localhost:8081/api/driver-orders/${orderId}`, updatedOrder);
+      await axios.put(`http://localhost:8089/api/driver-orders/${orderId}`, updatedOrder);
   
       // 2. Handle replication update
       try {
-        const replicationRes = await axios.get(`http://localhost:9001/api/deliveryReplication/${orderId}`);
+        //         const replicationRes = await axios.get(`http://localhost:9001/api/deliveryReplication/${orderId}`);
+        const replicationRes = await axios.get(`http://localhost:8089/api/deliveryReplication/${orderId}`);
         const currentReplication = replicationRes.data;
         console.log(replicationRes.data);
   
@@ -157,8 +160,9 @@ const UpdateOrderPage = () => {
           ...(status === "cant_deliver" ? { // Only clear driver info if status is "can't deliver"
             driverId: "NA",
             driverName: "NA",
-            driverPhoneNo: "NA"
-          } : {})
+            driverPhoneNo: "NA" 
+          } : {}),
+          assignDriver: status === "completed" ? true : currentReplication.isOrderDeliveredComplete,
           
         };
   
@@ -168,7 +172,8 @@ const UpdateOrderPage = () => {
   
         console.log("Sending replication update:", JSON.stringify(replicationUpdate, null, 2));
         
-        await axios.put(`http://localhost:9001/api/deliveryReplication/driver/${orderId}`, replicationUpdate);
+        //         await axios.put(`http://localhost:9001/api/deliveryReplication/driver/${orderId}`, replicationUpdate);
+        await axios.put(`http://localhost:8089/api/deliveryReplication/driver/${orderId}`, replicationUpdate);
         
         alert("Order updated successfully with all data preserved");
         navigate("/DeliveryAssignOrders");
