@@ -10,6 +10,7 @@ import org.springframework.cloud.gateway.server.mvc.handler.HandlerFunctions;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.servlet.function.*;
 
@@ -19,6 +20,8 @@ import static org.springframework.cloud.gateway.server.mvc.filter.FilterFunction
 
 @Configuration
 @RequiredArgsConstructor
+@CrossOrigin(origins = "http://127.0.0.1:3001/")
+
 public class Routes {
 
     @Value("${user.service.url}")
@@ -32,6 +35,20 @@ public class Routes {
 
     @Value("${delivery.service.url}")
     private String deliveryServiceUrl;
+
+    @Value("${delivery.replication.service.url}")
+    private String deliveryReplicationServiceUrl;
+
+
+    @Value("${delivery.DeliveryLocationService.service.url}")
+    private String DeliveryLocationServiceServiceUrl;
+
+    @Value("${delivery.DeliveryDriverService.service.url}")
+    private String DeliveryDriverServiceServiceUrl;
+
+    @Value("${delivery.DeliveryDriverOrderService.service.url}")
+    private String DeliveryDriverOrderServiceServiceUrl;
+
 
     private final JwtAuthFilter jwtAuthFilter;
 
@@ -101,6 +118,50 @@ public class Routes {
                         URI.create("forward:/fallbackRoute")))
                 .build();
     }
+
+
+    // DeliveryReplication service routes (no authentication required)
+    @Bean
+    public RouterFunction<ServerResponse> deliveryReplicationServiceRoutes() {
+        return GatewayRouterFunctions.route("delivery_replication_service")
+                .route(RequestPredicates.path("/api/deliveryReplication/**"),
+                        HandlerFunctions.http(deliveryReplicationServiceUrl))
+                .filter(CircuitBreakerFilterFunctions.circuitBreaker("deliveryReplicationServiceCircuitBreaker",
+                        URI.create("forward:/fallbackRoute")))
+                .build();
+    }
+
+
+    // DeliveryLocationService service routes (no authentication required)
+    @Bean
+    public RouterFunction<ServerResponse> DeliveryLocationServiceServiceRoutes() {
+        return GatewayRouterFunctions.route("delivery_location_service")
+                .route(RequestPredicates.path("/api/location/**"), HandlerFunctions.http(DeliveryLocationServiceServiceUrl))
+                .filter(CircuitBreakerFilterFunctions.circuitBreaker("deliveryReplicationServiceCircuitBreaker",
+                        URI.create("forward:/fallbackRoute")))
+                .build();
+    }
+
+    // DeliveryDriverService service routes (no authentication required)
+    @Bean
+    public RouterFunction<ServerResponse> DeliveryDriverServiceServiceRoutes() {
+        return GatewayRouterFunctions.route("delivery_driver_service")
+                .route(RequestPredicates.path("/api/deliveryDriver/**"), HandlerFunctions.http(DeliveryDriverServiceServiceUrl))
+                .filter(CircuitBreakerFilterFunctions.circuitBreaker("deliveryDriverServiceCircuitBreaker",
+                        URI.create("forward:/fallbackRoute")))
+                .build();
+    }
+
+    // DeliveryDriverOrderService service routes (no authentication required)
+    @Bean
+    public RouterFunction<ServerResponse> DeliveryDriverOrderServiceServiceRoutes() {
+        return GatewayRouterFunctions.route("delivery_driver_order_service")
+                .route(RequestPredicates.path("/api/driver-orders/**"), HandlerFunctions.http(DeliveryDriverOrderServiceServiceUrl))
+                .filter(CircuitBreakerFilterFunctions.circuitBreaker("deliveryDriverOrderServiceCircuitBreaker",
+                        URI.create("forward:/fallbackRoute")))
+                .build();
+    }
+
 
 
     // Order service routes - require authentication
