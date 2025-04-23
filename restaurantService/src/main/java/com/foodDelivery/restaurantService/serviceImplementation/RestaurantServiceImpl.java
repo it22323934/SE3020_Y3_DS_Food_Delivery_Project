@@ -1,8 +1,10 @@
 package com.foodDelivery.restaurantService.serviceImplementation;
 
 import com.foodDelivery.restaurantService.client.UserServiceClient;
+import com.foodDelivery.restaurantService.dto.RestaurantResponse;
 import com.foodDelivery.restaurantService.exception.BusinessValidationException;
 import com.foodDelivery.restaurantService.exception.ResourceNotFoundException;
+import com.foodDelivery.restaurantService.mapper.RestaurantTypeMapper;
 import com.foodDelivery.restaurantService.model.CuisineType;
 import com.foodDelivery.restaurantService.model.Restaurant;
 import com.foodDelivery.restaurantService.repository.CuisineTypeRepository;
@@ -109,6 +111,10 @@ public class RestaurantServiceImpl implements RestaurantService {
         restaurant.setEnabled(true);
         restaurant.setAvgRating(0.0);
         restaurant.setTotalRatings(0);
+        if (restaurant.getLatitude() != null && restaurant.getLongitude() != null) {
+            double[] location = new double[] {restaurant.getLongitude(), restaurant.getLatitude()};
+            restaurant.setLocation(location);
+        }
 
         log.info("Creating new restaurant: {} with {} admins", restaurant.getName(), restaurant.getAdminIds().size());
         Restaurant savedRestaurant = restaurantRepository.save(restaurant);
@@ -305,13 +311,14 @@ public class RestaurantServiceImpl implements RestaurantService {
         existingRestaurant.setBannerImageUrl(restaurant.getBannerImageUrl());
         existingRestaurant.setPhoneNumber(restaurant.getPhoneNumber());
         existingRestaurant.setEmail(restaurant.getEmail());
+        double[] location = new double[] {restaurant.getLongitude(), restaurant.getLatitude()};
+        existingRestaurant.setLocation(location);
         existingRestaurant.setLatitude(restaurant.getLatitude());
         existingRestaurant.setLongitude(restaurant.getLongitude());
         existingRestaurant.setFormattedAddress(restaurant.getFormattedAddress());
         existingRestaurant.setOpeningHours(restaurant.getOpeningHours());
         existingRestaurant.setEnabled(restaurant.isEnabled());
         existingRestaurant.setUpdatedAt(System.currentTimeMillis());
-
         // Only update adminIds if it was changed
         if (restaurant.getAdminIds() != null) {
             existingRestaurant.setAdminIds(restaurant.getAdminIds());
@@ -596,5 +603,30 @@ public class RestaurantServiceImpl implements RestaurantService {
                     .collect(Collectors.toList());
             throw new BusinessValidationException("Selected cuisine types are disabled: " + String.join(", ", disabledIds));
         }
+    }
+
+    @Override
+    public List<RestaurantResponse> getNearbyRestaurants(double latitude, double longitude, double radius) {
+        // Validate inputs
+        if (latitude < -90 || latitude > 90) {
+            throw new BusinessValidationException("Latitude must be between -90 and 90 degrees");
+        }
+        if (longitude < -180 || longitude > 180) {
+            throw new BusinessValidationException("Longitude must be between -180 and 180 degrees");
+        }
+        if (radius <= 0 || radius > 50) {
+            throw new BusinessValidationException("Radius must be positive and not more than 50 km");
+        }
+
+        // Convert radius from km to meters if using MongoDB
+        double radiusInMeters = radius * 1000;
+
+        // Find nearby restaurants
+        List<Restaurant> restaurants = restaurantRepository.findNearbyRestaurants(
+                latitude, longitude, radiusInMeters);
+
+        return restaurants.stream()
+                .map(RestaurantTypeMapper::mapToResponse)
+                .collect(Collectors.toList());
     }
 }

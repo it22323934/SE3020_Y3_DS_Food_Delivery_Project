@@ -11,6 +11,7 @@ import ContactUs from "./pages/ContactUs";
 import Header from "./components/Header";
 import FooterComp from "./components/Footer";
 import PrivateRoute from "./components/PrivateRoute";
+import RestaurantDetail from "./pages/RestaurantDetail";
 import RegisterDeliveryDriver from "./components/RegisterDeliveryDriver";
 import ViewDeliveryDrivers from "./components/ViewDeliveryDrivers";
 import DeliveryReplicationView from "./components/DeliveryReplicationView";
@@ -30,6 +31,7 @@ export default function App() {
         <Route path="/sign-up" element={<SignUp />} /> */}
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/restaurant/:id" element={<RestaurantDetail />} />
         <Route path="/RegisterDeliveryDriver" element={<RegisterDeliveryDriver />} />
         <Route path="/ViewDeliveryDrivers" element={<ViewDeliveryDrivers />} />
         <Route path="/DeliveryReplicationView" element={<DeliveryReplicationView />} />
@@ -38,8 +40,6 @@ export default function App() {
         <Route path="/location-map/:orderId" element={<LocationMap />} />
         <Route path="/UserLocationViewer" element={<UserLocationViewer />} />
         <Route path="/CreateUserModal" element={<CreateUserModal />} />
-
-
 
         <Route element={<PrivateRoute/>}>
         <Route path="/dashboard" element={<Dashboard />} />
