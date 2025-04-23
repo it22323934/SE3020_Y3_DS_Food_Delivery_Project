@@ -1,4 +1,3 @@
-// src/pages/SignIn.jsx
 import { Alert, Button, Label, Spinner, TextInput } from "flowbite-react";
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
@@ -11,7 +10,7 @@ import {
 import { ToastContainer, toast } from "react-toastify";
 import OAuth from "../components/OAuth";
 import { authService } from "../service/authService";
-import { set } from "mongoose";
+import { MdDeliveryDining } from "react-icons/md";
 
 export default function SignIn() {
   const dispatch = useDispatch();
@@ -61,72 +60,74 @@ export default function SignIn() {
   };
 
   return (
-    <div className="min-h-screen mt-20">
+    <div className="min-h-screen mt-20 bg-gray-50 dark:bg-gray-900">
       <ToastContainer />
       <div className="flex p-3 max-w-3xl mx-auto flex-col md:flex-row md:items-center gap-5">
         {/*left*/}
         <div className="flex-1">
-          <Link to="/" className="font-bold dark:text-white text-4xl">
-            <span className="px-2 py-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-lg text-white">
-              Economy
+          <Link to="/" className="font-bold dark:text-white text-4xl flex items-center">
+            <MdDeliveryDining className="text-5xl mr-1 text-orange-500" />
+            <span className="px-2 py-1 bg-gradient-to-r from-orange-500 to-red-600 dark:from-orange-600 dark:to-red-700 rounded-lg text-white font-bold">
+              Flavour
             </span>
-            Plus
+            <span className="font-bold text-orange-500 dark:text-orange-400 ml-1">Fleet</span>
           </Link>
-          <p className="text-sm mt-5">
-            This is a demo project. You can use your email to sign in or the
-            google API can be used to sign in
+          <p className="text-sm mt-5 text-gray-600 dark:text-gray-400">
+            Sign in to your account to order delicious food from your favorite restaurants, track your deliveries, and manage your preferences.
           </p>
         </div>
         {/*right*/}
         <div className="flex-1">
           <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
             <div>
-              <Label value="Your Email" />
+              <Label value="Your Email" className="text-gray-700 dark:text-gray-300" />
               <TextInput
                 type="email"
                 placeholder="name@company.com"
                 id="email"
                 value={formData.email || ""}
                 onChange={handleChange}
+                className="dark:bg-gray-700 dark:border-gray-600"
               />
             </div>
             <div>
-              <Label value="Your Password" />
+              <Label value="Your Password" className="text-gray-700 dark:text-gray-300" />
               <TextInput
                 type="password"
                 placeholder="**********"
                 id="password"
                 value={formData.password || ""}
                 onChange={handleChange}
+                className="dark:bg-gray-700 dark:border-gray-600"
               />
             </div>
             <div className="flex justify-end">
               <Link
                 to="/forgot-password"
-                className="text-sm text-blue-500 hover:underline"
+                className="text-sm text-orange-500 dark:text-orange-400 hover:underline"
               >
                 Forgot password?
               </Link>
             </div>
             <Button
-              gradientDuoTone="purpleToPink"
+              gradientDuoTone="redToYellow"
               type="submit"
               disabled={loading}
             >
               {loading ? (
                 <>
                   <Spinner size="sm" />
-                  <span className="pl-3">Loading....</span>
+                  <span className="pl-3">Loading...</span>
                 </>
               ) : (
-                "sign in"
+                "Sign In"
               )}
             </Button>
             <OAuth />
           </form>
-          <div className="flex gap-2 text-sm mt-5">
-            <span>Dont Have an account?</span>
-            <Link to="/sign-up" className="text-blue-500">
+          <div className="flex gap-2 text-sm mt-5 text-gray-700 dark:text-gray-300">
+            <span>Don't have an account?</span>
+            <Link to="/sign-up" className="text-orange-500 dark:text-orange-400 hover:underline">
               Sign Up
             </Link>
           </div>

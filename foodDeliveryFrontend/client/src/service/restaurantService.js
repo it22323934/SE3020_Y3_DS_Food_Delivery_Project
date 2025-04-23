@@ -163,13 +163,14 @@ export const restaurantService = {
    * @param {number} radius - Search radius in kilometers
    * @returns {Promise<Response>} - Fetch response
    */
-  getNearbyRestaurants: async (lat, lng, radius = 5) => {
+  getNearbyRestaurants: async (lat, lng, radius = 5,token) => {
     const res = await fetch(
       `${API_URL}/restaurants/nearby?lat=${lat}&lng=${lng}&radius=${radius}`,
       {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
       }
     );

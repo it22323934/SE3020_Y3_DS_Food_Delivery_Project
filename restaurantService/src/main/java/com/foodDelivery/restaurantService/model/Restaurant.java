@@ -2,6 +2,8 @@ package com.foodDelivery.restaurantService.model;
 
 import lombok.Data;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.GeoSpatialIndexType;
+import org.springframework.data.mongodb.core.index.GeoSpatialIndexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.util.ArrayList;
@@ -26,6 +28,9 @@ public class Restaurant {
     private String locationType = "Point";
     private String formattedAddress;
 
+    @GeoSpatialIndexed(type = GeoSpatialIndexType.GEO_2DSPHERE)
+    private double[] location;
+
     // Opening hours
     private List<OpeningHourInfo> openingHours = new ArrayList<>();
 
@@ -46,4 +51,5 @@ public class Restaurant {
         private String closeTime;
         private boolean closed;
     }
+
 }

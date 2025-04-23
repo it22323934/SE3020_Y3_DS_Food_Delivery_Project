@@ -127,4 +127,20 @@ public class RestaurantController {
         }
     }
 
+    @GetMapping("/nearby")
+    public ResponseEntity<?> getNearbyRestaurants(
+            @RequestParam(name = "lat") double latitude,
+            @RequestParam(name = "lng") double longitude,
+            @RequestParam(defaultValue = "10") double radius) {
+        try {
+            List<RestaurantResponse> restaurants = restaurantService.getNearbyRestaurants(
+                    latitude, longitude, radius);
+            return ResponseEntity.ok(restaurants);
+        } catch (BusinessValidationException e) {
+            log.warn("Invalid parameters for nearby restaurants: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
 }

@@ -24,13 +24,13 @@ public class RestaurantTypeMapper {
         response.setAdminIds(restaurant.getAdminIds());
         response.setCuisineTypeIds(restaurant.getCuisineTypeIds());
         response.setLongitude(restaurant.getLongitude());
+        response.setLocation(restaurant.getLocation());
         response.setFormattedAddress(restaurant.getFormattedAddress());
         response.setEnabled(restaurant.isEnabled());
         response.setAvgRating(restaurant.getAvgRating());
         response.setTotalRatings(restaurant.getTotalRatings());
         response.setCreatedAt(restaurant.getCreatedAt());
         response.setUpdatedAt(restaurant.getUpdatedAt());
-
         if (restaurant.getOpeningHours() != null) {
             response.setOpeningHours(restaurant.getOpeningHours().stream()
                     .map(info -> {
@@ -58,6 +58,13 @@ public class RestaurantTypeMapper {
         restaurant.setEmail(request.getEmail());
         restaurant.setLatitude(request.getLatitude());
         restaurant.setLongitude(request.getLongitude());
+
+        // Set up location field for geospatial queries
+        if (request.getLatitude() != null && request.getLongitude() != null) {
+            double[] location = new double[] {request.getLongitude(), request.getLatitude()};
+            restaurant.setLocation(location);
+        }
+
         restaurant.setFormattedAddress(request.getFormattedAddress());
         restaurant.setEnabled(request.isEnabled());
         restaurant.setAdminIds(request.getAdminIds());
