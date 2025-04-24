@@ -42,7 +42,7 @@ public class AuthServiceImpl implements AuthService {
     private final JwtUtils jwtUtils;
     private final KafkaProducerService kafkaProducerService;
 
-    private static final String RESET_PASSWORD_URL = "http://localhost:5173/reset-password?token=";
+    private static final String RESET_PASSWORD_URL = "http://127.0.0.1:3001/reset-password?token=";
     private static final String CONFIRMATION_URL = "http://localhost:8081/api/auth/confirm?token=";
 
     @Override
