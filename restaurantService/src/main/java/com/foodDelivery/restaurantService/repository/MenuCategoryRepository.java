@@ -13,4 +13,5 @@ public interface MenuCategoryRepository extends MongoRepository<MenuCategory, St
     boolean existsByNameAndRestaurantId(String name, String restaurantId);
     boolean existsByNameIgnoreCaseAndRestaurantId(String name, String restaurantId);
     int countByRestaurantId(String restaurantId);
+    List<MenuCategory> findByRestaurantIdAndActiveTrue(String restaurantId);
 }

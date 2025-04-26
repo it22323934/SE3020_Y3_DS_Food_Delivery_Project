@@ -2,9 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Button, Card, Badge, Spinner, Tabs } from 'flowbite-react';
 import { FaArrowLeft, FaStar, FaClock, FaMapMarkerAlt, FaPhoneAlt, FaUtensils, FaDollarSign } from 'react-icons/fa';
-import { restaurantService } from '../service/restaurantService';
-import { menuCategoryService } from '../service/menuCategoryService';
-import { menuItemService } from '../service/menuItemService';
+import { publicRestaurantService } from '../service/public/publicService';
 import { useSelector } from 'react-redux';
 
 export default function RestaurantDetail() {
@@ -23,7 +21,7 @@ export default function RestaurantDetail() {
         setLoading(true);
         
         // Fetch restaurant details
-        const restaurantResponse = await restaurantService.getRestaurantById(id, currentUser?.token);
+        const restaurantResponse = await publicRestaurantService.getRestaurantById(id, currentUser?.token);
         
         if (!restaurantResponse.ok) {
           throw new Error('Failed to fetch restaurant details');
@@ -33,7 +31,7 @@ export default function RestaurantDetail() {
         setRestaurant(restaurantData);
         
         // Fetch menu categories
-        const categoriesResponse = await menuCategoryService.getCategoriesByRestaurantId(
+        const categoriesResponse = await publicRestaurantService.getCategoriesByRestaurantId(
           id,
           currentUser?.token
         );
@@ -201,7 +199,7 @@ function MenuItemsByCategorySection({ categoryId, token }) {
     const fetchMenuItems = async () => {
       try {
         setLoading(true);
-        const response = await menuItemService.getMenuItemsByCategoryId(categoryId, token);
+        const response = await publicRestaurantService.getMenuItemsByCategoryId(categoryId, token);
         
         if (response.ok) {
           const data = await response.json();
