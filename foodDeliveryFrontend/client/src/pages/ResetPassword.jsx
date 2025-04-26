@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
 import { authService } from "../service/authService";
+import { MdDeliveryDining, MdLockReset } from "react-icons/md";
 
 export default function ResetPassword() {
   const [searchParams] = useSearchParams();
@@ -65,7 +66,6 @@ export default function ResetPassword() {
       } else {
         toast.error("An error occurred. Please try again later.");
       }
-      setTimeout(() => navigate("/sign-in"), 3000);
     } catch (error) {
       toast.error(error.response?.data?.message || "Failed to reset password");
     } finally {
@@ -75,67 +75,102 @@ export default function ResetPassword() {
 
   if (validating) {
     return (
-      <div className="min-h-screen mt-20 flex justify-center">
-        <Spinner size="xl" />
-        <span className="pl-3">Validating your link...</span>
+      <div className="min-h-screen mt-20 flex justify-center items-center bg-gray-50 dark:bg-gray-900">
+        <Spinner size="xl" color="warning" />
+        <span className="pl-3 text-gray-800 dark:text-gray-200">Validating your link...</span>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen mt-20">
+    <div className="min-h-screen mt-20  bg-gray-50 dark:bg-gray-900">
       <ToastContainer />
-      <div className="flex p-3 max-w-3xl mx-auto flex-col md:flex-row md:items-center gap-5">
+      <div className="flex p-3 max-w-4xl mx-auto flex-col md:flex-row md:items-center gap-5">
         <div className="flex-1">
-          <Link to="/" className="font-bold dark:text-white text-4xl">
-            <span className="px-2 py-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-lg text-white">
-              Zero
+          <Link to="/" className="font-bold dark:text-white text-4xl flex items-center">
+            <MdDeliveryDining className="text-5xl mr-1 text-orange-500" />
+            <span className="px-2 py-1 bg-gradient-to-r from-orange-500 to-red-600 dark:from-orange-600 dark:to-red-700 rounded-lg text-white font-bold">
+              Flavour
             </span>
-            Waste
+            <span className="font-bold text-orange-500 dark:text-orange-400 ml-1">Fleet</span>
           </Link>
-          <p className="text-sm mt-5">
-            Create a new password for your account.
+          <p className="text-sm mt-5 text-gray-600 dark:text-gray-400">
+            Create a new password for your Flavour Fleet account. Make sure it's secure and easy to remember.
           </p>
+          
+          <div className="mt-6 hidden md:block">
+            <img 
+              src="https://img.freepik.com/free-vector/reset-password-concept-illustration_114360-7866.jpg" 
+              alt="Reset Password" 
+              className="w-full max-w-md rounded-lg shadow-md"
+            />
+          </div>
         </div>
+        
         <div className="flex-1">
-          <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
-            <div>
-              <Label value="New Password" />
-              <TextInput
-                type="password"
-                placeholder="New password"
-                id="password"
-                value={formData.password}
-                onChange={handleChange}
-                required
-              />
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
+            <div className="mb-4 flex justify-center">
+              <div className="bg-orange-100 dark:bg-orange-900 p-3 rounded-full">
+                <MdLockReset className="text-4xl text-orange-500 dark:text-orange-400" />
+              </div>
             </div>
-            <div>
-              <Label value="Confirm Password" />
-              <TextInput
-                type="password"
-                placeholder="Confirm password"
-                id="confirmPassword"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                required
-              />
+            
+            <h2 className="text-2xl font-bold text-center mb-4 text-gray-800 dark:text-white">
+              Create New Password
+            </h2>
+            
+            <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+              <div>
+                <Label value="New Password" className="text-gray-700 dark:text-gray-300" />
+                <TextInput
+                  type="password"
+                  placeholder="••••••••"
+                  id="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  required
+                  className="dark:bg-gray-700 dark:border-gray-600"
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Must be at least 8 characters
+                </p>
+              </div>
+              <div>
+                <Label value="Confirm Password" className="text-gray-700 dark:text-gray-300" />
+                <TextInput
+                  type="password"
+                  placeholder="••••••••"
+                  id="confirmPassword"
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
+                  required
+                  className="dark:bg-gray-700 dark:border-gray-600"
+                />
+              </div>
+              <Button
+                gradientDuoTone="redToYellow"
+                type="submit"
+                disabled={loading}
+                className="mt-2"
+              >
+                {loading ? (
+                  <>
+                    <Spinner size="sm" />
+                    <span className="pl-3">Resetting...</span>
+                  </>
+                ) : (
+                  "Reset Password"
+                )}
+              </Button>
+            </form>
+            
+            <div className="flex gap-2 text-sm mt-5 justify-center text-gray-700 dark:text-gray-300">
+              <span>Remember your password?</span>
+              <Link to="/sign-in" className="text-orange-500 dark:text-orange-400 hover:underline">
+                Back to Sign In
+              </Link>
             </div>
-            <Button
-              gradientDuoTone="purpleToPink"
-              type="submit"
-              disabled={loading}
-            >
-              {loading ? (
-                <>
-                  <Spinner size="sm" />
-                  <span className="pl-3">Resetting...</span>
-                </>
-              ) : (
-                "Reset Password"
-              )}
-            </Button>
-          </form>
+          </div>
         </div>
       </div>
     </div>
