@@ -11,11 +11,21 @@ const CartContext = createContext();
 
 const initialState = {
   items: [],
-  restaurantId: null, // To ensure all items are from the same restaurant
+  restaurantId: null,
   subtotal: 0,
-  tax: 0.08, // 8% tax rate - can be configured as needed
+  tax: 0.08,
   deliveryFee: 3.99,
   total: 0,
+};
+
+const getInitialState = () => {
+  try {
+    const savedCart = localStorage.getItem("cart");
+    return savedCart ? JSON.parse(savedCart) : { ...initialState };
+  } catch (error) {
+    console.error("Error loading cart from localStorage:", error);
+    return { ...initialState };
+  }
 };
 
 // Types of actions
@@ -30,37 +40,54 @@ const actionTypes = {
 
 // Helper to create a unique key for a cart item including its addons
 const getCartItemKey = (itemId, addOns = []) => {
-  if (!addOns.length) return itemId;
+  if (!addOns || !addOns.length) return itemId;
 
   const addOnKeys = addOns
-    .map((addon) => `${addon.addOn.id}-${addon.quantity}`)
+    .map((addon) => `${addon.id}-${addon.quantity || 1}`)
     .sort()
     .join(",");
 
   return `${itemId}_${addOnKeys}`;
 };
 
-// Helper to calculate add-on total
 const calculateAddOnTotal = (addOns) => {
   if (!addOns || !addOns.length) return 0;
 
   return addOns.reduce((total, addon) => {
-    return total + addon.addOn.price * addon.quantity;
+    // Check for quantity in the add-on object
+    const addonPrice = Number(addon.price || 0);
+    const quantity = Number(addon.quantity || 1); // Use the quantity from the add-on
+
+    console.log(
+      `Add-on: ${
+        addon.name
+      }, Price: ${addonPrice}, Quantity: ${quantity}, Total: ${
+        addonPrice * quantity
+      }`
+    );
+
+    return total + addonPrice * quantity;
   }, 0);
 };
 
-// Helper to calculate item total including add-ons
+// Helper to calculate item total including add-ons - ensure all values are numeric
 const calculateItemTotal = (item, quantity, selectedAddOns) => {
-  const basePrice = item.onPromotion ? item.discountedPrice : item.price;
+  // Always convert values to numbers to prevent NaN
+  const basePrice = item.onPromotion
+    ? item.discountedPrice || 0
+    : item.price || 0;
+
+    const qty = quantity || item.quantity || 0;
   const addOnTotal = calculateAddOnTotal(selectedAddOns);
 
-  return basePrice * quantity + addOnTotal;
+  return basePrice * qty + addOnTotal;
 };
 
 // Reducer function
 function cartReducer(state, action) {
   switch (action.type) {
     case actionTypes.ADD_TO_CART: {
+      console.log("payload :", action.payload);
       const { item, quantity, selectedAddOns, restaurantId } = action.payload;
 
       // Check if we need to clear cart (items from different restaurant)
@@ -70,19 +97,25 @@ function cartReducer(state, action) {
         state.items.length > 0
       ) {
         return {
-          ...initialState,
+          ...state,
           items: [
+            ...state.items,
             {
               id: item.id,
               name: item.name,
-              price: Number(
-                item.onPromotion ? item.discountedPrice : item.price
-              ),
-              originalPrice: Number(item.price),
-              quantity,
+              price: item.onPromotion
+                ? Number(item.discountedPrice)
+                : Number(item.price),
+              originalPrice: Number(item.price || 0),
+              quantity: Number(item.quantity || quantity || 1),
               imageUrl: item.imageUrl,
-              addOns: selectedAddOns,
-              itemTotal: calculateItemTotal(item, quantity, selectedAddOns),
+              // Store the complete selectedAddOns array with quantity information
+              addOns: selectedAddOns || [],
+              itemTotal: calculateItemTotal(
+                item,
+                Number(item.quantity || quantity || 1),
+                selectedAddOns
+              ),
               restaurantId,
             },
           ],
@@ -102,6 +135,8 @@ function cartReducer(state, action) {
       if (existingItemIndex >= 0) {
         // Update existing item
         const updatedItems = [...state.items];
+        console.log("updatedItems :", updatedItems);
+        console.log("existingItemIndex :", quantity);
         updatedItems[existingItemIndex] = {
           ...updatedItems[existingItemIndex],
           quantity: updatedItems[existingItemIndex].quantity + quantity,
@@ -127,12 +162,12 @@ function cartReducer(state, action) {
           {
             id: item.id,
             name: item.name,
-            price: Number(item.onPromotion ? item.discountedPrice : item.price),
-            originalPrice: Number(item.price || 0),
-            quantity: Number(quantity),
+            price: item.onPromotion ? item.discountedPrice : item.price,
+            originalPrice: item.price || 0,
+            quantity: item.quantity || quantity,
             imageUrl: item.imageUrl,
-            addOns: selectedAddOns,
-            itemTotal: calculateItemTotal(item, quantity, selectedAddOns),
+            addOns: item.addOns,
+            itemTotal: calculateItemTotal(item, item.quantity, selectedAddOns),
             restaurantId,
           },
         ],
@@ -191,7 +226,7 @@ function cartReducer(state, action) {
     }
 
     case actionTypes.CLEAR_CART:
-      return initialState;
+      return { ...initialState };
 
     case actionTypes.SET_RESTAURANT: {
       const { restaurant } = action.payload;
@@ -219,8 +254,15 @@ function cartReducer(state, action) {
 }
 
 export function CartProvider({ children }) {
-  const [state, dispatch] = useReducer(cartReducer, initialState);
+  const [state, dispatch] = useReducer(cartReducer, getInitialState());
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
+  useEffect(() => {
+    try {
+      localStorage.setItem("cart", JSON.stringify(state));
+    } catch (error) {
+      console.error("Error saving cart to localStorage:", error);
+    }
+  }, [state]);
 
   useEffect(() => {
     try {
@@ -249,10 +291,18 @@ export function CartProvider({ children }) {
   const addToCart = (item, quantity, selectedAddOns) => {
     if (!item || quantity <= 0) return;
 
+    // Create a safe item with correct numeric values
+    const safeItem = {
+      ...item,
+      price: item.priceValue || item.price || 0,
+      discountedPrice: item.discountedValue || item.discountedPrice || 0,
+      quantity: item.quantity || 1,
+    };
+
     // Check if adding from a different restaurant
     if (
       state.restaurantId &&
-      state.restaurantId !== item.restaurantId &&
+      state.restaurantId !== safeItem.restaurantId &&
       state.items.length > 0
     ) {
       // Confirm with user before clearing cart
@@ -265,28 +315,18 @@ export function CartProvider({ children }) {
       toast.info("Cart cleared - items from previous restaurant removed");
     }
 
-    console.log("Adding to cart - item:", {
-      id: item.id,
-      name: item.name,
-      price: typeof item.price,
-      priceValue: item.price,
-      discountedPrice: typeof item.discountedPrice,
-      discountedValue: item.discountedPrice,
-      onPromotion: item.onPromotion,
-      finalPrice: item.onPromotion ? item.discountedPrice : item.price,
-    });
+    console.log("Safe item created:", safeItem);
 
+    // Use the safe item in the dispatch
     dispatch({
       type: actionTypes.ADD_TO_CART,
       payload: {
-        item,
-        quantity,
-        selectedAddOns,
-        restaurantId: item.restaurantId,
+        item: safeItem,
+        quantity: item.quantity || quantity,
+        selectedAddOns: item.addOns || selectedAddOns,
+        restaurantId: safeItem.restaurantId,
       },
     });
-
-    console.log("Item added to cart:", item, quantity, selectedAddOns);
   };
 
   const removeFromCart = (cartItemKey) => {
@@ -299,6 +339,7 @@ export function CartProvider({ children }) {
   };
 
   const updateQuantity = (cartItemKey, quantity) => {
+    console.log("Updating quantity for:", cartItemKey, "to", quantity);
     dispatch({
       type: actionTypes.UPDATE_QUANTITY,
       payload: { cartItemKey, quantity },
@@ -314,7 +355,10 @@ export function CartProvider({ children }) {
   const closeCartDrawer = () => setCartDrawerOpen(false);
 
   const setRestaurant = (restaurant) => {
-    dispatch({ type: "SET_RESTAURANT", payload: { restaurant } });
+    dispatch({
+      type: actionTypes.SET_RESTAURANT, // Use the constant, not a string
+      payload: { restaurant },
+    });
   };
 
   // Values to be provided to consuming components

@@ -16,6 +16,11 @@ export default function CartDrawer() {
 
   if (!cartDrawerOpen) return null;
 
+  const formatPrice = (value) => {
+    const numValue = Number(value);
+    return isNaN(numValue) ? '0.00' : numValue.toFixed(2);
+  };
+
   return (
     <>
       {/* Backdrop */}
@@ -92,16 +97,13 @@ export default function CartDrawer() {
                             {item.name}
                           </p>
                           <p className="font-medium text-gray-800 dark:text-white">
-                            $
-                            {isNaN(item.itemTotal)
-                              ? "0.00"
-                              : item.itemTotal.toFixed(2)}
+                          ${formatPrice(item.itemTotal)}
                           </p>
                         </div>
 
                         {/* Price per item */}
                         <p className="text-sm text-gray-500 dark:text-gray-400">
-                          ${item.price.toFixed(2)} each
+                        ${formatPrice(item.price)} each
                         </p>
 
                         {/* Add-ons */}
@@ -109,8 +111,8 @@ export default function CartDrawer() {
                           <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                             {item.addOns.map((addon, idx) => (
                               <span key={idx}>
-                                +{addon.quantity}x {addon.addOn.name} ($
-                                {addon.addOn.price.toFixed(2)})
+                                +{addon.quantity}x {addon.name} ($
+                                {addon.price.toFixed(2)})
                                 {idx < item.addOns.length - 1 && ", "}
                               </span>
                             ))}
@@ -128,7 +130,7 @@ export default function CartDrawer() {
                             >
                               <HiMinus className="h-3.5 w-3.5" />
                             </button>
-                            <span className="px-3 py-1">{item.quantity}</span>
+                            <span className="px-3 py-1">{isNaN(item.quantity) ? 1 : item.quantity}</span>
                             <button
                               onClick={() =>
                                 updateQuantity(cartItemKey, item.quantity + 1)
@@ -159,14 +161,13 @@ export default function CartDrawer() {
                 <div className="flex justify-between text-gray-600 dark:text-gray-400">
                   <span>Subtotal</span>
                   <span>
-                    ${isNaN(cart.subtotal) ? "0.00" : cart.subtotal.toFixed(2)}
+                  ${formatPrice(cart.subtotal)}
                   </span>
                 </div>
                 <div className="flex justify-between text-gray-600 dark:text-gray-400">
                   <span>Tax</span>
                   <span>
-                    $
-                    {isNaN(cart.taxAmount) ? "0.00" : cart.taxAmount.toFixed(2)}
+                  ${formatPrice(cart.taxAmount)}
                   </span>
                 </div>
                 <div className="flex justify-between text-gray-600 dark:text-gray-400">
@@ -181,7 +182,7 @@ export default function CartDrawer() {
                 <div className="flex justify-between font-bold text-gray-900 dark:text-white pt-2 border-t dark:border-gray-700">
                   <span>Total</span>
                   <span>
-                    ${isNaN(cart.total) ? "0.00" : cart.total.toFixed(2)}
+                  ${formatPrice(cart.total)}
                   </span>
                 </div>
               </div>
