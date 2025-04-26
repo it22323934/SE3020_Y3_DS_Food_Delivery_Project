@@ -9,6 +9,7 @@ public interface RestaurantService {
     Restaurant updateRestaurant(String id, Restaurant restaurant, String token);
     Restaurant getRestaurantById(String id);
     List<Restaurant> getAllRestaurants();
+    List<RestaurantResponse> getAllEnabledRestaurants();
     void deleteRestaurant(String id, String userId, String token);
     List<Restaurant> getRestaurantsByAdminId(String adminId);
     List<RestaurantResponse> getNearbyRestaurants(double latitude, double longitude, double radius);

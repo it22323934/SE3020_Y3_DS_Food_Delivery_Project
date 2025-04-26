@@ -316,4 +316,18 @@ public class MenuItemServiceImpl implements MenuItemService {
 
         log.info("Menu item deleted: {}", id);
     }
+
+    @Override
+    public List<MenuItemResponse> getAvailableMenuItemsByRestaurantId(String restaurantId) {
+        return menuItemRepository.findByRestaurantIdAndAvailableTrue(restaurantId).stream()
+                .map(menuItemMapper::toResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<MenuItemResponse> getAvailableMenuItemsByCategoryId(String categoryId) {
+        return menuItemRepository.findByCategoryIdAndAvailableTrue(categoryId).stream()
+                .map(menuItemMapper::toResponse)
+                .collect(Collectors.toList());
+    }
 }

@@ -11,6 +11,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.servlet.function.*;
 
@@ -102,21 +103,23 @@ public class Routes {
     @Bean
     public RouterFunction<ServerResponse> restaurantServiceRoutes() {
         return GatewayRouterFunctions.route("restaurant_service")
-                .route(RequestPredicates.path("/api/restaurants/**"), HandlerFunctions.http(restaurantServiceUrl))
-                .filter((request, next) -> {
-                    HttpServletRequest httpRequest = request.servletRequest();
-                    boolean authenticated = jwtAuthFilter.isAuthenticated(httpRequest);
-                    if (!authenticated) {
-                        return ServerResponse.status(HttpStatus.UNAUTHORIZED)
-                                .body("Access denied: Authentication required");
-                    }
-                    return next.handle(request);
-                })
+                // Put more specific route first
+                .route(RequestPredicates.path("/api/restaurant/public/**"),
+                        HandlerFunctions.http(restaurantServiceUrl))
+                // Then the more general route
+                .route(RequestPredicates.path("/api/restaurants/**"),
+                        request -> {
+                            HttpServletRequest httpRequest = request.servletRequest();
+                            if (!jwtAuthFilter.isAuthenticated(httpRequest)) {
+                                return ServerResponse.status(HttpStatus.UNAUTHORIZED)
+                                        .body("Access denied: Authentication required");
+                            }
+                            return HandlerFunctions.http(restaurantServiceUrl).handle(request);
+                        })
                 .filter(CircuitBreakerFilterFunctions.circuitBreaker("restaurantServiceCircuitBreaker",
                         URI.create("forward:/fallbackRoute")))
                 .build();
     }
-
 
     // DeliveryReplication service routes (no authentication required)
     @Bean
