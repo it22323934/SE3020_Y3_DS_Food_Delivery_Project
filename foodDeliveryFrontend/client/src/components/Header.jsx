@@ -8,6 +8,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { toggleTheme } from "../redux/theme/themeSlice";
 import { signOutSuccess } from "../redux/user/userSlice";
 import { authService } from "../service/authService";
+import CartIndicator from "./cart/CartIndicator";
 
 export default function Header() {
   const dispatch = useDispatch();
@@ -41,20 +42,15 @@ export default function Header() {
         <span className="font-bold text-orange-500 dark:text-orange-400 ml-1">Fleet</span>
       </Link>
       
-      <form>
-        <TextInput
-          type="text"
-          placeholder="Search restaurants..."
-          rightIcon={AiOutlineSearch}
-          className="hidden lg:inline dark:bg-gray-700 dark:border-gray-600"
-        />
-      </form>
       
       <Button className="w-12 h-10 lg:hidden" color="gray" pill>
         <AiOutlineSearch />
       </Button>
       
       <div className="flex gap-2 md:order-2">
+        {/* Add CartIndicator here, before theme toggle button */}
+        <CartIndicator />
+        
         <Button
           className="w-12 h-10 hidden sm:inline"
           color={theme === "light" ? "gray" : "light"}

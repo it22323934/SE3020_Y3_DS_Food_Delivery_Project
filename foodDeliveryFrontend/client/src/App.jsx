@@ -20,8 +20,12 @@ import UpdateOrderPage from "./components/UpdateOrder";
 import LocationMap from "./components/LocationMap";
 import UserLocationViewer from "./components/UserLocationViewer";
 import { CreateUserModal } from "./components/sub-components/user-management/CreateUserModal";
+import { CartProvider } from "./context/CartContext";
+import CartDrawer from "./components/cart/CartDrawer";
 export default function App() {
   return (
+    <CartProvider>
+      <CartDrawer />
     <BrowserRouter>
       <Header />
       <Routes>
@@ -47,5 +51,6 @@ export default function App() {
       </Routes>
       <FooterComp/>
     </BrowserRouter>
+    </CartProvider>
   );
 }
