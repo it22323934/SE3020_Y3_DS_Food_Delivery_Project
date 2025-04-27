@@ -320,6 +320,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.scheduling.annotation.Scheduled;
 
 import java.util.List;
 import java.util.Optional;
@@ -529,8 +530,9 @@ public class DeliveryReplicationService implements IDeliveryReplicationService {
     }
 
     // Updated method to return List<DeliveryReplicationResponse>
-    public List<DeliveryReplicationResponse> getDeliveriesByAssignDriver(Boolean isAssignDriver) {
-        List<DeliveryReplication> deliveries = deliveryReplcationRepository.findByIsAssignDriver(isAssignDriver);
+    @Scheduled(fixedRate = 120000) // every 2 minutes
+    public List<DeliveryReplicationResponse> getDeliveriesByAssignDriver() {
+        List<DeliveryReplication> deliveries = deliveryReplcationRepository.findByIsAssignDriver(false);
 
         // 🔁 Loop through each unassigned delivery and manually call the Kafka logic
         deliveries.forEach(delivery -> {

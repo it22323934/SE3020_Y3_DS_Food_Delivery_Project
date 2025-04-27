@@ -30,7 +30,7 @@ const DeliveryReplicationView = () => {
   // If loading, show a loading spinner
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
         <CircularProgress />
       </div>
     );
@@ -49,27 +49,27 @@ const DeliveryReplicationView = () => {
   return (
     <div style={{ padding: '20px' }}>
       <Typography variant="h4" gutterBottom align="center">
-        Delivery Replication Data
+        Delivery Order Data
       </Typography>
       <TableContainer component={Paper} style={{ maxWidth: '100%', overflowX: 'auto' }}>
         <Table>
-          <TableHead>
+          <TableHead style={{backgroundColor:"#FF5A1F "}}>
             <TableRow>
-              <TableCell>Order ID</TableCell>
-              <TableCell>User Name</TableCell>
-              <TableCell>User Phone</TableCell>
-              <TableCell>Restaurant ID</TableCell>
-              <TableCell>Delivery Address</TableCell>
-              <TableCell>Order Items</TableCell>
-              <TableCell>Price</TableCell>
-              <TableCell>Order Date</TableCell>
-              <TableCell>Order Time</TableCell>
-              <TableCell>Assign Driver</TableCell>
-              <TableCell>Driver Name</TableCell>
-              <TableCell>Driver Phone</TableCell>
-              <TableCell>Delivered</TableCell>
-              <TableCell>Driver Remark</TableCell>
-              <TableCell>User Remark</TableCell>
+              <TableCell style={{border:"1px solid white"}}>Order ID</TableCell>
+              <TableCell style={{border:"1px solid white"}}>User Name</TableCell>
+              <TableCell style={{border:"1px solid white"}}>User Phone</TableCell>
+              <TableCell style={{border:"1px solid white"}}>Restaurant ID</TableCell>
+              <TableCell style={{border:"1px solid white"}}>Delivery Address</TableCell>
+              <TableCell style={{border:"1px solid white"}}>Order Items</TableCell>
+              <TableCell style={{border:"1px solid white"}}>Price</TableCell>
+              <TableCell style={{border:"1px solid white"}}>Order Date</TableCell>
+              <TableCell style={{border:"1px solid white"}}>Order Time</TableCell>
+              <TableCell style={{border:"1px solid white"}}>Assign Driver</TableCell>
+              <TableCell style={{border:"1px solid white"}}>Driver Name</TableCell>
+              <TableCell style={{border:"1px solid white"}}>Driver Phone</TableCell>
+              <TableCell style={{border:"1px solid white"}}>Delivered</TableCell>
+              <TableCell style={{border:"1px solid white"}}>Driver Remark</TableCell>
+              <TableCell style={{border:"1px solid white"}}>User Remark</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>

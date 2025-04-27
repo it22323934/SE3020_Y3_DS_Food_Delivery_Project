@@ -19,6 +19,7 @@ import {
 import UpdateIcon from "@mui/icons-material/Update";
 import { useNavigate } from "react-router-dom";
 import MapIcon from "@mui/icons-material/Map"; // Add this import
+import { useDispatch, useSelector } from "react-redux";
 
 
 const DeliveryAssignOrders = ({ driverId = "DRV123" }) => {
@@ -26,15 +27,19 @@ const DeliveryAssignOrders = ({ driverId = "DRV123" }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
+  const { currentUser } = useSelector((state) => state.user);
 
   useEffect(() => {
+    console.log("DriverAssighn:"+ currentUser?.username); // 👉 This will print "Doe"
+    const driverID = currentUser?.username;
     const fetchDriverOrders = async () => {
       try {
         // const response = await axios.get(
         //   `http://localhost:8081/api/driver-orders/orders/${driverId}`
         // );
         const response = await axios.get(
-          `http://localhost:8089/api/driver-orders/orders/${driverId}`
+       //   `http://localhost:8089/api/driver-orders/orders/${driverId}`
+        `http://localhost:8089/api/driver-orders/orders/${driverID}`
         );
         setOrders(response.data);
       } catch (err) {
@@ -53,7 +58,7 @@ const DeliveryAssignOrders = ({ driverId = "DRV123" }) => {
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Paper elevation={6} sx={{ p: 3, borderRadius: 3 }}>
         <Typography variant="h4" gutterBottom color="primary">
-          Orders for Driver ID: <strong>{driverId}</strong>
+          Orders for Driver ID: <strong>{currentUser?.username}</strong>
         </Typography>
 
         {loading && (
