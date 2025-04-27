@@ -7,9 +7,12 @@
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
+        <module name="Delivery-Driver" />
         <module name="DeliveryLocationService" />
+        <module name="DriverOrderService" />
+        <module name="Delivery_Replication" />
       </profile>
-      <profile name="Annotation profile for paymentService" enabled="true">
+      <profile name="Annotation profile for restaurantService" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
@@ -24,35 +27,14 @@
         <module name="apiGateway" />
         <module name="userService" />
       </profile>
-      <profile name="Annotation profile for notificationService" enabled="true">
-        <sourceOutputDir name="target/generated-sources/annotations" />
-        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
-        <outputRelativeToContentRoot value="true" />
-        <processorPath useClasspath="false">
-          <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.30/lombok-1.18.30.jar" />
-          <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.30/lombok-1.18.30.jar" />
-        </processorPath>
-        <module name="notificationService" />
-      </profile>
-      <profile name="Annotation profile for DriverOrderService" enabled="true">
-        <sourceOutputDir name="target/generated-sources/annotations" />
-        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
-        <outputRelativeToContentRoot value="true" />
-        <processorPath useClasspath="false">
-          <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.36/lombok-1.18.36.jar" />
-        </processorPath>
-        <module name="Delivery-Driver" />
-        <module name="DriverOrderService" />
-        <module name="Delivery_Replication" />
-      </profile>
     </annotationProcessing>
   </component>
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
-      <module name="Delivery-Driver" options="-parameters" />
-      <module name="DeliveryLocationService" options="-parameters" />
-      <module name="Delivery_Replication" options="-parameters" />
-      <module name="DriverOrderService" options="-parameters" />
+      <module name="Delivery-Driver" options="" />
+      <module name="DeliveryLocationService" options="" />
+      <module name="Delivery_Replication" options="" />
+      <module name="DriverOrderService" options="" />
       <module name="apiGateway" options="-parameters" />
       <module name="deliveryService" options="-parameters" />
       <module name="notificationService" options="-parameters" />
