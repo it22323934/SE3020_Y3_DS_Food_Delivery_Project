@@ -12,6 +12,7 @@ import DeliveryReplicationView from "../components/DeliveryReplicationView";
 import DeliveryAssignOrders from "../components/DriverAssignOrders";
 import RegisterDeliveryDriver from "../components/RegisterDeliveryDriver";
 import UserLocationViewer from "../components/UserLocationViewer";
+import AllOrders from "../components/AllOrders";
 
 // import DashRestaurant from "../components/DashRestaurant";
 // import DashMenuManagement from "../components/DashMenuManagement";
@@ -52,6 +53,8 @@ export default function Dashboard() {
       {tab === "driver-order" && <DeliveryAssignOrders />}
       {tab === "driver-Registration" && <RegisterDeliveryDriver />}
       {tab === "Order-Location" && <UserLocationViewer />}
+      {tab === "AllOrders" && <AllOrders />}
+
 
 
     </div>

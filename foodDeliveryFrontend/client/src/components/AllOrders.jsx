@@ -1,0 +1,127 @@
+import React, { useEffect, useState } from "react";
+import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, CircularProgress, Typography } from "@mui/material";
+import { Button } from '@mui/material'; // ✅ Import MUI Button properly
+import { useNavigate } from "react-router-dom"; // ✅ Import useNavigate
+
+const AllOrders = () => {
+  const [deliveries, setDeliveries] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate(); // ✅ Initialize navigate
+
+  useEffect(() => {
+    fetch("http://localhost:8089/api/deliveryReplication")
+      .then((response) => {
+        if (!response.ok) {
+          // Handle HTTP errors
+          return response.text().then(text => {
+            throw new Error(`HTTP error! Status: ${response.status}, Message: ${text}`);
+          });
+        }
+        return response.json();
+      })
+      .then((data) => {
+        setDeliveries(data);
+        setLoading(false);
+      })
+      .catch((error) => {
+        console.error("Error fetching data:", error);
+        setLoading(false);
+        // Optionally show error to user
+      });
+  }, []);
+
+  // If loading, show a loading spinner
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+        <CircularProgress />
+      </div>
+    );
+  }
+
+  const getOrderIdStyle = (assignDriver, orderDeliveredComplete) => {
+    if (!assignDriver) {
+      return { color: 'red' }; // Red color if Assign Driver is false
+    }
+    if (assignDriver && !orderDeliveredComplete) {
+      return { color: 'orange' }; // Orange color if Assign Driver is true and Delivered is false
+    }
+    return { color: 'green' }; // Green color if Delivered is true
+  };
+
+  return (
+    <div style={{ padding: '20px' }}>
+      <Typography variant="h4" gutterBottom align="center">
+        Order Data
+      </Typography>
+      <TableContainer component={Paper} style={{ maxWidth: '100%', overflowX: 'auto' }}>
+        <Table>
+          <TableHead style={{backgroundColor:"#FF5A1F "}}>
+            <TableRow>
+              <TableCell style={{border:"1px solid white"}}>Order ID</TableCell>
+              <TableCell style={{border:"1px solid white",display:"none"}}>User Name</TableCell>
+              <TableCell style={{border:"1px solid white", display:"none"}}>User Phone</TableCell>
+              <TableCell style={{border:"1px solid white"}}>Restaurant ID</TableCell>
+              <TableCell style={{border:"1px solid white"}}>Delivery Address</TableCell>
+              <TableCell style={{border:"1px solid white"}}>Order Items</TableCell>
+              <TableCell style={{border:"1px solid white"}}>Price</TableCell>
+              <TableCell style={{border:"1px solid white"}}>Order Date</TableCell>
+              <TableCell style={{border:"1px solid white"}}>Order Time</TableCell>
+              <TableCell style={{border:"1px solid white"}}>Assign Driver</TableCell>
+              <TableCell style={{border:"1px solid white"}}>Driver Name</TableCell>
+              <TableCell style={{border:"1px solid white"}}>Driver Phone</TableCell>
+              <TableCell style={{border:"1px solid white"}}>Delivered</TableCell>
+              <TableCell style={{border:"1px solid white"}}>Driver Remark</TableCell>
+              <TableCell style={{border:"1px solid white"}}>User Remark</TableCell>
+              <TableCell style={{border:"1px solid white"}}>Track Location</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {deliveries.map((delivery) => (
+              <TableRow key={delivery.orderId}>
+                <TableCell style={getOrderIdStyle(delivery.isAssignDriver, delivery.orderDeliveredComplete)}>
+                  {delivery.orderId}
+                </TableCell>
+                <TableCell style={{display:"none"}}>{delivery.userName}</TableCell>
+                <TableCell style={{display:"none"}}>{delivery.userPhoneNo}</TableCell>
+                <TableCell>{delivery.restaurantId}</TableCell>
+                <TableCell>{delivery.deliveryAddress}</TableCell>
+                <TableCell>{delivery.orderItems.join(", ")}</TableCell>
+                <TableCell>{delivery.price}</TableCell>
+                <TableCell>{delivery.orderDate}</TableCell>
+                <TableCell>{delivery.orderTime}</TableCell>
+                <TableCell>{delivery.isAssignDriver ? "Yes" : "No"}</TableCell> 
+                <TableCell>{delivery.driverName}</TableCell>
+                <TableCell>{delivery.driverPhoneNo}</TableCell>
+                <TableCell>{delivery.orderDeliveredComplete ? "Yes" : "No"}</TableCell>
+                <TableCell>{delivery.driverRemark}</TableCell>
+                <TableCell>{delivery.userRemark}</TableCell>
+                                <Button
+                    variant="contained"
+                    size="small"
+                    onClick={() => navigate(`/CustomerTrackingOrder/${delivery.userId}/${delivery.orderId}`)}
+                    sx={{
+                    textTransform: "none",
+                    fontWeight: "bold",
+                    borderRadius: 2,
+                    boxShadow: 1,
+                    marginTop:"1.7rem",
+                    marginLeft:"1rem",
+                    backgroundColor: "#52be80",
+                    "&:hover": {
+                        backgroundColor: "#45a163",
+                    },
+                    }}
+                >
+                    Map
+                </Button>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+    </div>
+  );
+};
+
+export default AllOrders;

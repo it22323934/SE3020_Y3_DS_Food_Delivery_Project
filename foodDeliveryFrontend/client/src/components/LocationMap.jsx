@@ -11,11 +11,13 @@ const containerStyle = {
 
 function LocationMap() {
   const [currentLocation, setCurrentLocation] = useState(null);
- const { orderId } = useParams();
-  
+ const { orderId, userId } = useParams();
+
 
   useEffect(() => {
     console.log("Order ID:"+orderId);
+    console.log("User ID:"+userId);
+
     const watchId = navigator.geolocation.watchPosition(
       (position) => {
         setCurrentLocation({
@@ -51,7 +53,7 @@ function LocationMap() {
       const response = await axios.post('http://localhost:8089/api/location', {
         latitude: currentLocation.lat,
         longitude: currentLocation.lng,
-        userId:"R1",
+        userId:userId,
         orderId:orderId,
       });
 

@@ -66,6 +66,7 @@ export default function DashSideBar() {
     if (hasRole("ROLE_RESTAURANT_ADMIN")) return "Restaurant Admin";
  //   if (hasRole("ROLE_DRIVER")) return "Driver";
     if (hasRole("ROLE_DELIVERY_PERSONNEL")) return "Driver";
+    if (hasRole("ROLE_CUSTOMER")) return "User";
 
     return "User";
   };
@@ -217,9 +218,24 @@ export default function DashSideBar() {
             </Link>
           )}
 
+            {/* Driver Order managment */}
+            {currentUser && hasRole("ROLE_CUSTOMER") && (
+            <Link to="/dashboard?tab=AllOrders">
+              <Sidebar.Item
+                active={tab === "AllOrders"}
+                icon={GiCook}
+                labelColor="dark"
+                as="div"
+              >
+                Orders
+              </Sidebar.Item>
+            </Link>
+          )}
+
+
 
            {/* User Order managment */}
-           {currentUser && hasRole("User") && (
+           {currentUser && hasRole("ROLE_CUSTOMER") && (
             <Link to="/dashboard?tab=Order-Location">
               <Sidebar.Item
                 active={tab === "Order-Location"}
@@ -230,6 +246,10 @@ export default function DashSideBar() {
                 Order-Location
               </Sidebar.Item>
             </Link>
+
+            
+
+            
           )}
 
           {/* Profile link for all users */}

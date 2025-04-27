@@ -144,7 +144,7 @@ const DeliveryAssignOrders = ({ driverId = "DRV123" }) => {
                             variant="contained"
                             size="small"
                             startIcon={<MapIcon />}
-                            onClick={() => navigate(`/location-map/${order.orderId}`)}
+                            onClick={() => navigate(`/location-map/${order.orderId}/${order.userId}`)}
                             sx={{
                               textTransform: "none",
                               fontWeight: "bold",
