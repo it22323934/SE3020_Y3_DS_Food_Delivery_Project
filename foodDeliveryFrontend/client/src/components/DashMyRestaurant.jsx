@@ -46,6 +46,7 @@ import OpeningHoursEditor from "./sub-components/restaurant-management/OpeningHo
 import LocationTab from "./sub-components/restaurant-management/LocationTab";
 import { BsPersonBadge } from "react-icons/bs";
 import { authService } from "../service/authService";
+import { HiDocumentReport, HiDownload } from "react-icons/hi";
 
 export default function DashMyRestaurant() {
   // State definitions remain the same
@@ -53,6 +54,8 @@ export default function DashMyRestaurant() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [restaurant, setRestaurant] = useState(null);
+  const [isDownloading, setIsDownloading] = useState(false);
+
   // Add new state for restaurant admins
   const [restaurantAdmins, setRestaurantAdmins] = useState([]);
   const [loadingAdmins, setLoadingAdmins] = useState(false);
@@ -480,7 +483,49 @@ export default function DashMyRestaurant() {
     }
   };
 
-  // Updated UI with improved spacing, layout and visual enhancements
+  const handleDownloadReport = async () => {
+    if (!restaurant?.id) {
+      toast.warning("Restaurant information not available");
+      return;
+    }
+
+    setIsDownloading(true);
+    try {
+      const response = await restaurantService.generateRestaurantReport(
+        restaurant.id,
+        currentUser.token
+      );
+
+      if (response.ok) {
+        // Convert response to blob
+        const blob = await response.blob();
+
+        // Create download link and trigger download
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.style.display = "none";
+        a.href = url;
+        a.download = `restaurant-report-${formData.name}-${
+          new Date().toISOString().split("T")[0]
+        }.pdf`;
+        document.body.appendChild(a);
+        a.click();
+
+        // Clean up
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+
+        toast.success("Restaurant report downloaded successfully");
+      } else {
+        throw new Error(`Failed to download report: ${response.status}`);
+      }
+    } catch (error) {
+      console.error("Error downloading report:", error);
+      toast.error("Failed to download restaurant report");
+    } finally {
+      setIsDownloading(false);
+    }
+  };
   return (
     <div className="p-6 max-w-7xl mx-auto">
       <ToastContainer position="top-right" autoClose={3000} />
@@ -496,7 +541,22 @@ export default function DashMyRestaurant() {
             Manage your restaurant details and settings
           </p>
         </div>
-        <div>
+        <div className="flex gap-3">
+          {/* Add Report Download Button */}
+          <Button
+            gradientDuoTone="purpleToBlue"
+            size="lg"
+            onClick={handleDownloadReport}
+            disabled={isDownloading || !restaurant}
+            className="px-6"
+          >
+            {isDownloading ? (
+              <Spinner size="sm" className="mr-2" />
+            ) : (
+              <HiDocumentReport className="mr-2 text-lg" />
+            )}
+            {isDownloading ? "Generating..." : "Download Report"}
+          </Button>
           <Button
             gradientDuoTone="greenToBlue"
             size="lg"
@@ -709,7 +769,6 @@ export default function DashMyRestaurant() {
                     key={admin.id}
                     className="flex items-center p-3 bg-gray-50 rounded-lg transition-all hover:bg-gray-100"
                   >
-
                     <div>
                       <p className="font-medium">
                         {admin.firstName && admin.lastName
@@ -817,6 +876,60 @@ export default function DashMyRestaurant() {
                 </p>
               </div>
             )}
+          </Card>
+
+          <Card className="shadow-md">
+            <h3 className="text-lg font-bold mb-4 flex items-center">
+              <HiDocumentReport className="mr-3 text-blue-600" />
+              Analytics & Reports
+            </h3>
+
+            <div className="space-y-4">
+              {/* Restaurant Performance Report */}
+              <div className="p-4 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-gray-800 dark:to-gray-700 rounded-lg border border-blue-100 dark:border-gray-600">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h4 className="font-medium text-gray-800 dark:text-white">
+                      Restaurant Report
+                    </h4>
+                    <p className="text-sm text-gray-500 dark:text-gray-300 mt-1">
+                      Download a comprehensive report of your restaurant
+                      performance, orders, and customer feedback.
+                    </p>
+                  </div>
+                  <div className="bg-white dark:bg-gray-700 rounded-full p-2 shadow">
+                    <HiDocumentReport className="text-blue-500 dark:text-blue-400 text-xl" />
+                  </div>
+                </div>
+
+                <Button
+                  color="light"
+                  size="sm"
+                  className="w-full mt-4 bg-white dark:bg-gray-700 border border-blue-200 dark:border-gray-600 hover:bg-blue-50 dark:hover:bg-gray-600 transition-colors duration-200"
+                  onClick={handleDownloadReport}
+                  disabled={isDownloading}
+                >
+                  {isDownloading ? (
+                    <>
+                      <Spinner size="sm" className="mr-2" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <HiDownload className="mr-2" />
+                      Download Report
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              <div className="text-center text-sm text-gray-500 mt-2">
+                <p>
+                  Reports are generated based on your restaurant's current data
+                  and performance metrics.
+                </p>
+              </div>
+            </div>
           </Card>
         </div>
 

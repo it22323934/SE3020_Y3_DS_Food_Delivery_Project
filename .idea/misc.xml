@@ -11,6 +11,10 @@
         <option value="$PROJECT_DIR$/deliveryService/pom.xml" />
         <option value="$PROJECT_DIR$/orderService/pom.xml" />
         <option value="$PROJECT_DIR$/foodDeliveryFrontend/pom.xml" />
+        <option value="$PROJECT_DIR$/Delivery-Driver/pom.xml" />
+        <option value="$PROJECT_DIR$/Delivery_Replication/pom.xml" />
+        <option value="$PROJECT_DIR$/DriverOrderService/pom.xml" />
+        <option value="$PROJECT_DIR$/DeliveryLocationService/pom.xml" />
       </list>
     </option>
   </component>

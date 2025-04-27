@@ -52,6 +52,7 @@ export default function SignIn() {
       }
       if (res.ok) {
         dispatch(signInSuccess(data));
+        setFormData({});
         navigate("/");
       }
     } catch (error) {

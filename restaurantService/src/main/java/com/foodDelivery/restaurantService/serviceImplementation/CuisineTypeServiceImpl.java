@@ -212,4 +212,16 @@ public class CuisineTypeServiceImpl implements CuisineTypeService {
                 .map(cuisineTypeMapper::toDto)
                 .collect(Collectors.toList());
     }
+
+    @Override
+    public List<CuisineTypeResponse> getActiveCuisineTypes() {
+        return cuisineTypeRepository.findByActiveTrue().stream()
+                .map(cuisineTypeMapper::toDto)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<CuisineType> getCuisineTypesByIds(List<String> cuisineTypeIds) {
+        return cuisineTypeRepository.findAllById(cuisineTypeIds);
+    }
 }
