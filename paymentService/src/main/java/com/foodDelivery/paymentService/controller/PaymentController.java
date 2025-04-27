@@ -4,7 +4,7 @@ package com.foodDelivery.paymentService.controller;
 import com.foodDelivery.paymentService.dto.PaymentRequest;
 import com.foodDelivery.paymentService.dto.PaymentResponse;
 import com.foodDelivery.paymentService.dto.PaymentDetails;
-import com.foodDelivery.paymentService.service.PaymentService;
+import com.foodDelivery.paymentService.serviceImpl.PaymentServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -20,7 +20,7 @@ import java.util.List;
 public class PaymentController {
 
     @Autowired
-    private PaymentService paymentService;
+    private PaymentServiceImpl paymentService;
 
     @PostMapping
     public ResponseEntity<PaymentResponse> processPayment(@RequestBody PaymentRequest paymentRequest) {
