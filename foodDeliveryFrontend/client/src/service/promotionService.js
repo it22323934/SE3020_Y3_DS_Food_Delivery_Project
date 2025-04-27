@@ -77,7 +77,7 @@ export const promotionService = {
   },
 
   // Get only active promotions by restaurant ID
-  getActivePromotionsByRestaurantId: async (restaurantId, token = null) => {
+  getActivePromotionsByRestaurantId: async (restaurantId, token) => {
     const headers = {
       "Content-Type": "application/json",
     };
