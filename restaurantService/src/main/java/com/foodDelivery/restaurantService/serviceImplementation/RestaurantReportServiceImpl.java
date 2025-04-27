@@ -85,6 +85,7 @@ public class RestaurantReportServiceImpl implements RestaurantReportService {
             addMenuItems(document, restaurant);
             addSeparator(document);
             addPerformanceMetrics(document, restaurant);
+            addFooter(document);
 
             document.close();
             return baos.toByteArray();
@@ -257,28 +258,53 @@ public class RestaurantReportServiceImpl implements RestaurantReportService {
         document.add(Chunk.NEWLINE);
     }
 
-    private void addAdminInformation(Document document, Restaurant restaurant,String token) throws DocumentException {
+    private void addAdminInformation(Document document, Restaurant restaurant, String token) throws DocumentException {
         Paragraph adminsTitle = new Paragraph("Restaurant Administrators",
                 FontFactory.getFont(FontFactory.HELVETICA_BOLD, 14));
         document.add(adminsTitle);
 
-        PdfPTable table = new PdfPTable(4); // Changed to 4 columns
+        PdfPTable table = new PdfPTable(4);
         table.setWidthPercentage(100);
+        addTableHeader(table, "Admin ID", "Name", "Email", "Phone");
 
-        addTableHeader(table, "Admin ID", "Name", "Email", "Phone"); // Added phone
+        boolean serviceAvailable = true;
+        StringBuilder errorMessage = new StringBuilder();
 
         for (String adminId : restaurant.getAdminIds()) {
-            UserProfileResponse adminInfo = userServiceClient.getAdminInfo(adminId,token);
-            if (adminInfo != null) {
-                table.addCell(adminId);
-                table.addCell(adminInfo.getUsername());
-                table.addCell(adminInfo.getEmail());
-                table.addCell(adminInfo.getPhoneNumber());
+            try {
+                UserProfileResponse adminInfo = userServiceClient.getAdminInfo(adminId, token);
+                if (adminInfo != null) {
+                    table.addCell(adminId);
+                    table.addCell(adminInfo.getUsername());
+                    table.addCell(adminInfo.getEmail());
+                    table.addCell(adminInfo.getPhoneNumber());
+                } else {
+                    addUnavailableRow(table, adminId);
+                }
+            } catch (Exception e) {
+                log.error("Failed to fetch admin info for ID {}: {}", adminId, e.getMessage());
+                serviceAvailable = false;
+                errorMessage.append("User service is currently unavailable. Some administrator information may be incomplete.");
+                addUnavailableRow(table, adminId);
             }
         }
 
         document.add(table);
         document.add(Chunk.NEWLINE);
+
+        if (!serviceAvailable) {
+            Paragraph errorNote = new Paragraph(errorMessage.toString(),
+                    FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10, BaseColor.RED));
+            errorNote.setSpacingBefore(5);
+            document.add(errorNote);
+        }
+    }
+
+    private void addUnavailableRow(PdfPTable table, String adminId) {
+        table.addCell(adminId);
+        table.addCell("Data Unavailable");
+        table.addCell("Data Unavailable");
+        table.addCell("Data Unavailable");
     }
 
     private void addMenuItems(Document document, Restaurant restaurant) throws DocumentException {
