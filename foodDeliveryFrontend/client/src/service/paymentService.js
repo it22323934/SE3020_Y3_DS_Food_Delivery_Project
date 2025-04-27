@@ -2,7 +2,7 @@
 
 const API_BASE_URL = "http://localhost:8082/api/payments";
 
-const paymentService = {
+export const paymentService = {
   /**
    * Get all payments (Admin only)
    * @param {string} token - JWT authentication token
@@ -77,4 +77,3 @@ const paymentService = {
   }
 };
 
-export { paymentService };
