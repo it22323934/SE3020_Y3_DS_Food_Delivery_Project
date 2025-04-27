@@ -9,12 +9,9 @@ import React, { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { signOutSuccess } from "../redux/user/userSlice";
 import { useDispatch, useSelector } from "react-redux";
-import {
-  FaStore,
-  FaUtensils,
-} from "react-icons/fa";
+import { FaStore, FaTag, FaUtensils } from "react-icons/fa";
 import { GiCook } from "react-icons/gi";
-import {  MdRestaurantMenu } from "react-icons/md";
+import { MdRestaurantMenu } from "react-icons/md";
 import { authService } from "../service/authService";
 
 export default function DashSideBar() {
@@ -121,6 +118,16 @@ export default function DashSideBar() {
 
           {currentUser && hasRole("ROLE_RESTAURANT_ADMIN") && (
             <>
+              <Link to="/dashboard?tab=promotion-management">
+                <Sidebar.Item
+                  active={tab === "promotion-management"}
+                  icon={FaTag}
+                  labelColor="dark"
+                  as="div"
+                >
+                  Promotions
+                </Sidebar.Item>
+              </Link>
               <Link to="/dashboard?tab=menu-management">
                 <Sidebar.Item
                   active={tab === "menu-management"}

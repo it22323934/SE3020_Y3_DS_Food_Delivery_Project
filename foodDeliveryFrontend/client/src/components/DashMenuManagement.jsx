@@ -8,6 +8,7 @@ import {
   Badge,
   TextInput,
   Dropdown,
+  Alert,
 } from "flowbite-react";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -18,8 +19,15 @@ import {
   HiOutlineTrash,
   HiOutlineEye,
   HiFilter,
+  HiInformationCircle,
 } from "react-icons/hi";
-import { FaUtensils } from "react-icons/fa";
+import {
+  FaUtensils,
+  FaStar,
+  FaListAlt,
+  FaEye,
+  FaDollarSign,
+} from "react-icons/fa";
 import { restaurantService } from "../service/restaurantService";
 import ReactPaginate from "react-paginate";
 import ViewMenuItemModal from "./sub-components/menu-item-management/ViewMenuItemModal";
@@ -28,6 +36,7 @@ import { menuCategoryService } from "../service/menuCategoryService";
 import { menuItemService } from "../service/menuItemService";
 import DeleteMenuItemModal from "./sub-components/menu-item-management/DeleteMenuItemModal";
 import UpdateMenuItemModal from "./sub-components/menu-item-management/UpdateMenuItemModal";
+import LoadingSpinner from "./LoadingSpinner"; // Import the LoadingSpinner component
 
 export default function DashMenuItems() {
   const { currentUser } = useSelector((state) => state.user);
@@ -45,7 +54,9 @@ export default function DashMenuItems() {
   const [selectedMenuItem, setSelectedMenuItem] = useState(null);
   const [categories, setCategories] = useState([]);
   const [pageNumber, setPageNumber] = useState(0);
-  const itemsPerPage = 8;
+  const [totalMenuItems, setTotalMenuItems] = useState(0);
+  const [availableItems, setAvailableItems] = useState(0);
+  const itemsPerPage = 5; // Changed to match the category management component
 
   const pageCount = Math.ceil(filteredMenuItems.length / itemsPerPage);
   const displayMenuItems = filteredMenuItems.slice(
@@ -106,6 +117,7 @@ export default function DashMenuItems() {
 
   const fetchUserRestaurant = async () => {
     try {
+      setLoading(true);
       const response = await restaurantService.getRestaurantsByUserId(
         currentUser.id,
         currentUser.token
@@ -116,13 +128,18 @@ export default function DashMenuItems() {
         if (data && data.length > 0) {
           setRestaurant(data[0]); // Assuming the user is associated with one restaurant
         } else {
-          toast.error("You don't have any restaurants assigned to you.");
+          toast.info(
+            "You don't have any restaurants assigned to you. Please contact the system administrator."
+          );
         }
       } else {
         toast.error("Failed to fetch restaurant information");
       }
     } catch (error) {
+      console.error("Error fetching restaurant:", error);
       toast.error(`Error: ${error.message}`);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -139,22 +156,28 @@ export default function DashMenuItems() {
         const data = await response.json();
         setMenuItems(data);
         setFilteredMenuItems(data);
+        setTotalMenuItems(data.length);
+        setAvailableItems(data.filter((item) => item.available).length);
       } else {
         const errorData = await response.json();
         toast.warning(errorData.error || "No menu items found");
         setMenuItems([]);
         setFilteredMenuItems([]);
+        setTotalMenuItems(0);
+        setAvailableItems(0);
       }
     } catch (error) {
+      console.error("Error fetching menu items:", error);
       toast.error(`Error fetching menu items: ${error.message}`);
       setMenuItems([]);
       setFilteredMenuItems([]);
+      setTotalMenuItems(0);
+      setAvailableItems(0);
     } finally {
       setLoading(false);
     }
   };
 
-  // Then replace the fetchCategories function with this corrected version
   const fetchCategories = async () => {
     if (!restaurant?.id || !currentUser?.token) return;
 
@@ -174,7 +197,7 @@ export default function DashMenuItems() {
           // No categories found
           setCategories([]);
           toast.info(
-            "No menu categories found for this restaurant. Create some categories to organize your menu."
+            "No menu categories found for this restaurant. Create some categories first."
           );
         }
       } else {
@@ -190,6 +213,7 @@ export default function DashMenuItems() {
       toast.error("Error loading menu categories");
     }
   };
+
   const handleCreateMenuItem = () => {
     setShowCreateModal(true);
   };
@@ -238,6 +262,7 @@ export default function DashMenuItems() {
         toast.error(errorData.error || "Failed to delete menu item");
       }
     } catch (error) {
+      console.error("Error deleting menu item:", error);
       toast.error(`Error: ${error.message}`);
     } finally {
       setShowDeleteModal(false);
@@ -250,149 +275,180 @@ export default function DashMenuItems() {
     setAvailabilityFilter("");
   };
 
+  if (loading && !restaurant) {
+    return <LoadingSpinner />;
+  }
+
   if (!restaurant) {
     return (
-      <div className="p-6 flex justify-center items-center">
-        <Card className="max-w-md mx-auto">
-          <div className="text-center p-6">
-            <FaUtensils className="mx-auto text-5xl text-gray-400 mb-4" />
-            <h2 className="text-xl font-bold mb-2">No Restaurant Found</h2>
-            <p className="text-gray-600 mb-4">
-              You need to be associated with a restaurant to manage menu items.
-            </p>
-            <Button color="dark" href="/dashboard">
-              Return to Dashboard
-            </Button>
-          </div>
-        </Card>
+      <div className="p-4">
+        <Alert color="info" icon={HiInformationCircle}>
+          <span className="font-medium">No restaurant found!</span> You don't
+          have any restaurants assigned to your account. Please contact the
+          system administrator.
+        </Alert>
       </div>
     );
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="table-auto overflow-x-scroll md:mx-auto p-3 scrollbar scrollbar-track-slate-100 scrollbar-thumb-slate-300 dark:scrollbar-track-slate-700 dark:scrollbar-thumb-slate-500">
       <ToastContainer position="top-right" autoClose={3000} />
 
-      {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-center mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800 mb-2 flex items-center">
-            <FaUtensils className="mr-3 text-blue-600" />
-            Menu Items
-          </h1>
-          <p className="text-gray-600">
-            Manage menu items for {restaurant.name}
-          </p>
-        </div>
-        <Button
-          gradientDuoTone="purpleToBlue"
-          onClick={handleCreateMenuItem}
-          className="mt-4 md:mt-0"
-        >
-          <HiPlusCircle className="mr-2 h-5 w-5" />
-          Add Menu Item
-        </Button>
-      </div>
-
-      {/* Filters */}
-      <Card className="mb-6 overflow-hidden">
-        <div className="p-4">
-          <div className="flex flex-wrap items-center gap-4">
-            <div className="flex-grow md:max-w-md">
-              <TextInput
-                type="text"
-                icon={HiOutlineSearch}
-                placeholder="Search menu items..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full"
-              />
+      {/* Stats Cards - Similar to the category management component */}
+      <div className="p-3 md:mx-auto">
+        <div className="flex-wrap flex gap-4 justify-center">
+          <div className="flex flex-col p-3 dark:bg-slate-800 gap-4 md:w-72 w-full rounded-md shadow-md">
+            <div className="flex justify-between">
+              <div>
+                <h3 className="text-gray-500 text-md uppercase">
+                  Total Menu Items
+                </h3>
+                <p className="text-2xl">{totalMenuItems}</p>
+              </div>
+              <FaUtensils className="bg-yellow-500 text-white text-5xl p-3 shadow-lg rounded-lg" />
             </div>
-
-            <div className="flex flex-wrap gap-3">
+          </div>
+          <div className="flex flex-col p-3 dark:bg-slate-800 gap-4 md:w-72 w-full rounded-md shadow-md">
+            <div className="flex justify-between">
               <div>
-                <Dropdown
-                  label={
-                    <div className="flex items-center">
-                      <HiFilter className="mr-2" />
-                      {categoryFilter
-                        ? `Category: ${
-                            categories.find((c) => c.id === categoryFilter)
-                              ?.name || "Selected"
-                          }`
-                        : "Filter by Category"}
-                    </div>
-                  }
-                  color="light"
-                  size="sm"
-                >
-                  <Dropdown.Item onClick={() => setCategoryFilter("")}>
-                    All Categories
-                  </Dropdown.Item>
-                  <Dropdown.Divider />
-                  {categories.map((category) => (
-                    <Dropdown.Item
-                      key={category.id}
-                      onClick={() => setCategoryFilter(category.id)}
-                    >
-                      {category.name}
-                    </Dropdown.Item>
-                  ))}
-                </Dropdown>
+                <h3 className="text-gray-500 text-md uppercase">
+                  Available Items
+                </h3>
+                <p className="text-2xl">{availableItems}</p>
               </div>
-
+              <FaUtensils className="bg-green-500 text-white text-5xl p-3 shadow-lg rounded-lg" />
+            </div>
+          </div>
+          <div className="flex flex-col p-3 dark:bg-slate-800 gap-4 md:w-72 w-full rounded-md shadow-md">
+            <div className="flex justify-between">
               <div>
-                <Dropdown
-                  label={
-                    <div className="flex items-center">
-                      <HiFilter className="mr-2" />
-                      {availabilityFilter === "available"
-                        ? "Available Items"
-                        : availabilityFilter === "unavailable"
-                        ? "Unavailable Items"
-                        : "Filter by Availability"}
-                    </div>
-                  }
-                  color="light"
-                  size="sm"
-                >
-                  <Dropdown.Item onClick={() => setAvailabilityFilter("")}>
-                    All Items
-                  </Dropdown.Item>
-                  <Dropdown.Divider />
-                  <Dropdown.Item
-                    onClick={() => setAvailabilityFilter("available")}
-                  >
-                    Available Only
-                  </Dropdown.Item>
-                  <Dropdown.Item
-                    onClick={() => setAvailabilityFilter("unavailable")}
-                  >
-                    Unavailable Only
-                  </Dropdown.Item>
-                </Dropdown>
+                <h3 className="text-gray-500 text-md uppercase">
+                  Unavailable Items
+                </h3>
+                <p className="text-2xl">{totalMenuItems - availableItems}</p>
               </div>
-
-              {(search || categoryFilter || availabilityFilter) && (
-                <Button color="light" size="sm" onClick={resetFilters}>
-                  Clear Filters
-                </Button>
-              )}
+              <FaUtensils className="bg-red-500 text-white text-5xl p-3 shadow-lg rounded-lg" />
             </div>
           </div>
         </div>
-      </Card>
+      </div>
+
+      {/* Header and Actions */}
+      <div className="mb-6">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-4 gap-4">
+          <div className="flex-1">
+            <h2 className="text-xl font-semibold text-gray-800 dark:text-white flex items-center">
+              <FaUtensils className="mr-2 text-blue-600" />
+              {restaurant.name} - Menu Items
+            </h2>
+          </div>
+          <div className="flex gap-4 w-full md:w-auto">
+            <Button
+              outline
+              gradientDuoTone="greenToBlue"
+              onClick={handleCreateMenuItem}
+              className="w-full md:w-auto"
+            >
+              <HiPlusCircle className="mr-2 h-5 w-5" />
+              Add New Item
+            </Button>
+          </div>
+        </div>
+
+        {/* Improved Filter Section */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+          <div className="col-span-1 md:col-span-3 lg:col-span-1">
+            <TextInput
+              type="text"
+              placeholder="Search menu items..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              icon={HiOutlineSearch}
+              className="w-full"
+            />
+          </div>
+
+          <div className="flex gap-2 col-span-1 md:col-span-2 lg:col-span-1">
+            <Dropdown
+              label={
+                <div className="flex items-center">
+                  <HiFilter className="mr-2" />
+                  {categoryFilter
+                    ? `Category: ${
+                        categories.find((c) => c.id === categoryFilter)?.name ||
+                        "Selected"
+                      }`
+                    : "Filter by Category"}
+                </div>
+              }
+              color="light"
+              className="w-full"
+            >
+              <Dropdown.Item onClick={() => setCategoryFilter("")}>
+                All Categories
+              </Dropdown.Item>
+              <Dropdown.Divider />
+              {categories.map((category) => (
+                <Dropdown.Item
+                  key={category.id}
+                  onClick={() => setCategoryFilter(category.id)}
+                >
+                  {category.name}
+                </Dropdown.Item>
+              ))}
+            </Dropdown>
+            <Dropdown
+              label={
+                <div className="flex items-center">
+                  <HiFilter className="mr-2" />
+                  {availabilityFilter === "available"
+                    ? "Available Items"
+                    : availabilityFilter === "unavailable"
+                    ? "Unavailable Items"
+                    : "Filter by Availability"}
+                </div>
+              }
+              color="light"
+              className="w-full md:w-auto"
+            >
+              <Dropdown.Item onClick={() => setAvailabilityFilter("")}>
+                All Items
+              </Dropdown.Item>
+              <Dropdown.Divider />
+              <Dropdown.Item onClick={() => setAvailabilityFilter("available")}>
+                Available Only
+              </Dropdown.Item>
+              <Dropdown.Item
+                onClick={() => setAvailabilityFilter("unavailable")}
+              >
+                Unavailable Only
+              </Dropdown.Item>
+            </Dropdown>
+          </div>
+
+          <div className="flex flex-wrap gap-2 col-span-1 md:col-span-3 lg:col-span-1">
+            {(search || categoryFilter || availabilityFilter) && (
+              <Button
+                color="light"
+                onClick={resetFilters}
+                className="w-full md:w-auto mt-2 md:mt-0"
+              >
+                Clear Filters
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
 
       {/* Menu Items Table */}
       {loading ? (
-        <div className="flex justify-center py-12">
-          <Spinner size="xl" />
-        </div>
+        <LoadingSpinner />
       ) : (
-        <Card>
+        <>
           {filteredMenuItems.length > 0 ? (
-            <>
-              <Table hoverable striped>
+            <div className="overflow-x-auto">
+              <Table>
                 <Table.Head>
                   <Table.HeadCell>Image</Table.HeadCell>
                   <Table.HeadCell>Name</Table.HeadCell>
@@ -431,40 +487,46 @@ export default function DashMenuItems() {
                           ?.name || "Uncategorized"}
                       </Table.Cell>
                       <Table.Cell>
-                        {item.available ? (
-                          <Badge color="success" className="px-3 py-1.5">
-                            Available
-                          </Badge>
-                        ) : (
-                          <Badge color="failure" className="px-3 py-1.5">
-                            Unavailable
-                          </Badge>
-                        )}
+                        <Badge
+                          color={item.available ? "success" : "failure"}
+                          style={{
+                            fontSize: "1rem",
+                            padding: "0.4rem 0.8rem",
+                            borderRadius: "8px",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
+                        >
+                          {item.available ? "Available" : "Unavailable"}
+                        </Badge>
                       </Table.Cell>
                       <Table.Cell>
-                        <div className="flex gap-2">
+                        <div className="flex items-center space-x-2">
                           <Button
-                            size="xs"
-                            color="info"
+                            size="sm"
+                            color="purple"
                             onClick={() => handleViewMenuItem(item)}
                           >
-                            <HiOutlineEye className="mr-1" />
+                            <HiOutlineEye className="mr-1 h-4 w-4" />
                             View
                           </Button>
                           <Button
-                            size="xs"
-                            color="success"
+                            color="green"
+                            size="sm"
+                            outline
                             onClick={() => handleEditMenuItem(item)}
                           >
-                            <HiOutlinePencilAlt className="mr-1" />
+                            <HiOutlinePencilAlt className="mr-1 h-4 w-4" />
                             Edit
                           </Button>
                           <Button
-                            size="xs"
                             color="failure"
+                            size="sm"
+                            outline
                             onClick={() => handleDeleteMenuItem(item)}
                           >
-                            <HiOutlineTrash className="mr-1" />
+                            <HiOutlineTrash className="mr-1 h-4 w-4" />
                             Delete
                           </Button>
                         </div>
@@ -474,9 +536,9 @@ export default function DashMenuItems() {
                 </Table.Body>
               </Table>
 
-              {/* Pagination */}
-              {pageCount > 1 && (
-                <div className="flex items-center justify-center p-4">
+              {/* Pagination - Styled exactly like the category management component */}
+              {filteredMenuItems.length > 0 && pageCount > 1 && (
+                <div className="py-4 mt-4 border-t border-gray-200 dark:border-gray-700">
                   <ReactPaginate
                     previousLabel={"Previous"}
                     nextLabel={"Next"}
@@ -485,37 +547,47 @@ export default function DashMenuItems() {
                     forcePage={pageNumber}
                     containerClassName="flex justify-center items-center space-x-1"
                     pageClassName="inline-flex"
-                    pageLinkClassName="px-3 py-2 leading-tight text-gray-500 bg-white border border-gray-300 hover:bg-gray-100 hover:text-gray-700"
-                    previousLinkClassName="px-3 py-2 leading-tight text-gray-500 bg-white border border-gray-300 rounded-l-lg hover:bg-gray-100 hover:text-gray-700"
-                    nextLinkClassName="px-3 py-2 leading-tight text-gray-500 bg-white border border-gray-300 rounded-r-lg hover:bg-gray-100 hover:text-gray-700"
-                    activeLinkClassName="px-3 py-2 text-blue-600 border border-blue-300 bg-blue-50 hover:bg-blue-100 hover:text-blue-700"
+                    pageLinkClassName="px-3 py-2 leading-tight text-gray-500 bg-white border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+                    previousLinkClassName="px-3 py-2 leading-tight text-gray-500 bg-white border border-gray-300 rounded-l-lg hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+                    nextLinkClassName="px-3 py-2 leading-tight text-gray-500 bg-white border border-gray-300 rounded-r-lg hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+                    activeLinkClassName="!bg-blue-50 !text-blue-600 !border-blue-300 dark:!bg-gray-700 dark:!text-white"
                     disabledLinkClassName="opacity-50 cursor-not-allowed"
+                    breakLabel="..."
+                    breakLinkClassName="px-3 py-2 leading-tight text-gray-500 bg-white border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
                   />
                 </div>
               )}
-            </>
+            </div>
           ) : (
-            <div className="flex flex-col items-center justify-center py-12">
-              <FaUtensils className="text-gray-400 text-5xl mb-4" />
-              <h3 className="text-xl font-semibold text-gray-700 mb-2">
+            <div className="text-center py-10">
+              <div className="inline-block p-3 bg-gray-100 dark:bg-gray-700 rounded-full mb-4">
+                <FaUtensils
+                  size={30}
+                  className="text-gray-400 dark:text-gray-500"
+                />
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white">
                 No menu items found
               </h3>
-              <p className="text-gray-500 mb-6">
+              <p className="text-gray-500 dark:text-gray-400 mt-2">
                 {search || categoryFilter || availabilityFilter
-                  ? "No items match your filter criteria"
-                  : "Start by adding menu items to your restaurant"}
+                  ? "No items match your filter criteria."
+                  : "This restaurant doesn't have any menu items yet."}
               </p>
-              {(search || categoryFilter || availabilityFilter) && (
-                <Button color="light" onClick={resetFilters}>
-                  Clear Filters
-                </Button>
-              )}
+              <Button
+                gradientDuoTone="greenToBlue"
+                className="mt-4"
+                onClick={handleCreateMenuItem}
+              >
+                <HiPlusCircle className="mr-2" />
+                Add First Menu Item
+              </Button>
             </div>
           )}
-        </Card>
+        </>
       )}
 
-      {/* Create Menu Item Modal */}
+      {/* Modals - No change needed here */}
       <CreateMenuItemModal
         show={showCreateModal}
         onClose={() => setShowCreateModal(false)}
@@ -542,7 +614,7 @@ export default function DashMenuItems() {
         onClose={() => setShowDeleteModal(false)}
         menuItem={selectedMenuItem}
         onConfirm={confirmDelete}
-        isDeleting={false} // You could add a loading state for deletion if desired
+        isDeleting={false}
       />
 
       <UpdateMenuItemModal

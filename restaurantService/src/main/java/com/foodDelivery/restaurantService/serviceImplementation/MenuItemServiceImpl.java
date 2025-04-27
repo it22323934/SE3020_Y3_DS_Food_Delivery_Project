@@ -1,5 +1,6 @@
 package com.foodDelivery.restaurantService.serviceImplementation;
 
+import com.foodDelivery.restaurantService.client.UserServiceClient;
 import com.foodDelivery.restaurantService.dto.MenuItemCreateRequest;
 import com.foodDelivery.restaurantService.dto.MenuItemResponse;
 import com.foodDelivery.restaurantService.exception.BusinessValidationException;
@@ -14,6 +15,8 @@ import com.foodDelivery.restaurantService.repository.RestaurantRepository;
 import com.foodDelivery.restaurantService.serviceInterfaces.MenuItemService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,6 +32,7 @@ public class MenuItemServiceImpl implements MenuItemService {
     private final MenuCategoryRepository menuCategoryRepository;
     private final RestaurantRepository restaurantRepository;
     private final MenuItemMapper menuItemMapper;
+    private final UserServiceClient userServiceClient;
 
     @Override
     @Transactional
@@ -36,6 +40,8 @@ public class MenuItemServiceImpl implements MenuItemService {
         // Validate restaurant exists
         Restaurant restaurant = restaurantRepository.findById(request.getRestaurantId())
                 .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found with id: " + request.getRestaurantId()));
+
+        validateUserPermission(restaurant, token);
 
         // Validate menu category exists
         MenuCategory category = menuCategoryRepository.findById(request.getCategoryId())
@@ -183,6 +189,8 @@ public class MenuItemServiceImpl implements MenuItemService {
         Restaurant restaurant = restaurantRepository.findById(request.getRestaurantId())
                 .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found with id: " + request.getRestaurantId()));
 
+        validateUserPermission(restaurant, token);
+
         // Validate category exists
         MenuCategory newCategory = menuCategoryRepository.findById(request.getCategoryId())
                 .orElseThrow(() -> new ResourceNotFoundException("Menu category not found with id: " + request.getCategoryId()));
@@ -329,5 +337,47 @@ public class MenuItemServiceImpl implements MenuItemService {
         return menuItemRepository.findByCategoryIdAndAvailableTrue(categoryId).stream()
                 .map(menuItemMapper::toResponse)
                 .collect(Collectors.toList());
+    }
+
+    private void validateUserPermission(Restaurant restaurant, String token) {
+        if (token == null || token.trim().isEmpty()) {
+            log.error("Authorization token is missing or empty");
+            throw new BusinessValidationException("Authorization required");
+        }
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String currentUserId = authentication.getName();
+        log.debug("Validating permissions for user: {}", currentUserId);
+
+        try {
+            boolean isSystemAdmin = userServiceClient.validateUserRole(currentUserId, "ROLE_ADMIN", token);
+            if (isSystemAdmin) {
+                log.debug("User {} has system admin privileges", currentUserId);
+                return;
+            }
+
+            Long userID = userServiceClient.getUserIdFromToken(token);
+            if (userID == null) {
+                log.error("User ID could not be extracted from token");
+                throw new BusinessValidationException("Invalid authorization token");
+            }
+
+            boolean isRestaurantAdmin = userServiceClient.validateUserRole(
+                    currentUserId, "ROLE_RESTAURANT_ADMIN", token);
+
+            if (!isRestaurantAdmin) {
+                log.warn("User {} is not a restaurant admin", currentUserId);
+                throw new BusinessValidationException("You need restaurant administrator privileges");
+            }
+
+            if (!restaurant.getAdminIds().contains(String.valueOf(userID))) {
+                log.warn("User {} is not an admin of restaurant {}", userID, restaurant.getId());
+                throw new BusinessValidationException(
+                        "You don't have administrator permissions for this restaurant");
+            }
+        } catch (Exception e) {
+            log.error("Failed to validate user permissions: {}", e.getMessage());
+            throw new BusinessValidationException("Failed to validate user authorization");
+        }
     }
 }

@@ -8,6 +8,7 @@ import DashMenuManagement from "../components/DashMenuManagement";
 import DashCuisineManagement from "../components/DashCuisineManagement";
 import DashMyRestaurant from "../components/DashMyRestaurant";
 import DashMenuItemCategoryManagement from "../components/DashMenuItemCategoryManagement";
+import DashPromotionManagement from "../components/DashPromotionManagement";
 // import DashRestaurant from "../components/DashRestaurant";
 // import DashMenuManagement from "../components/DashMenuManagement";
 export default function Dashboard() {
@@ -42,6 +43,8 @@ export default function Dashboard() {
       {tab === "menu-item-category-management" && (
         <DashMenuItemCategoryManagement />
       )}
+      {/** <DashPromotionManagement/> */}
+      {tab === "promotion-management" && <DashPromotionManagement />}
     </div>
   );
 }
