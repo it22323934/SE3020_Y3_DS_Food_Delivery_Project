@@ -226,5 +226,23 @@ export const restaurantService = {
       },
     });
     return res;
+  },
+  generateRestaurantReport: async (restaurantId, token) => {
+    try {
+      const response = await fetch(`${API_URL}/restaurants/reports/${restaurantId}`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        // Important for PDF download
+        responseType: 'blob'
+      });
+      
+      return response;
+    } catch (error) {
+      console.error("Error generating report:", error);
+      throw error;
+    }
   }
+
 };

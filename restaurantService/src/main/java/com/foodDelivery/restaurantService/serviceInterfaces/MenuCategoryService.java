@@ -12,4 +12,5 @@ public interface MenuCategoryService {
     MenuCategory getCategoryById(String id);
     List<MenuCategory> getCategoriesByRestaurantId(String restaurantId);
     void reorderCategories(String restaurantId, List<String> categoryIds, String token);
+    List<MenuCategory> getActiveCategoriesByRestaurantId(String restaurantId);
 }

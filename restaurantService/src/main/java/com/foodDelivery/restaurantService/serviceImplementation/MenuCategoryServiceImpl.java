@@ -222,6 +222,11 @@ public class MenuCategoryServiceImpl implements MenuCategoryService {
         }
     }
 
+    @Override
+    public List<MenuCategory> getActiveCategoriesByRestaurantId(String restaurantId) {
+        return menuCategoryRepository.findByRestaurantIdAndActiveTrue(restaurantId);
+    }
+
     private void validateUserPermission(Restaurant restaurant, String token) {
         if (token == null || token.trim().isEmpty()) {
             log.error("Authorization token is missing or empty");
@@ -294,4 +299,5 @@ public class MenuCategoryServiceImpl implements MenuCategoryService {
             throw new BusinessValidationException("Display order cannot be negative");
         }
     }
+
 }

@@ -9,4 +9,6 @@ public interface MenuItemRepository extends MongoRepository<MenuItem, String> {
     List<MenuItem> findByRestaurantId(String restaurantId);
     List<MenuItem> findByCategoryId(String categoryId);
     boolean existsByRestaurantIdAndNameIgnoreCase(String restaurantId, String name);
+    List<MenuItem> findByRestaurantIdAndAvailableTrue(String restaurantId);
+    List<MenuItem> findByCategoryIdAndAvailableTrue(String categoryId);
 }

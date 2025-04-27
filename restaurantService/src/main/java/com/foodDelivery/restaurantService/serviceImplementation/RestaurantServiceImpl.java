@@ -34,10 +34,10 @@ public class RestaurantServiceImpl implements RestaurantService {
     private final KafkaProducerService kafkaProducerService;
     private static final int MAX_CUISINE_TYPES_PER_RESTAURANT = 5;
 
-    private static final String USER_SERVICE = "userService";
+    private static final String RESTAURANT_SERVICE = "restaurantService";
 
     @Override
-    @CircuitBreaker(name = USER_SERVICE, fallbackMethod = "createRestaurantFallback")
+    @CircuitBreaker(name = RESTAURANT_SERVICE, fallbackMethod = "createRestaurantFallback")
     public Restaurant createRestaurant(Restaurant restaurant, String token) {
         // Extract user ID from authentication
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -166,7 +166,7 @@ public class RestaurantServiceImpl implements RestaurantService {
     }
 
     @Override
-    @CircuitBreaker(name = USER_SERVICE, fallbackMethod = "updateRestaurantFallback")
+    @CircuitBreaker(name = RESTAURANT_SERVICE, fallbackMethod = "updateRestaurantFallback")
     public Restaurant updateRestaurant(String id, Restaurant restaurant, String token) {
         // Extract user ID from authentication
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -432,7 +432,7 @@ public class RestaurantServiceImpl implements RestaurantService {
     }
 
     @Override
-    @CircuitBreaker(name = USER_SERVICE, fallbackMethod = "deleteRestaurantFallback")
+    @CircuitBreaker(name = RESTAURANT_SERVICE, fallbackMethod = "deleteRestaurantFallback")
     public void deleteRestaurant(String id, String userId, String token) {
         Restaurant restaurant = getRestaurantById(id);
 
@@ -466,7 +466,7 @@ public class RestaurantServiceImpl implements RestaurantService {
     }
 
     @Override
-    @CircuitBreaker(name = USER_SERVICE, fallbackMethod = "addAdminToRestaurantFallback")
+    @CircuitBreaker(name = RESTAURANT_SERVICE, fallbackMethod = "addAdminToRestaurantFallback")
     public Restaurant addAdminToRestaurant(String restaurantId, String adminId, String token) {
         Restaurant restaurant = getRestaurantById(restaurantId);
 
@@ -491,7 +491,7 @@ public class RestaurantServiceImpl implements RestaurantService {
     }
 
     @Override
-    @CircuitBreaker(name = USER_SERVICE, fallbackMethod = "removeAdminFromRestaurantFallback")
+    @CircuitBreaker(name = RESTAURANT_SERVICE, fallbackMethod = "removeAdminFromRestaurantFallback")
     public Restaurant removeAdminFromRestaurant(String restaurantId, String adminId, String userId, String token) {
         Restaurant restaurant = getRestaurantById(restaurantId);
 
@@ -626,6 +626,13 @@ public class RestaurantServiceImpl implements RestaurantService {
                 latitude, longitude, radiusInMeters);
 
         return restaurants.stream()
+                .map(RestaurantTypeMapper::mapToResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<RestaurantResponse> getAllEnabledRestaurants() {
+        return restaurantRepository.findByEnabledTrue().stream()
                 .map(RestaurantTypeMapper::mapToResponse)
                 .collect(Collectors.toList());
     }

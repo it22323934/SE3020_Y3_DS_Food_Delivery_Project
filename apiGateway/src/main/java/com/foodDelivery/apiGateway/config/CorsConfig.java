@@ -19,13 +19,32 @@ public class CorsConfig {
     public CorsFilter corsFilter() {
         CorsConfiguration corsConfiguration = new CorsConfiguration();
         corsConfiguration.setAllowCredentials(true);
-        corsConfiguration.setAllowedOrigins(Collections.singletonList("http://127.0.0.1:3001"));
+        corsConfiguration.setAllowedOrigins(Arrays.asList(
+                "http://127.0.0.1:3001",
+                "http://localhost:3001"
+        ));
         corsConfiguration.setAllowedHeaders(Arrays.asList(
-                "Origin", "Access-Control-Allow-Origin", "Content-Type",
-                "Accept", "Authorization", "X-Requested-With"));
+                "Origin",
+                "Access-Control-Allow-Origin",
+                "Access-Control-Request-Method",
+                "Access-Control-Request-Headers",
+                "Content-Type",
+                "Accept",
+                "Authorization",
+                "X-Requested-With"
+        ));
         corsConfiguration.setExposedHeaders(Arrays.asList(
-                "Access-Control-Allow-Origin", "Access-Control-Allow-Credentials", "Authorization"));
-        corsConfiguration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+                "Access-Control-Allow-Origin",
+                "Access-Control-Allow-Credentials",
+                "Authorization"
+        ));
+        corsConfiguration.setAllowedMethods(Arrays.asList(
+                "GET",
+                "POST",
+                "PUT",
+                "DELETE",
+                "OPTIONS"
+        ));
         corsConfiguration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
