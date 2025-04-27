@@ -151,8 +151,6 @@ public class RestaurantReportServiceImpl implements RestaurantReportService {
         table.addCell(cell);
     }
 
-    // ... [Previous helper methods remain the same]
-
     private class HeaderFooter extends PdfPageEventHelper {
         Font headerFont = FontFactory.getFont(FontFactory.HELVETICA, 8, BaseColor.GRAY);
         Font footerFont = FontFactory.getFont(FontFactory.HELVETICA, 8, BaseColor.GRAY);

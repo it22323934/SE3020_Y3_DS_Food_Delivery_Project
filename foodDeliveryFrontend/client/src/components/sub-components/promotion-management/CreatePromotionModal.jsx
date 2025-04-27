@@ -127,6 +127,7 @@ export default function CreatePromotionModal({ show, onClose, onSuccess, restaur
       const response = await promotionService.createPromotion(formData, token);
       
       if (response.ok) {
+        setFormData({}); // Reset form data
         onSuccess();
       } else {
         const errorData = await response.json();

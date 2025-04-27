@@ -31,6 +31,8 @@ public class PromotionCreateRequest {
     
     @NotNull(message = "Start date is required")
     private LocalDateTime startDate;
+
+    private Boolean active;
     
     @NotNull(message = "End date is required")
     private LocalDateTime endDate;

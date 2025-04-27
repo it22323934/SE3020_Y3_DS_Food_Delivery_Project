@@ -7,7 +7,8 @@ import {
   Textarea,
   Spinner,
   ToggleSwitch,
-  Card
+  Card,
+  Alert
 } from "flowbite-react";
 import { toast } from "react-toastify";
 import { promotionService } from "../../../service/promotionService";
@@ -22,7 +23,9 @@ import {
   FaDollarSign,
   FaUserClock,
   FaIdCard,
-  FaEdit
+  FaEdit,
+  FaPowerOff,
+  FaToggleOn
 } from "react-icons/fa";
 
 export default function UpdatePromotionModal({ show, onClose, onSuccess, promotion, token }) {
@@ -37,7 +40,8 @@ export default function UpdatePromotionModal({ show, onClose, onSuccess, promoti
     startDate: new Date(),
     endDate: new Date(),
     maxUses: 0,
-    oneTimeUsePerUser: false
+    oneTimeUsePerUser: false,
+    active: true // Add the active property
   });
 
   const [errors, setErrors] = useState({});
@@ -48,6 +52,7 @@ export default function UpdatePromotionModal({ show, onClose, onSuccess, promoti
         ...promotion,
         startDate: new Date(promotion.startDate),
         endDate: new Date(promotion.endDate),
+        active: promotion.active !== undefined ? promotion.active : true // Initialize with promotion's active status or true as default
       });
     }
   }, [promotion]);
@@ -109,6 +114,10 @@ export default function UpdatePromotionModal({ show, onClose, onSuccess, promoti
     setFormData({ ...formData, oneTimeUsePerUser: checked });
   };
 
+  const handleActiveToggleChange = (checked) => {
+    setFormData({ ...formData, active: checked });
+  };
+
   const handleStartDateChange = (date) => {
     setFormData({ ...formData, startDate: date });
     // If end date is before new start date, update it
@@ -159,6 +168,32 @@ export default function UpdatePromotionModal({ show, onClose, onSuccess, promoti
         </div>
       </Modal.Header>
       <Modal.Body className="space-y-6 max-h-[80vh] overflow-y-auto">
+        {/* Activation Status Banner */}
+        <Card className="overflow-hidden border-0">
+          <div className={`p-4 ${formData.active ? 'bg-green-100 dark:bg-green-900' : 'bg-red-100 dark:bg-red-900'}`}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <FaToggleOn className={`mr-3 text-2xl ${formData.active ? 'text-green-600' : 'text-red-600'}`} />
+                <div>
+                  <h3 className={`font-medium ${formData.active ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}`}>
+                    Promotion Status: {formData.active ? 'Active' : 'Inactive'}
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">
+                    {formData.active 
+                      ? "This promotion is currently active and can be used by customers." 
+                      : "This promotion is currently inactive and cannot be used by customers."}
+                  </p>
+                </div>
+              </div>
+              <ToggleSwitch
+                checked={formData.active}
+                onChange={handleActiveToggleChange}
+                label=""
+              />
+            </div>
+          </div>
+        </Card>
+
         {/* Form introduction */}
         <div className="bg-green-50 dark:bg-gray-700 p-4 rounded-lg border-l-4 border-green-500">
           <div className="flex">
@@ -228,6 +263,7 @@ export default function UpdatePromotionModal({ show, onClose, onSuccess, promoti
             </div>
           </Card>
 
+          {/* Rest of the form remains unchanged */}
           {/* Discount Details Section */}
           <Card>
             <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4 flex items-center">

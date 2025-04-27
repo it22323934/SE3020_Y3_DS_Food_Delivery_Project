@@ -65,13 +65,13 @@ public class PromotionServiceImpl implements PromotionService {
         validateUserPermission(restaurant, token);
         validatePromotionRequest(request);
         validateOwnership(existing.getRestaurantId(), request.getRestaurantId());
-
         existing.setDescription(request.getDescription());
         existing.setDiscountPercentage(request.getDiscountPercentage());
         existing.setMaxDiscount(request.getMaxDiscount());
         existing.setMinOrderAmount(request.getMinOrderAmount());
         existing.setStartDate(request.getStartDate());
         existing.setEndDate(request.getEndDate());
+        existing.setActive(request.getActive());
         existing.setMaxUses(request.getMaxUses());
         existing.setOneTimeUsePerUser(request.isOneTimeUsePerUser());
         existing.setUpdatedAt(LocalDateTime.now());

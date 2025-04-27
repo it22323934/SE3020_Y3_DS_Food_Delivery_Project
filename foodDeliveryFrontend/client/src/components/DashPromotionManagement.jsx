@@ -205,10 +205,16 @@ export default function DashPromotionManagement() {
   };
 
   const getPromotionStatus = (promotion) => {
+    // First, check if promotion has been manually deactivated
+    if (promotion.active === false) {
+      return { status: "inactive", label: "Inactive", color: "gray" };
+    }
+  
+    // If not manually deactivated, check date-based status
     const now = new Date();
     const startDate = new Date(promotion.startDate);
     const endDate = new Date(promotion.endDate);
-
+  
     if (startDate > now) {
       return { status: "upcoming", label: "Upcoming", color: "warning" };
     } else if (endDate < now) {
