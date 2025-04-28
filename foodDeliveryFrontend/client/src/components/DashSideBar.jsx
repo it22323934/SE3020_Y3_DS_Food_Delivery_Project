@@ -2,27 +2,16 @@ import { Sidebar } from "flowbite-react";
 import {
   HiUser,
   HiArrowSmRight,
-  HiDocument,
-  HiDocumentText,
   HiOutlineUserGroup,
-  HiAnnotation,
   HiChartPie,
 } from "react-icons/hi";
 import React, { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { signOutSuccess } from "../redux/user/userSlice";
 import { useDispatch, useSelector } from "react-redux";
-import {
-  FaMapMarkerAlt,
-  FaTrashAlt,
-  FaTruck,
-  FaCreditCard,
-  FaStore,
-  FaUtensils,
-} from "react-icons/fa";
-import { GiCook, GiRecycle } from "react-icons/gi";
-import { RiGovernmentLine } from "react-icons/ri";
-import { MdLocalShipping, MdRestaurantMenu } from "react-icons/md";
+import { FaStore, FaTag, FaUtensils } from "react-icons/fa";
+import { GiCook } from "react-icons/gi";
+import { MdRestaurantMenu } from "react-icons/md";
 import { authService } from "../service/authService";
 
 export default function DashSideBar() {
@@ -86,33 +75,19 @@ export default function DashSideBar() {
                   </Sidebar.Item>
                 </Link>
 
-                {/* Restaurant Management - visible to both admin types */}
-                <Link to="/dashboard?tab=restaurant-management">
-                  <Sidebar.Item
-                    active={tab === "restaurant-management"}
-                    icon={FaStore}
-                    labelColor="dark"
-                    as="div"
-                  >
-                    Restaurant
-                  </Sidebar.Item>
-                </Link>
-
-                {/* Menu Management - visible to both admin types */}
-                <Link to="/dashboard?tab=menu-management">
-                  <Sidebar.Item
-                    active={tab === "menu-management"}
-                    icon={FaUtensils}
-                    labelColor="dark"
-                    as="div"
-                  >
-                    Menu Item
-                  </Sidebar.Item>
-                </Link>
-
                 {/* Items that only the main admin should see */}
                 {hasRole("ROLE_ADMIN") && (
                   <>
+                    <Link to="/dashboard?tab=restaurant-management">
+                      <Sidebar.Item
+                        active={tab === "restaurant-management"}
+                        icon={FaStore}
+                        labelColor="dark"
+                        as="div"
+                      >
+                        Restaurant
+                      </Sidebar.Item>
+                    </Link>
                     <Link to="/dashboard?tab=user-management">
                       <Sidebar.Item
                         active={tab === "user-management"}
@@ -143,6 +118,26 @@ export default function DashSideBar() {
 
           {currentUser && hasRole("ROLE_RESTAURANT_ADMIN") && (
             <>
+              <Link to="/dashboard?tab=promotion-management">
+                <Sidebar.Item
+                  active={tab === "promotion-management"}
+                  icon={FaTag}
+                  labelColor="dark"
+                  as="div"
+                >
+                  Promotions
+                </Sidebar.Item>
+              </Link>
+              <Link to="/dashboard?tab=menu-management">
+                <Sidebar.Item
+                  active={tab === "menu-management"}
+                  icon={FaUtensils}
+                  labelColor="dark"
+                  as="div"
+                >
+                  Menu Item
+                </Sidebar.Item>
+              </Link>
               <Link to="/dashboard?tab=menu-item-category-management">
                 <Sidebar.Item
                   active={tab === "menu-item-category-management"}
@@ -164,20 +159,6 @@ export default function DashSideBar() {
                 </Sidebar.Item>
               </Link>
             </>
-          )}
-
-          {/* Cuisine management for restaurants */}
-          {currentUser && hasRole("ROLE_RESTAURANT") && (
-            <Link to="/dashboard?tab=cuisine-management">
-              <Sidebar.Item
-                active={tab === "cuisine-management"}
-                icon={GiCook}
-                labelColor="dark"
-                as="div"
-              >
-                Cuisine Type
-              </Sidebar.Item>
-            </Link>
           )}
 
           {/* Profile link for all users */}

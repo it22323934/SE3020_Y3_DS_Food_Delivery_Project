@@ -427,7 +427,6 @@ export default function UpdateMenuItemModal({
 
       if (response.ok) {
         onSuccess();
-        toast.success("Menu item updated successfully");
       } else {
         const errorData = await response.json();
         toast.error(errorData.error || "Failed to update menu item");

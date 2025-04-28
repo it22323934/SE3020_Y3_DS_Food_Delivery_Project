@@ -10,12 +10,16 @@ import { toast } from "react-toastify";
 const CartContext = createContext();
 
 const initialState = {
-  items: [],
   restaurantId: null,
+  restaurantName: null,
+  items: [],
   subtotal: 0,
-  tax: 0.08,
+  taxRate: 0.10, // 10% tax rate
+  taxAmount: 0,
   deliveryFee: 3.99,
-  total: 0,
+  discountAmount: 0,
+  appliedPromotion: null,
+  total: 0
 };
 
 const getInitialState = () => {
@@ -36,6 +40,8 @@ const actionTypes = {
   CLEAR_CART: "CLEAR_CART",
   SET_RESTAURANT: "SET_RESTAURANT",
   UPDATE_TOTALS: "UPDATE_TOTALS",
+  APPLY_PROMOTION: "APPLY_PROMOTION",
+  REMOVE_PROMOTION: "REMOVE_PROMOTION"
 };
 
 // Helper to create a unique key for a cart item including its addons
@@ -182,16 +188,20 @@ function cartReducer(state, action) {
         (item) => getCartItemKey(item.id, item.addOns) !== cartItemKey
       );
 
-      // If no items left, reset restaurantId
+      // If no items left, reset restaurantId and applied promotion
       const updatedRestaurantId =
         updatedItems.length > 0 ? state.restaurantId : null;
+      const updatedPromotion = updatedItems.length > 0 ? state.appliedPromotion : null;
 
       return {
         ...state,
         items: updatedItems,
         restaurantId: updatedRestaurantId,
+        appliedPromotion: updatedPromotion,
+        discountAmount: updatedPromotion ? state.discountAmount : 0
       };
     }
+
     case actionTypes.UPDATE_QUANTITY: {
       const { cartItemKey, quantity } = action.payload;
 
@@ -239,12 +249,29 @@ function cartReducer(state, action) {
     }
 
     case actionTypes.UPDATE_TOTALS: {
-      const { subtotal, taxAmount, total } = action.payload;
+      const { subtotal, taxAmount, discountAmount, total } = action.payload;
       return {
         ...state,
         subtotal,
         taxAmount,
+        discountAmount,
         total,
+      };
+    }
+
+    case actionTypes.APPLY_PROMOTION: {
+      const { promotion } = action.payload;
+      return {
+        ...state,
+        appliedPromotion: promotion
+      };
+    }
+
+    case actionTypes.REMOVE_PROMOTION: {
+      return {
+        ...state,
+        appliedPromotion: null,
+        discountAmount: 0
       };
     }
 
@@ -256,6 +283,7 @@ function cartReducer(state, action) {
 export function CartProvider({ children }) {
   const [state, dispatch] = useReducer(cartReducer, getInitialState());
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
+  
   useEffect(() => {
     try {
       localStorage.setItem("cart", JSON.stringify(state));
@@ -271,22 +299,43 @@ export function CartProvider({ children }) {
         (total, item) => total + Number(item.itemTotal || 0),
         0
       );
-      const taxAmount = subtotal * Number(state.tax || 0);
+      
+      // Calculate discount if promotion is applied
+      let discountAmount = 0;
+      if (state.appliedPromotion) {
+        // Calculate discount based on percentage
+        const rawDiscount = subtotal * (state.appliedPromotion.discountPercentage / 100);
+        
+        // Apply max discount limit if available
+        if (state.appliedPromotion.maxDiscount && rawDiscount > state.appliedPromotion.maxDiscount) {
+          discountAmount = state.appliedPromotion.maxDiscount;
+        } else {
+          discountAmount = rawDiscount;
+        }
+      }
+      
+      // Apply discount to the subtotal
+      const discountedSubtotal = subtotal - discountAmount;
+      
+      // Calculate tax on the discounted subtotal
+      const taxAmount = discountedSubtotal * Number(state.taxRate || 0.1);
+      
       const deliveryFee =
         state.items.length > 0 ? Number(state.deliveryFee || 0) : 0;
-      const total = subtotal + taxAmount + deliveryFee;
+        
+      const total = discountedSubtotal + taxAmount + deliveryFee;
 
       // Debug totals
-      console.log("Cart totals:", { subtotal, taxAmount, deliveryFee, total });
+      console.log("Cart totals:", { subtotal, discountAmount, taxAmount, deliveryFee, total });
 
       dispatch({
         type: actionTypes.UPDATE_TOTALS,
-        payload: { subtotal, taxAmount, total },
+        payload: { subtotal, discountAmount, taxAmount, total },
       });
     } catch (error) {
       console.error("Error calculating totals:", error);
     }
-  }, [state.items, state.tax, state.deliveryFee]);
+  }, [state.items, state.taxRate, state.deliveryFee, state.appliedPromotion]);
 
   const addToCart = (item, quantity, selectedAddOns) => {
     if (!item || quantity <= 0) return;
@@ -360,6 +409,30 @@ export function CartProvider({ children }) {
       payload: { restaurant },
     });
   };
+  
+  const applyPromotion = (promotion) => {
+    // Check if the minimum order amount is met
+    if (state.subtotal < promotion.minOrderAmount) {
+      toast.error(`Minimum order amount of $${promotion.minOrderAmount.toFixed(2)} not met`);
+      return false;
+    }
+    
+    dispatch({
+      type: actionTypes.APPLY_PROMOTION,
+      payload: { promotion }
+    });
+    
+    toast.success(`Promotion ${promotion.code} applied successfully!`);
+    return true;
+  };
+  
+  const removePromotion = () => {
+    dispatch({
+      type: actionTypes.REMOVE_PROMOTION
+    });
+    
+    toast.info("Promotion removed");
+  };
 
   // Values to be provided to consuming components
   const value = {
@@ -374,6 +447,8 @@ export function CartProvider({ children }) {
     openCartDrawer,
     closeCartDrawer,
     getCartItemKey, // Export helper function for components
+    applyPromotion,
+    removePromotion
   };
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

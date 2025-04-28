@@ -22,6 +22,7 @@ import UserLocationViewer from "./components/UserLocationViewer";
 import { CreateUserModal } from "./components/sub-components/user-management/CreateUserModal";
 import { CartProvider } from "./context/CartContext";
 import CartDrawer from "./components/cart/CartDrawer";
+import Checkout from "./pages/Checkout";
 export default function App() {
   return (
     <CartProvider>
@@ -46,6 +47,7 @@ export default function App() {
         <Route path="/CreateUserModal" element={<CreateUserModal />} />
         <Route element={<PrivateRoute/>}>
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/checkout" element={<Checkout/>}/>
         </Route>
         <Route path="/contact-us" element={<ContactUs />} />
       </Routes>
