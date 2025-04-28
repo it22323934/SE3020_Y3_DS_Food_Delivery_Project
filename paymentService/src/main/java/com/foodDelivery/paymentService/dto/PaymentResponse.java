@@ -9,4 +9,9 @@ public class PaymentResponse {
     private String paymentStatus;
     private String stripePaymentId;
     private String errorMessage;
+    private String paymentIntentId;
+    private String customerEmail;
+    private Double amount;
+
+
 }

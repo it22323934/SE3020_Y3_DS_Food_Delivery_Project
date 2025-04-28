@@ -24,8 +24,8 @@ import ReactPaginate from "react-paginate";
 import { FaCheckCircle, FaTimesCircle, FaReceipt } from "react-icons/fa";
 import { AiOutlineSearch } from "react-icons/ai";
 import { useSelector } from "react-redux";
-import { paymentService } from "../service/paymentService";
-import { paymentReportService } from "../service/paymentReportService";
+import paymentService from "../service/paymentService";
+import paymentReportService from "../service/paymentReportService";
 
 export default function DashPaymentManagement() {
   const [loading, setLoading] = useState(true);

@@ -1,18 +1,24 @@
 package com.foodDelivery.paymentService.controller;
 
 
-import com.foodDelivery.paymentService.dto.PaymentRequest;
-import com.foodDelivery.paymentService.dto.PaymentResponse;
+import com.foodDelivery.paymentService.dto.*;
 import com.foodDelivery.paymentService.dto.PaymentDetails;
 import com.foodDelivery.paymentService.serviceImpl.PaymentServiceImpl;
+import com.stripe.exception.StripeException;
+import com.stripe.model.PaymentIntent;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 
 @RestController
@@ -65,4 +71,60 @@ public class PaymentController {
         }
         return ResponseEntity.notFound().build();
     }
+
+    @PostMapping("/create-payment-intent")
+    public ResponseEntity<?> createPaymentIntent(@RequestBody PaymentIntentRequest request) {
+        try {
+            Map<String, Object> response = paymentService.createPaymentIntent(request);
+            return ResponseEntity.ok(response);
+        } catch (StripeException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/confirm")
+    public ResponseEntity<?> confirmPayment(@RequestBody ConfirmPaymentRequest request) {
+        try {
+            PaymentResponse response = paymentService.confirmPayment(request);
+            return ResponseEntity.ok(response);
+        } catch (StripeException e) {
+            // Ensure proper JSON error response
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("error", "Payment processing failed");
+            errorResponse.put("details", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(errorResponse);
+        } catch (Exception e) {
+            // Catch any other exceptions and return proper JSON
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("error", "Internal server error");
+            errorResponse.put("details", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(errorResponse);
+        }
+    }
+
+    /**
+     * Get failed payments (Admin-only)
+     */
+    @GetMapping("/admin/failed")
+    public ResponseEntity<List<PaymentDetails>> getFailedPayments() {
+        List<PaymentDetails> payments = paymentService.getFailedPayments();
+        return ResponseEntity.ok(payments);
+    }
+
+//    /**
+//     * Get payments by date range (Admin-only)
+//     */
+//    @GetMapping("/admin/range")
+//    public ResponseEntity<List<PaymentDetails>> getPaymentsByDateRange(
+//            @RequestParam String startDate,
+//            @RequestParam String endDate) {
+//        List<PaymentDetails> payments = paymentService.getPaymentsByDateRange(startDate, endDate);
+//        return ResponseEntity.ok(payments);
+//    }
+
 }

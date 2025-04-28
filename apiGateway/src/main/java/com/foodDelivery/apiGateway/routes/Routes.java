@@ -21,7 +21,7 @@ import static org.springframework.cloud.gateway.server.mvc.filter.FilterFunction
 
 @Configuration
 @RequiredArgsConstructor
-@CrossOrigin(origins = "http://127.0.0.1:3001/")
+@CrossOrigin(origins = "http://127.0.0.1:3003/")
 public class Routes {
 
     @Value("${user.service.url}")

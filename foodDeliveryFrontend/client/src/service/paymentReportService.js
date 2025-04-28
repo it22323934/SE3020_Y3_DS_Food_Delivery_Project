@@ -1,6 +1,6 @@
 const API_URL = "http://localhost:8082/api/payments/reports";
 
-export const paymentReportService = {
+const paymentReportService = {
   getAvailableReportTypes: async (token) => {
     try {
       const response = await fetch(`${API_URL}/types`, {
@@ -108,3 +108,5 @@ export const paymentReportService = {
     window.URL.revokeObjectURL(url);
   }
 };
+
+export default paymentReportService;
