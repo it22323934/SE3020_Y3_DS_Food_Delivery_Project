@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Button, Alert, Spinner, Card } from 'flowbite-react';
 import { CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { FaCreditCard, FaLock } from 'react-icons/fa';
+import { useSelector } from "react-redux";
 
 export default function CheckoutForm({ onSuccess, clientSecret }) {
   const stripe = useStripe();
@@ -9,6 +10,8 @@ export default function CheckoutForm({ onSuccess, clientSecret }) {
   const [error, setError] = useState(null);
   const [processing, setProcessing] = useState(false);
 
+  const { currentUser } = useSelector((state) => state.user);
+  console.log("hello",currentUser.email)
   const handleSubmit = async (event) => {
     event.preventDefault();
 
@@ -26,7 +29,7 @@ export default function CheckoutForm({ onSuccess, clientSecret }) {
           payment_method: {
             card: elements.getElement(CardElement),
             billing_details: {
-              email: 'test@example.com', // Replace with actual user email
+              email: currentUser.email, // Replace with actual user email
             },
           }
         }

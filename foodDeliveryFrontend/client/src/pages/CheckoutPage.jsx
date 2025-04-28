@@ -8,6 +8,7 @@ import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { FaCheck, FaShoppingCart, FaReceipt, FaArrowLeft, FaEnvelope } from 'react-icons/fa';
 import { MdRestaurant, MdDeliveryDining } from 'react-icons/md';
+import { useSelector } from "react-redux";
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
@@ -23,13 +24,20 @@ export default function CheckoutPage() {
   const [orderTotal, setOrderTotal] = useState(0);
   const [paymentMessage, setPaymentMessage] = useState('');
 
-  // Calculate subtotal and delivery fee
-  const subtotal = cart.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  const deliveryFee = cart.total - subtotal;
+  // These values should come directly from the cart context
+  const subtotal = cart.subtotal;
+  const taxAmount = cart.taxAmount;
+  const deliveryFee = cart.deliveryFee;
+  const discountAmount = cart.discountAmount;
+  const total = cart.total;
 
   // For successful order screen
   const [orderSubtotal, setOrderSubtotal] = useState(0);
+  const [orderTaxAmount, setOrderTaxAmount] = useState(0);
   const [orderDeliveryFee, setOrderDeliveryFee] = useState(0);
+  const [orderDiscountAmount, setOrderDiscountAmount] = useState(0);
+
+  const { currentUser } = useSelector((state) => state.user);
 
   useEffect(() => {
     console.log('Cart Total:', cart.total);
@@ -53,7 +61,7 @@ export default function CheckoutPage() {
           {
             amount: cart.total,
             orderId: `order_${Date.now()}`,
-            customerEmail: user?.email || 'test@example.com'
+            customerEmail: currentUser?.email || 'test@example.com'
           },
           user?.token || 'mock_jwt_token'
         );
@@ -87,15 +95,19 @@ export default function CheckoutPage() {
         // Store all the important values before clearing the cart
         setOrderTotal(cart.total);
         setOrderSubtotal(subtotal);
+        setOrderTaxAmount(taxAmount);
         setOrderDeliveryFee(deliveryFee);
+        setOrderDiscountAmount(discountAmount);
 
         // Set order details
         setOrderDetails({
           orderId: paymentRecord.orderId,
-          email: user?.email || paymentIntent.receipt_email,
+          email: currentUser?.email || paymentIntent.receipt_email,
           amount: cart.total,
           subtotal: subtotal,
-          deliveryFee: deliveryFee
+          taxAmount: taxAmount,
+          deliveryFee: deliveryFee,
+          discountAmount: discountAmount
         });
 
         // Display the success message for 2 seconds before transitioning
@@ -191,6 +203,23 @@ export default function CheckoutPage() {
                   <span className="font-medium">Subtotal:</span>
                   <span className="text-gray-700 dark:text-gray-300">
                     ${(orderDetails?.subtotal || orderSubtotal).toFixed(2)}
+                  </span>
+                </div>
+
+                {/* Show discount if applicable */}
+                {(orderDetails?.discountAmount > 0 || orderDiscountAmount > 0) && (
+                  <div className="flex justify-between py-2 border-b border-gray-200 dark:border-gray-700">
+                    <span className="font-medium text-green-600">Discount:</span>
+                    <span className="text-green-600 dark:text-green-400">
+                      -${(orderDetails?.discountAmount || orderDiscountAmount).toFixed(2)}
+                    </span>
+                  </div>
+                )}
+
+                <div className="flex justify-between py-2 border-b border-gray-200 dark:border-gray-700">
+                  <span className="font-medium">Tax:</span>
+                  <span className="text-gray-700 dark:text-gray-300">
+                    ${(orderDetails?.taxAmount || orderTaxAmount).toFixed(2)}
                   </span>
                 </div>
 
@@ -313,13 +342,28 @@ export default function CheckoutPage() {
               <span>Subtotal:</span>
               <span>${subtotal.toFixed(2)}</span>
             </div>
+
+            {/* Show discount if applicable */}
+            {discountAmount > 0 && (
+              <div className="flex justify-between text-green-600 dark:text-green-400 mb-1">
+                <span>Discount:</span>
+                <span>-${discountAmount.toFixed(2)}</span>
+              </div>
+            )}
+
+            <div className="flex justify-between text-gray-700 dark:text-gray-300 mb-1">
+              <span>Tax:</span>
+              <span>${taxAmount.toFixed(2)}</span>
+            </div>
+
             <div className="flex justify-between text-gray-700 dark:text-gray-300 mb-2">
               <span>Delivery Fee:</span>
               <span>${deliveryFee.toFixed(2)}</span>
             </div>
+
             <div className="flex justify-between font-bold text-lg pt-2 border-t border-gray-200 dark:border-gray-700">
               <span>Order Total:</span>
-              <span className="text-orange-600 dark:text-orange-400">${cart.total.toFixed(2)}</span>
+              <span className="text-orange-600 dark:text-orange-400">${total.toFixed(2)}</span>
             </div>
             <p className="text-gray-600 dark:text-gray-400 text-sm mt-2 flex items-center">
               <MdDeliveryDining className="mr-1" />
