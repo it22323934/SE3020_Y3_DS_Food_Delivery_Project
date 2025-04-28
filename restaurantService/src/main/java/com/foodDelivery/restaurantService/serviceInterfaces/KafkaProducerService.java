@@ -1,5 +1,7 @@
 package com.foodDelivery.restaurantService.serviceInterfaces;
 
+import com.foodDelivery.restaurantService.model.Promotion;
+
 import java.util.List;
 
 public interface KafkaProducerService {
@@ -12,4 +14,10 @@ public interface KafkaProducerService {
                                     List<String> adminIds,
                                     List<String> addedAdminIds, List<String> removedAdminIds,
                                     List<String> cuisineTypeIds);
+
+    void publishPromotionCreatedEvent(Promotion promotion);
+
+    void publishPromotionUpdatedEvent(Promotion promotion);
+
+    void publishPromotionDeletedEvent(Promotion promotion);
 }

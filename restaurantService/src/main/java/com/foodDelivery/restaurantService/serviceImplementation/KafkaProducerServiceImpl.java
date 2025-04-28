@@ -1,6 +1,8 @@
 package com.foodDelivery.restaurantService.serviceImplementation;
 
+import com.foodDelivery.restaurantService.event.PromotionCreatedEvent;
 import com.foodDelivery.restaurantService.event.RestaurantEvent;
+import com.foodDelivery.restaurantService.model.Promotion;
 import com.foodDelivery.restaurantService.serviceInterfaces.KafkaProducerService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,6 +18,7 @@ import java.util.UUID;
 public class KafkaProducerServiceImpl implements KafkaProducerService {
     private final KafkaTemplate<String, Object> kafkaTemplate;
     private static final String NOTIFICATION_TOPIC = "restaurant-notifications";
+    private static final String PROMOTION_TOPIC = "promotion-notifications";
 
     @Override
     public void sendRestaurantCreatedEvent(String restaurantId, String restaurantName,
@@ -78,6 +81,104 @@ public class KafkaProducerServiceImpl implements KafkaProducerService {
                     });
         } catch (Exception e) {
             log.error("Error sending restaurant update notification: {}", e.getMessage());
+        }
+    }
+
+    public void publishPromotionCreatedEvent(Promotion promotion) {
+        try {
+            PromotionCreatedEvent event = PromotionCreatedEvent.builder()
+                    .eventId(UUID.randomUUID().toString())
+                    .eventType("PROMOTION_CREATED")
+                    .restaurantId(promotion.getRestaurantId())
+                    .restaurantName(promotion.getRestaurantName())
+                    .code(promotion.getCode())
+                    .description(promotion.getDescription())
+                    .discountPercentage(promotion.getDiscountPercentage())
+                    .minOrderAmount(promotion.getMinOrderAmount())
+                    .maxDiscount(promotion.getMaxDiscount())
+                    .startDate(promotion.getStartDate())
+                    .endDate(promotion.getEndDate())
+                    .timestamp(System.currentTimeMillis())
+                    .build();
+
+            kafkaTemplate.send(NOTIFICATION_TOPIC, promotion.getRestaurantId(), event)
+                    .whenComplete((result, ex) -> {
+                        if (ex == null) {
+                            log.info("Promotion creation notification sent for restaurant: {}",
+                                    promotion.getRestaurantName());
+                        } else {
+                            log.error("Failed to send promotion creation notification: {}",
+                                    ex.getMessage());
+                        }
+                    });
+        } catch (Exception e) {
+            log.error("Error sending promotion creation notification: {}", e.getMessage());
+        }
+    }
+
+    @Override
+    public void publishPromotionUpdatedEvent(Promotion promotion) {
+        try {
+            PromotionCreatedEvent event = PromotionCreatedEvent.builder()
+                    .eventId(UUID.randomUUID().toString())
+                    .eventType("PROMOTION_UPDATED")
+                    .restaurantId(promotion.getRestaurantId())
+                    .restaurantName(promotion.getRestaurantName())
+                    .code(promotion.getCode())
+                    .description(promotion.getDescription())
+                    .discountPercentage(promotion.getDiscountPercentage())
+                    .minOrderAmount(promotion.getMinOrderAmount())
+                    .maxDiscount(promotion.getMaxDiscount())
+                    .startDate(promotion.getStartDate())
+                    .endDate(promotion.getEndDate())
+                    .timestamp(System.currentTimeMillis())
+                    .build();
+
+            kafkaTemplate.send(NOTIFICATION_TOPIC, promotion.getRestaurantId(), event)
+                    .whenComplete((result, ex) -> {
+                        if (ex == null) {
+                            log.info("Promotion update notification sent for restaurant: {}",
+                                    promotion.getRestaurantName());
+                        } else {
+                            log.error("Failed to send promotion update notification: {}",
+                                    ex.getMessage());
+                        }
+                    });
+        } catch (Exception e) {
+            log.error("Error sending promotion update notification: {}", e.getMessage());
+        }
+    }
+
+    @Override
+    public void publishPromotionDeletedEvent(Promotion promotion) {
+        try {
+            PromotionCreatedEvent event = PromotionCreatedEvent.builder()
+                    .eventId(UUID.randomUUID().toString())
+                    .eventType("PROMOTION_DELETED")
+                    .restaurantId(promotion.getRestaurantId())
+                    .restaurantName(promotion.getRestaurantName())
+                    .code(promotion.getCode())
+                    .description(promotion.getDescription())
+                    .discountPercentage(promotion.getDiscountPercentage())
+                    .minOrderAmount(promotion.getMinOrderAmount())
+                    .maxDiscount(promotion.getMaxDiscount())
+                    .startDate(promotion.getStartDate())
+                    .endDate(promotion.getEndDate())
+                    .timestamp(System.currentTimeMillis())
+                    .build();
+
+            kafkaTemplate.send(NOTIFICATION_TOPIC, promotion.getRestaurantId(), event)
+                    .whenComplete((result, ex) -> {
+                        if (ex == null) {
+                            log.info("Promotion deletion notification sent for restaurant: {}",
+                                    promotion.getRestaurantName());
+                        } else {
+                            log.error("Failed to send promotion deletion notification: {}",
+                                    ex.getMessage());
+                        }
+                    });
+        } catch (Exception e) {
+            log.error("Error sending promotion deletion notification: {}", e.getMessage());
         }
     }
 }

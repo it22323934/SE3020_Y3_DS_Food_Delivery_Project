@@ -25,6 +25,7 @@ import CartDrawer from "./components/cart/CartDrawer";
 import AllOrders from "./components/AllOrders";
 import CustomerTrackingOrder from "./components/CustomerTrackingOrder"; 
 
+import Checkout from "./pages/Checkout";
 export default function App() {
   return (
     <CartProvider>
@@ -49,6 +50,7 @@ export default function App() {
         <Route path="/CreateUserModal" element={<CreateUserModal />} />
         <Route element={<PrivateRoute/>}>
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/checkout" element={<Checkout/>}/>
         </Route>
         <Route path="/contact-us" element={<ContactUs />} />
         <Route path="/AllOrders" element={<AllOrders />} />

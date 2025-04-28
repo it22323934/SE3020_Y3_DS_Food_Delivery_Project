@@ -14,8 +14,9 @@ import RegisterDeliveryDriver from "../components/RegisterDeliveryDriver";
 import UserLocationViewer from "../components/UserLocationViewer";
 import AllOrders from "../components/AllOrders";
 
-// import DashRestaurant from "../components/DashRestaurant";
-// import DashMenuManagement from "../components/DashMenuManagement";
+import DashPromotionManagement from "../components/DashPromotionManagement";
+import DashRestaurant from "../components/DashRestaurant";
+import DashMenuManagement from "../components/DashMenuManagement";
 export default function Dashboard() {
   const location = useLocation();
   const [tab, setTab] = useState("");
@@ -57,6 +58,8 @@ export default function Dashboard() {
 
 
 
+      {/** <DashPromotionManagement/> */}
+      {tab === "promotion-management" && <DashPromotionManagement />}
     </div>
   );
 }
