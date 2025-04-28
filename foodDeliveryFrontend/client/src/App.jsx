@@ -22,12 +22,8 @@ import UserLocationViewer from "./components/UserLocationViewer";
 import { CreateUserModal } from "./components/sub-components/user-management/CreateUserModal";
 import { CartProvider } from "./context/CartContext";
 import CartDrawer from "./components/cart/CartDrawer";
-import CheckoutPage from "./pages/CheckoutPage";
-import { AuthProvider } from './context/AuthContext';
-import OrderSuccessPage from './pages/OrderSuccessPage';
 export default function App() {
   return (
-  <AuthProvider>
     <CartProvider>
       <CartDrawer />
     <BrowserRouter>
@@ -52,13 +48,9 @@ export default function App() {
         <Route path="/dashboard" element={<Dashboard />} />
         </Route>
         <Route path="/contact-us" element={<ContactUs />} />
-        <Route path="/checkout" element={<CheckoutPage />} />
-        <Route path="order-success" element={<OrderSuccessPage />} />
       </Routes>
       <FooterComp/>
-
     </BrowserRouter>
     </CartProvider>
-     </AuthProvider>
   );
 }

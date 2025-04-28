@@ -30,6 +30,7 @@ import { publicRestaurantService } from "../service/public/publicService";
 import { useSelector } from "react-redux";
 import { useCart } from "../context/CartContext"; // Fix the import path
 import { toast } from "react-toastify";
+import { promotionService } from "../service/promotionService";
 
 export default function RestaurantDetail() {
   const { id } = useParams();
@@ -42,24 +43,10 @@ export default function RestaurantDetail() {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Sample promo codes (in a real app, these would come from the API)
-  const [availablePromoCodes, setAvailablePromoCodes] = useState([
-    {
-      code: "WELCOME10",
-      description: "10% off your first order",
-      discount: 10,
-    },
-    {
-      code: "FREESHIP",
-      description: "Free delivery on orders over $25",
-      discount: 0,
-    },
-    {
-      code: "LUNCH20",
-      description: "20% off on lunch specials (11AM-2PM)",
-      discount: 20,
-    },
-  ]);
+  // Fetch restaurant and menu categories on component mount
+  const [availablePromoCodes, setAvailablePromoCodes] = useState([]);
+  const [loadingPromoCodes, setLoadingPromoCodes] = useState(false);
+  const [promoError, setPromoError] = useState(null);
 
   // Fetch restaurant and menu categories on component mount
   useEffect(() => {
@@ -103,7 +90,38 @@ export default function RestaurantDetail() {
           throw new Error("Failed to fetch menu categories");
         }
 
-        // In a real app, you would fetch promo codes here as well
+        // Fetch active promotions for the restaurant
+        try {
+          setLoadingPromoCodes(true);
+          const promosResponse =
+            await promotionService.getActivePromotionsByRestaurantId(
+              id,
+              currentUser?.token
+            );
+
+          if (promosResponse.ok) {
+            const promosData = await promosResponse.json();
+
+            // Format the promotions for display
+            const formattedPromos = promosData.map((promo) => ({
+              code: promo.code,
+              description: promo.description,
+              discount: promo.discountPercentage,
+              maxDiscount: promo.maxDiscount,
+              minOrderAmount: promo.minOrderAmount,
+            }));
+
+            setAvailablePromoCodes(formattedPromos);
+          } else {
+            console.error("Failed to fetch promotions");
+            setPromoError("Could not load promotions");
+          }
+        } catch (promoErr) {
+          console.error("Error fetching promotions:", promoErr);
+          setPromoError(promoErr.message);
+        } finally {
+          setLoadingPromoCodes(false);
+        }
       } catch (err) {
         console.error("Error fetching data:", err);
         setError(err.message);
@@ -310,7 +328,18 @@ export default function RestaurantDetail() {
                 </h2>
               </div>
 
-              {availablePromoCodes.length > 0 ? (
+              {loadingPromoCodes ? (
+                <div className="flex justify-center py-4">
+                  <Spinner size="sm" className="text-orange-500" />
+                  <span className="ml-2 text-gray-600 dark:text-gray-400">
+                    Loading offers...
+                  </span>
+                </div>
+              ) : promoError ? (
+                <div className="bg-red-50 dark:bg-red-900/20 p-3 rounded text-sm text-red-700 dark:text-red-300">
+                  <p>Could not load promotions</p>
+                </div>
+              ) : availablePromoCodes.length > 0 ? (
                 <div className="space-y-3">
                   {availablePromoCodes.map((promo, index) => (
                     <div
@@ -328,6 +357,16 @@ export default function RestaurantDetail() {
                       <p className="text-gray-600 dark:text-gray-400 text-sm">
                         {promo.description}
                       </p>
+                      {promo.minOrderAmount > 0 && (
+                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          Min. order: ${promo.minOrderAmount.toFixed(2)}
+                        </div>
+                      )}
+                      {promo.maxDiscount > 0 && (
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                          Max discount: ${promo.maxDiscount.toFixed(2)}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -446,30 +485,30 @@ function MenuItemsByCategorySection({
         maxQuantity: addon.maxQuantity,
         multiple: addon.multiple,
       }));
-  
+
       // Debug the add-ons before sending them
       console.log("Adding item with formatted add-ons:", formattedAddOns);
-  
+
       // Create a clean item object with add-ons properly integrated
       const cartItem = {
         ...item,
         quantity: Number(quantity),
         // Use addOns as the property name, not selectedAddOns
-        addOns: formattedAddOns
+        addOns: formattedAddOns,
       };
-  
+
       // Remove redundant property if it exists
       delete cartItem.selectedAddOns;
-  
+
       // Add to cart with the properly structured item
       addToCart(cartItem);
-  
+
       // Show success toast
       toast.success(`Added ${quantity} ${item.name} to cart`, {
         position: "bottom-right",
         autoClose: 2000,
       });
-  
+
       if (showItemModal) {
         setShowItemModal(false);
       }
@@ -812,17 +851,17 @@ function ItemAddToCartControl({ item, onAddToCart, closeModal }) {
 
   const handleAddToCartClick = () => {
     setIsAdding(true);
-    
+
     // Ensure add-ons have consistent format and quantity
-    const preparedAddOns = selectedAddOns.map(addon => ({
+    const preparedAddOns = selectedAddOns.map((addon) => ({
       ...addon,
       quantity: Number(addon.quantity || 1),
-      price: Number(addon.price || 0)
+      price: Number(addon.price || 0),
     }));
-    
+
     // Log add-ons for debugging
     console.log("Prepared add-ons for cart:", preparedAddOns);
-    
+
     setTimeout(() => {
       onAddToCart(item, quantity, preparedAddOns);
       setIsAdding(false);

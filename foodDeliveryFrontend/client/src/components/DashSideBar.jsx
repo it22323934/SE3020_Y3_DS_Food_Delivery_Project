@@ -12,7 +12,6 @@ import React, { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { signOutSuccess } from "../redux/user/userSlice";
 import { useDispatch, useSelector } from "react-redux";
-
 import {
   FaMapMarkerAlt,
   FaTrashAlt,
@@ -124,18 +123,7 @@ export default function DashSideBar() {
                         Users
                       </Sidebar.Item>
                     </Link>
-                     <Link to="/dashboard?tab=payment-management">
-                          <Sidebar.Item
-                            active={tab === "payment-management"}
-                            icon={FaCreditCard}
-                            labelColor="dark"
-                            as="div"
-                          >
-                            Payments
-                          </Sidebar.Item>
-                     </Link>
                   </>
-
                 )}
               </>
             )}
@@ -204,7 +192,6 @@ export default function DashSideBar() {
               Profile
             </Sidebar.Item>
           </Link>
-
 
           <Sidebar.Item
             icon={HiArrowSmRight}
