@@ -106,7 +106,9 @@ export default function DashPaymentManagement() {
       const filtered = payments.filter(payment => {
         const orderId = payment.orderId?.toLowerCase() || '';
         const email = payment.customerEmail?.toLowerCase() || '';
-        const paymentId = payment.stripePaymentId?.toLowerCase() || '';
+        const paymentId = payment.paymentStatus === 'succeeded'
+          ? payment.stripePaymentId?.toLowerCase() || ''
+          : 'n/a';
 
         return (
           orderId.includes(searchTerm) ||
@@ -148,7 +150,7 @@ export default function DashPaymentManagement() {
           {new Date(payment.paymentDate).toLocaleString()}
         </Table.Cell>
         <Table.Cell className="font-mono text-sm">
-          {payment.stripePaymentId}
+          {payment.paymentStatus === 'succeeded' ? payment.stripePaymentId : "N/A"}
         </Table.Cell>
       </Table.Row>
     ));

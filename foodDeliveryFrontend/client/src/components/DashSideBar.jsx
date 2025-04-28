@@ -110,6 +110,18 @@ export default function DashSideBar() {
                   </Sidebar.Item>
                 </Link>
 
+                {/* Payment Management - visible to both admin types */}
+                <Link to="/dashboard?tab=payment-management">
+                  <Sidebar.Item
+                    active={tab === "payment-management"}
+                    icon={FaCreditCard}
+                    labelColor="dark"
+                    as="div"
+                  >
+                    Payments
+                  </Sidebar.Item>
+                </Link>
+
                 {/* Items that only the main admin should see */}
                 {hasRole("ROLE_ADMIN") && (
                   <>
