@@ -21,5 +21,7 @@ public interface PaymentService {
 
     Map<String, Object> createPaymentIntent(PaymentIntentRequest request) throws StripeException;
 
-    PaymentResponse confirmPayment(ConfirmPaymentRequest request) throws StripeException;
+    //PaymentResponse confirmPayment(ConfirmPaymentRequest request) throws StripeException;
+
+    PaymentResponse confirmPayment(ConfirmPaymentRequest request, String token) throws StripeException;
 }

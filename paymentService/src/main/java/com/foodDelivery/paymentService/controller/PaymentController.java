@@ -6,6 +6,7 @@ import com.foodDelivery.paymentService.dto.PaymentDetails;
 import com.foodDelivery.paymentService.serviceImpl.PaymentServiceImpl;
 import com.stripe.exception.StripeException;
 import com.stripe.model.PaymentIntent;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -19,6 +20,8 @@ import org.springframework.web.bind.annotation.*;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.slf4j.Logger;
+
 
 
 @RestController
@@ -27,6 +30,8 @@ public class PaymentController {
 
     @Autowired
     private PaymentServiceImpl paymentService;
+
+    private static final Logger logger = LoggerFactory.getLogger(PaymentController.class);
 
     @PostMapping
     public ResponseEntity<PaymentResponse> processPayment(@RequestBody PaymentRequest paymentRequest) {
@@ -84,26 +89,34 @@ public class PaymentController {
     }
 
     @PostMapping("/confirm")
-    public ResponseEntity<?> confirmPayment(@RequestBody ConfirmPaymentRequest request) {
+    public ResponseEntity<?> confirmPayment(@RequestBody ConfirmPaymentRequest request,
+                                            @RequestHeader(value = "Authorization", required = false) String authHeader) {
         try {
-            PaymentResponse response = paymentService.confirmPayment(request);
+            // Better token validation
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("error", "Authentication required"));
+            }
+
+            String token = authHeader.substring(7);
+            PaymentResponse response = paymentService.confirmPayment(request, token);
             return ResponseEntity.ok(response);
         } catch (StripeException e) {
-            // Ensure proper JSON error response
-            Map<String, String> errorResponse = new HashMap<>();
-            errorResponse.put("error", "Payment processing failed");
-            errorResponse.put("details", e.getMessage());
+            logger.error("Stripe error in confirmation: ", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(errorResponse);
+                    .body(Map.of(
+                            "error", "Stripe error",
+                            "message", e.getMessage(),
+                            "stripeError", e.getStripeError() != null ? e.getStripeError().getCode() : null
+                    ));
         } catch (Exception e) {
-            // Catch any other exceptions and return proper JSON
-            Map<String, String> errorResponse = new HashMap<>();
-            errorResponse.put("error", "Internal server error");
-            errorResponse.put("details", e.getMessage());
+            logger.error("Payment confirmation failed: ", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(errorResponse);
+                    .body(Map.of(
+                            "error", "Payment processing failed",
+                            "message", e.getMessage(),
+                            "cause", e.getCause() != null ? e.getCause().getMessage() : null
+                    ));
         }
     }
 

@@ -25,5 +25,6 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
 
     List<Payment> findByPaymentStatusIgnoreCaseOrderByPaymentDateDesc(String status);
 
+    Optional<Payment> findByStripePaymentId(String stripePaymentId);
     List<Payment> findByCustomerEmailOrderByPaymentDateDesc(String email);
 }

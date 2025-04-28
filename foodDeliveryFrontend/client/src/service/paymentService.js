@@ -15,11 +15,11 @@ const paymentService = {
    */
   createPaymentIntent: async (paymentData, token) => {
     try {
-    // Validate amount before sending
-        if (paymentData.amount <= 0) {
-          throw new Error('Payment amount must be positive');
-        }
-    console.log('Creating payment intent with amount:', paymentData.amount); // Debug log
+      if (paymentData.amount <= 0) {
+        throw new Error('Payment amount must be positive');
+      }
+
+      console.log('Attempting to connect to:', `${API_BASE_URL}/create-payment-intent`);
 
       const response = await fetch(`${API_BASE_URL}/create-payment-intent`, {
         method: "POST",
@@ -29,24 +29,29 @@ const paymentService = {
         },
         body: JSON.stringify({
           ...paymentData,
-          amount: parseFloat(paymentData.amount.toFixed(2))  // Convert to cents
+          amount: parseFloat(paymentData.amount.toFixed(2))
         })
       });
 
       if (!response.ok) {
+        // Improved error handling
         const errorText = await response.text();
-        try {
-          const errorData = JSON.parse(errorText);
-          throw new Error(errorData.message || 'Failed to create payment intent');
-        } catch {
-          throw new Error(errorText || 'Failed to create payment intent');
-        }
+        console.error('Backend response error:', {
+          status: response.status,
+          statusText: response.statusText,
+          errorText
+        });
+        throw new Error(`Backend error: ${response.status} - ${errorText}`);
       }
 
       return await response.json();
     } catch (error) {
-      console.error("PaymentService Error - createPaymentIntent:", error);
-      throw error;
+      console.error("Full PaymentService Error:", {
+        message: error.message,
+        stack: error.stack,
+        type: error.name
+      });
+      throw new Error(`Payment initialization failed: ${error.message}`);
     }
   },
 
@@ -58,34 +63,30 @@ const paymentService = {
    * @returns {Promise<PaymentResponse>} - Payment response object
    */
   confirmPayment: async (paymentData, token) => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/confirm`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify(paymentData)
-      });
+      try {
+          console.log('Confirming payment with data:', paymentData);
 
-      // Clone response for error handling
-      const responseClone = response.clone();
+          const response = await fetch(`${API_BASE_URL}/confirm`, {
+              method: "POST",
+              headers: {
+                  "Content-Type": "application/json",
+                  "Authorization": `Bearer ${token}`
+              },
+              body: JSON.stringify({
+                  paymentIntentId: paymentData.paymentIntentId
+              })
+          });
 
-      if (!response.ok) {
-        try {
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'Payment confirmation failed');
-        } catch (e) {
-          const errorText = await responseClone.text();
-          throw new Error(errorText || 'Payment confirmation failed');
-        }
+          if (!response.ok) {
+              const errorData = await response.json();
+              throw new Error(errorData.message || 'Payment confirmation failed');
+          }
+
+          return await response.json();
+      } catch (error) {
+          console.error("Payment confirmation error:", error);
+          throw error;
       }
-
-      return await response.json();
-    } catch (error) {
-      console.error("PaymentService Error - confirmPayment:", error);
-      throw error;
-    }
   },
 
   /**

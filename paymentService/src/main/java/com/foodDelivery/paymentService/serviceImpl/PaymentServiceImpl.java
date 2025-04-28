@@ -9,16 +9,15 @@ import com.foodDelivery.paymentService.serviceInterfaces.PaymentService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.stripe.Stripe;
-import com.stripe.exception.InvalidRequestException;
 import com.stripe.exception.StripeException;
 import com.stripe.model.Charge;
 import com.stripe.model.PaymentIntent;
-import com.stripe.model.StripeError;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import jakarta.annotation.PostConstruct;
+
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
@@ -227,41 +226,51 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     @Override
-    public PaymentResponse confirmPayment(ConfirmPaymentRequest request) throws StripeException {
+    public PaymentResponse confirmPayment(ConfirmPaymentRequest request, String token) throws StripeException {
         try {
-            PaymentIntent intent = PaymentIntent.retrieve(request.getPaymentIntentId());
+            // Initialize Stripe with API key
+            Stripe.apiKey = stripeSecretKey;
 
-            if (!"succeeded".equals(intent.getStatus())) {
-                throw new IllegalStateException(
-                        "Payment not completed. Current status: " + intent.getStatus()
-                );
+            // 1. Retrieve payment intent
+            PaymentIntent intent = PaymentIntent.retrieve(request.getPaymentIntentId());
+            logger.info("Retrieved payment intent: {}", intent);
+
+            // 2. Validate metadata exists
+            if (intent.getMetadata() == null || intent.getMetadata().isEmpty()) {
+                throw new IllegalArgumentException("Payment intent missing required metadata");
             }
 
-            // Save payment record
+            String orderId = intent.getMetadata().get("order_id");
+            String customerEmail = intent.getMetadata().get("customer_email");
+
+            if (orderId == null || customerEmail == null) {
+                throw new IllegalArgumentException("Missing order_id or customer_email in metadata");
+            }
+
+            // 3. Create and save payment record
             Payment payment = new Payment();
-            payment.setOrderId(intent.getMetadata().get("order_id"));
-            payment.setCustomerEmail(intent.getMetadata().get("customer_email"));
-            payment.setAmount(intent.getAmount() / 100.0);
+            payment.setOrderId(orderId);
+            payment.setCustomerEmail(customerEmail);
+            payment.setAmount(intent.getAmount() / 100.0); // Convert from cents
             payment.setPaymentStatus(intent.getStatus());
             payment.setStripePaymentId(intent.getId());
             payment.setPaymentDate(LocalDateTime.now());
-            paymentRepository.save(payment);
 
-            // Return response
+            // Save to database
+            Payment savedPayment = paymentRepository.save(payment);
+            logger.info("Saved payment record with ID: {}", savedPayment.getId());
+
+            // 4. Return response
             PaymentResponse response = new PaymentResponse();
-            response.setOrderId(payment.getOrderId());
+            response.setOrderId(orderId);
             response.setPaymentStatus("succeeded");
-            response.setStripePaymentId(payment.getStripePaymentId());
-            return response;
+            response.setStripePaymentId(intent.getId());
+            response.setCustomerEmail(customerEmail);
+            response.setAmount(payment.getAmount());
 
-        } catch (StripeException e) {
-            logger.error("Stripe error confirming payment {}: {}",
-                    request.getPaymentIntentId(), e.getMessage());
-            throw e;
+            return response;
         } catch (Exception e) {
-            logger.error("Error confirming payment {}: {}",
-                    request.getPaymentIntentId(), e.getMessage());
-            throw new RuntimeException("Payment confirmation failed", e);
+            logger.error("Error in confirmPayment: ", e);
+            throw new RuntimeException("Payment processing error", e);
         }
-    }
-}
+    }}

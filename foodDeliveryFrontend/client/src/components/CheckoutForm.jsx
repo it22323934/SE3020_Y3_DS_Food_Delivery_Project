@@ -4,6 +4,7 @@ import { CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { FaCreditCard, FaLock } from 'react-icons/fa';
 import { useSelector } from "react-redux";
 
+//test update
 export default function CheckoutForm({ onSuccess, clientSecret }) {
   const stripe = useStripe();
   const elements = useElements();

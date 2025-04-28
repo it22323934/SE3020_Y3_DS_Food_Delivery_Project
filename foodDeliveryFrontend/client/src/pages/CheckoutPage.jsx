@@ -24,12 +24,11 @@ export default function CheckoutPage() {
   const [orderTotal, setOrderTotal] = useState(0);
   const [paymentMessage, setPaymentMessage] = useState('');
 
-  // These values should come directly from the cart context
-  const subtotal = cart.subtotal;
-  const taxAmount = cart.taxAmount;
-  const deliveryFee = cart.deliveryFee;
-  const discountAmount = cart.discountAmount;
-  const total = cart.total;
+  // Calculate subtotal, tax, and delivery fee correctly
+  const subtotal = cart.subtotal || 0;
+  const taxAmount = cart.taxAmount || 0;
+  const deliveryFee = cart.deliveryFee || 0;
+  const discountAmount = cart.discountAmount || 0;
 
   // For successful order screen
   const [orderSubtotal, setOrderSubtotal] = useState(0);
@@ -38,6 +37,7 @@ export default function CheckoutPage() {
   const [orderDiscountAmount, setOrderDiscountAmount] = useState(0);
 
   const { currentUser } = useSelector((state) => state.user);
+  console.log("incheckoutpage", currentUser?.email);
 
   useEffect(() => {
     console.log('Cart Total:', cart.total);
@@ -206,10 +206,10 @@ export default function CheckoutPage() {
                   </span>
                 </div>
 
-                {/* Show discount if applicable */}
-                {(orderDetails?.discountAmount > 0 || orderDiscountAmount > 0) && (
+                {/* Display discount if applied */}
+                {(orderDetails?.discountAmount || orderDiscountAmount) > 0 && (
                   <div className="flex justify-between py-2 border-b border-gray-200 dark:border-gray-700">
-                    <span className="font-medium text-green-600">Discount:</span>
+                    <span className="font-medium">Discount:</span>
                     <span className="text-green-600 dark:text-green-400">
                       -${(orderDetails?.discountAmount || orderDiscountAmount).toFixed(2)}
                     </span>
@@ -343,16 +343,16 @@ export default function CheckoutPage() {
               <span>${subtotal.toFixed(2)}</span>
             </div>
 
-            {/* Show discount if applicable */}
+            {/* Display discount if applied */}
             {discountAmount > 0 && (
-              <div className="flex justify-between text-green-600 dark:text-green-400 mb-1">
+              <div className="flex justify-between text-gray-700 dark:text-gray-300 mb-1">
                 <span>Discount:</span>
-                <span>-${discountAmount.toFixed(2)}</span>
+                <span className="text-green-600 dark:text-green-400">-${discountAmount.toFixed(2)}</span>
               </div>
             )}
 
             <div className="flex justify-between text-gray-700 dark:text-gray-300 mb-1">
-              <span>Tax:</span>
+              <span>Tax ({(cart.taxRate * 100).toFixed(0)}%):</span>
               <span>${taxAmount.toFixed(2)}</span>
             </div>
 
@@ -363,8 +363,9 @@ export default function CheckoutPage() {
 
             <div className="flex justify-between font-bold text-lg pt-2 border-t border-gray-200 dark:border-gray-700">
               <span>Order Total:</span>
-              <span className="text-orange-600 dark:text-orange-400">${total.toFixed(2)}</span>
+              <span className="text-orange-600 dark:text-orange-400">${cart.total.toFixed(2)}</span>
             </div>
+
             <p className="text-gray-600 dark:text-gray-400 text-sm mt-2 flex items-center">
               <MdDeliveryDining className="mr-1" />
               Estimated delivery time: 30-45 minutes
