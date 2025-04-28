@@ -44,9 +44,13 @@ export default function DashPaymentManagement() {
   const [selectedOrderId, setSelectedOrderId] = useState("");
   const [selectedEmail, setSelectedEmail] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("succeeded");
-  const [startDate, setStartDate] = useState(new Date());
-  const [endDate, setEndDate] = useState(new Date());
   const [reportTypes, setReportTypes] = useState([]);
+  const [endDate, endStartDate] = useState(new Date());
+  const [startDate, startEndDate] = useState(() => {
+    const date = new Date();
+    date.setDate(date.getDate() - 7); // Set default end date to 7 days after start date
+    return date;
+  });
 
   // Debounce search input
   useEffect(() => {
@@ -196,6 +200,7 @@ export default function DashPaymentManagement() {
       toast.error(error.message || "Error generating report");
     } finally {
       setIsDownloading(false);
+      setShowReportModal(false);
     }
   };
 
@@ -303,8 +308,6 @@ export default function DashPaymentManagement() {
                   <Dropdown
                     id="reportType"
                     label={reportType.replace("_", " ")}
-                    value={reportType}
-                    onChange={(e) => setReportType(e.target.value)}
                   >
                     {reportTypes.map((type) => (
                       <Dropdown.Item
@@ -355,23 +358,33 @@ export default function DashPaymentManagement() {
                   </div>
                 )}
 
+
                 {reportType === "DATE_RANGE" && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="startDate" value="Start Date" />
                       <Datepicker
                         id="startDate"
-                        value={startDate}
-                        onSelectedDateChanged={setStartDate}
+                        defaultDate={startDate}
+                        onSelectedDateChanged={(date) => {
+                          console.log("Start date changed:", date);
+                          setStartDate(date);
+                        }}
+                        showClearButton={false}
+                        className="w-full"
                       />
                     </div>
                     <div>
                       <Label htmlFor="endDate" value="End Date" />
                       <Datepicker
                         id="endDate"
-                        value={endDate}
-                        onSelectedDateChanged={setEndDate}
-                        minDate={startDate}
+                        defaultDate={endDate}
+                        onSelectedDateChanged={(date) => {
+                          console.log("End date changed:", date);
+                          setEndDate(date);
+                        }}
+                        showClearButton={false}
+                        className="w-full"
                       />
                     </div>
                   </div>
