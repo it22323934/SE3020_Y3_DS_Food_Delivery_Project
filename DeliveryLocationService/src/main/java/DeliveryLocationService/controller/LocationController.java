@@ -10,7 +10,6 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/location")
-@CrossOrigin(origins = "*") // Allow CORS
 public class LocationController {
 
     @Autowired

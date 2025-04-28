@@ -1,9 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, CircularProgress, Typography } from "@mui/material";
+import { Button } from '@mui/material'; // ✅ Import MUI Button properly
+import { useNavigate } from "react-router-dom"; // ✅ Import useNavigate
 
-const DeliveryReplicationView = () => {
+const AllOrders = () => {
   const [deliveries, setDeliveries] = useState([]);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate(); // ✅ Initialize navigate
 
   useEffect(() => {
     fetch("http://localhost:8089/api/deliveryReplication")
@@ -49,15 +52,15 @@ const DeliveryReplicationView = () => {
   return (
     <div style={{ padding: '20px' }}>
       <Typography variant="h4" gutterBottom align="center">
-        Delivery Order Data
+        Order Data
       </Typography>
       <TableContainer component={Paper} style={{ maxWidth: '100%', overflowX: 'auto' }}>
         <Table>
           <TableHead style={{backgroundColor:"#FF5A1F "}}>
             <TableRow>
               <TableCell style={{border:"1px solid white"}}>Order ID</TableCell>
-              <TableCell style={{border:"1px solid white"}}>User Name</TableCell>
-              <TableCell style={{border:"1px solid white"}}>User Phone</TableCell>
+              <TableCell style={{border:"1px solid white",display:"none"}}>User Name</TableCell>
+              <TableCell style={{border:"1px solid white", display:"none"}}>User Phone</TableCell>
               <TableCell style={{border:"1px solid white"}}>Restaurant ID</TableCell>
               <TableCell style={{border:"1px solid white"}}>Delivery Address</TableCell>
               <TableCell style={{border:"1px solid white"}}>Order Items</TableCell>
@@ -70,6 +73,7 @@ const DeliveryReplicationView = () => {
               <TableCell style={{border:"1px solid white"}}>Delivered</TableCell>
               <TableCell style={{border:"1px solid white"}}>Driver Remark</TableCell>
               <TableCell style={{border:"1px solid white"}}>User Remark</TableCell>
+              <TableCell style={{border:"1px solid white"}}>Track Location</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -78,8 +82,8 @@ const DeliveryReplicationView = () => {
                 <TableCell style={getOrderIdStyle(delivery.isAssignDriver, delivery.orderDeliveredComplete)}>
                   {delivery.orderId}
                 </TableCell>
-                <TableCell>{delivery.userName}</TableCell>
-                <TableCell>{delivery.userPhoneNo}</TableCell>
+                <TableCell style={{display:"none"}}>{delivery.userName}</TableCell>
+                <TableCell style={{display:"none"}}>{delivery.userPhoneNo}</TableCell>
                 <TableCell>{delivery.restaurantId}</TableCell>
                 <TableCell>{delivery.deliveryAddress}</TableCell>
                 <TableCell>{delivery.orderItems.join(", ")}</TableCell>
@@ -92,6 +96,25 @@ const DeliveryReplicationView = () => {
                 <TableCell>{delivery.orderDeliveredComplete ? "Yes" : "No"}</TableCell>
                 <TableCell>{delivery.driverRemark}</TableCell>
                 <TableCell>{delivery.userRemark}</TableCell>
+                                <Button
+                    variant="contained"
+                    size="small"
+                    onClick={() => navigate(`/CustomerTrackingOrder/${delivery.userId}/${delivery.orderId}`)}
+                    sx={{
+                    textTransform: "none",
+                    fontWeight: "bold",
+                    borderRadius: 2,
+                    boxShadow: 1,
+                    marginTop:"1.7rem",
+                    marginLeft:"1rem",
+                    backgroundColor: "#52be80",
+                    "&:hover": {
+                        backgroundColor: "#45a163",
+                    },
+                    }}
+                >
+                    Map
+                </Button>
               </TableRow>
             ))}
           </TableBody>
@@ -101,4 +124,4 @@ const DeliveryReplicationView = () => {
   );
 };
 
-export default DeliveryReplicationView;
+export default AllOrders;

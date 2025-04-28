@@ -22,6 +22,9 @@ import UserLocationViewer from "./components/UserLocationViewer";
 import { CreateUserModal } from "./components/sub-components/user-management/CreateUserModal";
 import { CartProvider } from "./context/CartContext";
 import CartDrawer from "./components/cart/CartDrawer";
+import AllOrders from "./components/AllOrders";
+import CustomerTrackingOrder from "./components/CustomerTrackingOrder"; 
+
 import Checkout from "./pages/Checkout";
 export default function App() {
   return (
@@ -42,7 +45,7 @@ export default function App() {
         <Route path="/DeliveryReplicationView" element={<DeliveryReplicationView />} />
         <Route path="/DeliveryAssignOrders" element={<DeliveryAssignOrders />} />
         <Route path="/update-order/:orderId" element={<UpdateOrderPage />} />
-        <Route path="/location-map/:orderId" element={<LocationMap />} />
+        <Route path="/location-map/:orderId/:userId" element={<LocationMap />} />
         <Route path="/UserLocationViewer" element={<UserLocationViewer />} />
         <Route path="/CreateUserModal" element={<CreateUserModal />} />
         <Route element={<PrivateRoute/>}>
@@ -50,6 +53,9 @@ export default function App() {
         <Route path="/checkout" element={<Checkout/>}/>
         </Route>
         <Route path="/contact-us" element={<ContactUs />} />
+        <Route path="/AllOrders" element={<AllOrders />} />
+        <Route path="/CustomerTrackingOrder/:userId/:orderId" element={<CustomerTrackingOrder />} /> {/* ✅ Added Route */}
+
       </Routes>
       <FooterComp/>
     </BrowserRouter>

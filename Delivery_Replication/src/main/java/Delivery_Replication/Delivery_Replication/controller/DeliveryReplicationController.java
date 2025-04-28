@@ -74,7 +74,6 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/deliveryReplication")
-@CrossOrigin(origins = "*") // Allow any origin to access this API
 public class DeliveryReplicationController {
 
     DeliveryReplication delivery = new DeliveryReplication();
@@ -106,7 +105,7 @@ public class DeliveryReplicationController {
     // Updated method to return a list of responses based on isAssignDriver
     @GetMapping("/by-assign-driver")
     public List<DeliveryReplicationResponse> getDeliveriesByAssignDriver() {
-        return deliveryReplicationService.getDeliveriesByAssignDriver(false);
+        return deliveryReplicationService.getDeliveriesByAssignDriver();
     }
 
     @PutMapping("/{orderId}")
