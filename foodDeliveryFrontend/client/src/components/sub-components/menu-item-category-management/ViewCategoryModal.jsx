@@ -50,7 +50,7 @@ export const ViewCategoryModal = ({ show, onClose, categoryData, token }) => {
   if (!categoryData) return null;
 
   return (
-    <Modal show={show} onClose={onClose} size="6xl">
+    <Modal show={show} onClose={onClose} size="4xl">
       <Modal.Header className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
         <div className="flex items-center text-white">
           <FaListUl className="mr-2 text-xl " />

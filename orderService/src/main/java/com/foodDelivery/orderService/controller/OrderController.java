@@ -65,7 +65,6 @@ public class OrderController {
 
     @GetMapping("/user/{userId}")
     @CircuitBreaker(name = ORDER_SERVICE, fallbackMethod = "getOrdersByUserIdFallback")
-    @PreAuthorize("#userId == authentication.details.userId or hasRole('ADMIN')")
     public ResponseEntity<List<OrderResponse>> getOrdersByUserId(
             @PathVariable Long userId,
             @RequestHeader("Authorization") String token) {

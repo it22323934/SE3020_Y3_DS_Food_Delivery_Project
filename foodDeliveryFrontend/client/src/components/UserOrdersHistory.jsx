@@ -31,6 +31,7 @@ import {
   HiOutlinePhone,
   HiOutlineMail,
   HiOutlineUser,
+  HiHome,
 } from "react-icons/hi";
 import {
   FaReceipt,
@@ -38,21 +39,19 @@ import {
   FaUtensils,
   FaRegCalendarAlt,
   FaMoneyBillWave,
+  FaHistory,
 } from "react-icons/fa";
 import { orderService } from "../service/orderService";
-import { restaurantService } from "../service/restaurantService";
 import ReactPaginate from "react-paginate";
 import LoadingSpinner from "./LoadingSpinner";
-import UpdateOrderStatusDropdown from "./sub-components/order-management/UpdateOrderStatusDropdown";
 import OrderStatusTimeline from "./sub-components/order-management/OrderStatusTimeline";
 
-export default function DashMyOrdersRestaurantManagement() {
+export default function UserOrderTracking() {
   const { currentUser } = useSelector((state) => state.user);
   const [orders, setOrders] = useState([]);
   const [filteredOrders, setFilteredOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [restaurant, setRestaurant] = useState(null);
   const [currentTab, setCurrentTab] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [sortOrder, setSortOrder] = useState("desc");
@@ -66,17 +65,7 @@ export default function DashMyOrdersRestaurantManagement() {
   const [activeOrders, setActiveOrders] = useState(0);
   const [completedOrders, setCompletedOrders] = useState(0);
 
-  // Status workflows and display configs
-  const statusWorkflow = {
-    PENDING: ["CONFIRMED", "CANCELLED"],
-    CONFIRMED: ["PREPARING", "CANCELLED"],
-    PREPARING: ["READY_FOR_PICKUP", "CANCELLED"],
-    READY_FOR_PICKUP: ["OUT_FOR_DELIVERY", "DELIVERED", "CANCELLED"],
-    OUT_FOR_DELIVERY: ["DELIVERED", "CANCELLED"],
-    DELIVERED: [],
-    CANCELLED: [],
-  };
-
+  // Status display configs
   const statusColors = {
     PENDING: "warning",
     CONFIRMED: "info",
@@ -119,55 +108,23 @@ export default function DashMyOrdersRestaurantManagement() {
     setPageNumber(selected);
   };
 
-  // Fetch restaurant information and then orders
+  // Fetch orders when component mounts
   useEffect(() => {
     if (currentUser?.token) {
-      fetchRestaurant();
-    }
-  }, [currentUser]);
-
-  // Fetch orders when restaurant ID is available
-  useEffect(() => {
-    if (restaurant?.id && currentUser?.token) {
       fetchOrders();
     }
-  }, [restaurant]);
+  }, [currentUser]);
 
   // Filter orders when tab changes or search term changes
   useEffect(() => {
     filterOrders();
   }, [orders, currentTab, searchTerm]);
 
-  const fetchRestaurant = async () => {
-    try {
-      setLoading(true);
-      const response = await restaurantService.getRestaurantsByUserId(
-        currentUser.id,
-        currentUser.token
-      );
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data && data.length > 0) {
-          setRestaurant(data[0]);
-        } else {
-          setError("No restaurant found for your account");
-        }
-      } else {
-        setError("Failed to fetch restaurant details");
-      }
-    } catch (err) {
-      setError(`Error: ${err.message}`);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const fetchOrders = async () => {
     try {
       setLoading(true);
-      const response = await orderService.getOrdersByRestaurantId(
-        restaurant.id,
+      const response = await orderService.getOrdersByUserId(
+        currentUser.id,
         currentUser.token
       );
 
@@ -204,7 +161,7 @@ export default function DashMyOrdersRestaurantManagement() {
   };
 
   const filterOrders = () => {
-    if (!orders.length) return;
+    if (!orders || !orders.length) return;
     
     let result = [...orders];
 
@@ -236,8 +193,7 @@ export default function DashMyOrdersRestaurantManagement() {
       result = result.filter(
         (order) =>
           order.id.toLowerCase().includes(search) ||
-          order.contactInfo.name.toLowerCase().includes(search) ||
-          order.contactInfo.phone.includes(search) ||
+          (order.restaurant?.name && order.restaurant.name.toLowerCase().includes(search)) ||
           order.status.toLowerCase().includes(search) ||
           (order.deliveryAddress &&
             `${order.deliveryAddress.street} ${order.deliveryAddress.city}`
@@ -275,31 +231,6 @@ export default function DashMyOrdersRestaurantManagement() {
     setIsModalOpen(true);
   };
 
-  // Handle status update from the separate component
-  const handleStatusUpdated = (orderId, newStatus) => {
-    // Update orders list
-    const updatedOrders = orders.map((order) =>
-      order.id === orderId ? { ...order, status: newStatus } : order
-    );
-    setOrders(updatedOrders);
-
-    // Update selected order if needed
-    if (selectedOrder && selectedOrder.id === orderId) {
-      setSelectedOrder({ ...selectedOrder, status: newStatus });
-    }
-
-    // Update counts after status change
-    const active = updatedOrders.filter(order => 
-      ['PENDING', 'CONFIRMED', 'PREPARING', 'READY_FOR_PICKUP', 'OUT_FOR_DELIVERY'].includes(order.status)
-    ).length;
-    setActiveOrders(active);
-    
-    const completed = updatedOrders.filter(order => 
-      order.status === 'DELIVERED'
-    ).length;
-    setCompletedOrders(completed);
-  };
-
   // Order status badge component for consistency
   const OrderStatusBadge = ({ status }) => (
     <Badge color={statusColors[status] || "gray"} className="whitespace-nowrap">
@@ -308,94 +239,137 @@ export default function DashMyOrdersRestaurantManagement() {
     </Badge>
   );
 
-  if (loading && !restaurant) {
+  // Get estimated delivery time based on status
+  const getEstimatedDeliveryTime = (status) => {
+    switch (status) {
+      case "PENDING":
+        return "Waiting for restaurant confirmation";
+      case "CONFIRMED":
+        return "15-30 minutes";
+      case "PREPARING":
+        return "20-35 minutes";
+      case "READY_FOR_PICKUP":
+        return "10-15 minutes";
+      case "OUT_FOR_DELIVERY":
+        return "5-10 minutes";
+      case "DELIVERED":
+        return "Delivered";
+      case "CANCELLED":
+        return "Cancelled";
+      default:
+        return "Unknown";
+    }
+  };
+
+  // Empty state component for when no orders are found
+  const EmptyState = ({ title, description, actionLabel, onAction }) => (
+    <div className="text-center py-10">
+      <div className="inline-block p-3 bg-gray-100 dark:bg-gray-700 rounded-full mb-4">
+        <FaReceipt
+          size={30}
+          className="text-gray-400 dark:text-gray-500"
+        />
+      </div>
+      <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+        {title}
+      </h3>
+      <p className="text-gray-500 dark:text-gray-400 mt-2">
+        {description}
+      </p>
+      {actionLabel && (
+        <Button color="light" className="mt-4" onClick={onAction}>
+          {actionLabel}
+        </Button>
+      )}
+    </div>
+  );
+
+  if (loading && !orders.length) {
     return <LoadingSpinner />;
   }
 
-  if (!restaurant) {
-    return (
-      <div className="p-4">
-        <Alert color="info" icon={HiInformationCircle}>
-          <span className="font-medium">No restaurant found!</span> You don't
-          have any restaurants assigned to your account. Please contact the
-          system administrator.
-        </Alert>
-      </div>
-    );
-  }
-
   return (
-    <div className="table-auto overflow-x-scroll md:mx-auto p-3 scrollbar scrollbar-track-slate-100 scrollbar-thumb-slate-300 dark:scrollbar-track-slate-700 dark:scrollbar-thumb-slate-500">
+    <div className="container mx-auto px-4 py-8">
       <ToastContainer position="top-right" autoClose={3000} />
 
-      {/* Stats Cards */}
-      <div className="p-3 md:mx-auto">
-        <div className="flex-wrap flex gap-4 justify-center">
-          <div className="flex flex-col p-3 dark:bg-slate-800 gap-4 md:w-72 w-full rounded-md shadow-md">
-            <div className="flex justify-between">
-              <div>
-                <h3 className="text-gray-500 text-md uppercase">
-                  Total Orders
-                </h3>
-                <p className="text-2xl">{totalOrders}</p>
-              </div>
-              <FaReceipt className="bg-blue-500 text-white text-5xl p-3 shadow-lg rounded-lg" />
-            </div>
-          </div>
-          <div className="flex flex-col p-3 dark:bg-slate-800 gap-4 md:w-72 w-full rounded-md shadow-md">
-            <div className="flex justify-between">
-              <div>
-                <h3 className="text-gray-500 text-md uppercase">
-                  Active Orders
-                </h3>
-                <p className="text-2xl">{activeOrders}</p>
-              </div>
-              <HiOutlineClock className="bg-yellow-500 text-white text-5xl p-3 shadow-lg rounded-lg" />
-            </div>
-          </div>
-          <div className="flex flex-col p-3 dark:bg-slate-800 gap-4 md:w-72 w-full rounded-md shadow-md">
-            <div className="flex justify-between">
-              <div>
-                <h3 className="text-gray-500 text-md uppercase">
-                  Completed Orders
-                </h3>
-                <p className="text-2xl">{completedOrders}</p>
-              </div>
-              <HiCheck className="bg-green-500 text-white text-5xl p-3 shadow-lg rounded-lg" />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Header and Filters */}
+      {/* Header and Stats */}
       <div className="mb-6">
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-4 gap-4">
-          <div className="flex-1">
-            <h2 className="text-xl font-semibold text-gray-800 dark:text-white flex items-center">
-              <FaReceipt className="mr-2 text-blue-600" />
-              {restaurant.name} - Orders Management
-            </h2>
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800 dark:text-white flex items-center">
+              <FaHistory className="mr-3 text-blue-600" />
+              My Order History
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400 mt-1">
+              Track and manage all your orders in one place
+            </p>
           </div>
-          <div className="flex gap-4 w-full md:w-auto">
-            <Button
-              outline
-              gradientDuoTone="purpleToBlue"
-              onClick={fetchOrders}
-              disabled={loading}
-              className="w-full md:w-auto"
-            >
-              <HiOutlineRefresh className={`mr-2 h-5 w-5 ${loading ? 'animate-spin' : ''}`} />
-              Refresh Orders
-            </Button>
-          </div>
+          <Button
+            outline
+            gradientDuoTone="purpleToBlue"
+            onClick={fetchOrders}
+            disabled={loading}
+          >
+            <HiOutlineRefresh className={`mr-2 h-5 w-5 ${loading ? 'animate-spin' : ''}`} />
+            Refresh Orders
+          </Button>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <Card>
+            <div className="flex justify-between items-center">
+              <div>
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                  Total Orders
+                </p>
+                <h5 className="text-xl font-bold text-gray-900 dark:text-white">
+                  {totalOrders}
+                </h5>
+              </div>
+              <div className="rounded-full p-3 bg-blue-100 dark:bg-blue-900">
+                <FaReceipt className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+              </div>
+            </div>
+          </Card>
+          <Card>
+            <div className="flex justify-between items-center">
+              <div>
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                  Active Orders
+                </p>
+                <h5 className="text-xl font-bold text-gray-900 dark:text-white">
+                  {activeOrders}
+                </h5>
+              </div>
+              <div className="rounded-full p-3 bg-yellow-100 dark:bg-yellow-900">
+                <HiOutlineClock className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
+              </div>
+            </div>
+          </Card>
+          <Card>
+            <div className="flex justify-between items-center">
+              <div>
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                  Completed Orders
+                </p>
+                <h5 className="text-xl font-bold text-gray-900 dark:text-white">
+                  {completedOrders}
+                </h5>
+              </div>
+              <div className="rounded-full p-3 bg-green-100 dark:bg-green-900">
+                <HiCheck className="h-6 w-6 text-green-600 dark:text-green-400" />
+              </div>
+            </div>
+          </Card>
         </div>
 
         {/* Enhanced Filter Section */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div className="col-span-1 md:col-span-2">
             <TextInput
               type="text"
-              placeholder="Search orders by ID, customer name, phone..."
+              placeholder="Search by restaurant, order ID, status..."
               value={searchTerm}
               onChange={handleSearchChange}
               icon={HiOutlineSearch}
@@ -478,74 +452,111 @@ export default function DashMyOrdersRestaurantManagement() {
       {/* Orders Display Section */}
       {loading ? (
         <LoadingSpinner />
+      ) : error ? (
+        <Alert color="failure">
+          <span className="font-medium">Error!</span> {error}
+        </Alert>
       ) : (
         <>
           {filteredOrders.length > 0 ? (
-            <div className="overflow-x-auto">
-              <Table>
-                <Table.Head>
-                  <Table.HeadCell>Customer</Table.HeadCell>
-                  <Table.HeadCell>Date</Table.HeadCell>
-                  <Table.HeadCell>Total</Table.HeadCell>
-                  <Table.HeadCell>Status</Table.HeadCell>
-                  <Table.HeadCell>Actions</Table.HeadCell>
-                </Table.Head>
-                <Table.Body className="divide-y">
-                  {displayOrders.map((order) => (
-                    <Table.Row
-                      key={order.id}
-                      className="bg-white dark:border-gray-700 dark:bg-gray-800"
-                    >
-                      <Table.Cell>
-                        <div className="flex flex-col">
-                          <span>{order.contactInfo.name}</span>
-                          <span className="text-xs text-gray-500">
-                            {order.contactInfo.phone}
+            <div className="space-y-6">
+              {/* Grid of order cards */}
+              <div className="grid gap-6">
+                {displayOrders.map((order) => (
+                  <Card key={order.id} className="overflow-hidden">
+                    <div className="flex flex-col md:flex-row justify-between gap-4">
+                      {/* Order basic info */}
+                      <div className="space-y-3 flex-1">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h5 className="text-lg font-bold tracking-tight text-gray-900 dark:text-white flex items-center gap-2">
+                              <FaReceipt className="text-blue-600" />
+                              {order.restaurant?.name || "Restaurant"}
+                            </h5>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                              Order #{order.id.substring(0, 8)}...
+                            </p>
+                          </div>
+                          <OrderStatusBadge status={order.status} />
+                        </div>
+                        
+                        <div className="flex items-center gap-2 text-sm">
+                          <FaRegCalendarAlt className="text-gray-500" />
+                          <span>{formatDate(order.createdAt)}</span>
+                        </div>
+                        
+                        <div className="flex gap-2 items-center">
+                          <span className="font-medium text-gray-500">Total:</span>
+                          <span className="font-bold text-lg">${order.total?.toFixed(2)}</span>
+                        </div>
+                        
+                        <div className="flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400">
+                          <HiOutlineLocationMarker />
+                          <span>
+                            {order.deliveryAddress?.street}, {order.deliveryAddress?.city}
                           </span>
                         </div>
-                      </Table.Cell>
-                      <Table.Cell>
-                        <div className="whitespace-nowrap">
-                          {formatDate(order.createdAt)}
+                        
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          <span className="text-sm text-gray-600 dark:text-gray-400">
+                            {order.items?.length || 0} {order.items?.length === 1 ? "item" : "items"}
+                          </span>
+                          {order.items?.slice(0, 2).map((item, i) => (
+                            <Badge key={i} color="light" className="text-xs">
+                              {item.quantity}x {item.name}
+                            </Badge>
+                          ))}
+                          {order.items && order.items.length > 2 && (
+                            <Badge color="light" className="text-xs">
+                              +{order.items.length - 2} more
+                            </Badge>
+                          )}
                         </div>
-                      </Table.Cell>
-                      <Table.Cell className="font-medium">
-                        ${order.total.toFixed(2)}
-                      </Table.Cell>
-                      <Table.Cell>
-                        <OrderStatusBadge status={order.status} />
-                      </Table.Cell>
-                      <Table.Cell>
-                        <div className="flex items-center space-x-2">
+                      </div>
+                      
+                      {/* Right side with action button */}
+                      <div className="flex flex-col justify-between items-end gap-4">
+                        <div className="text-sm text-right">
+                          <div className="text-gray-500">Estimated Time</div>
+                          <div className="font-medium">
+                            {getEstimatedDeliveryTime(order.status)}
+                          </div>
+                        </div>
+                        
+                        <div className="flex flex-col gap-2">
                           <Button
-                            size="xs"
-                            color="info"
+                            color="light"
                             onClick={() => openOrderDetails(order)}
+                            className="whitespace-nowrap"
                           >
-                            <HiOutlineEye className="mr-1 h-4 w-4" />
-                            View
+                            <HiOutlineEye className="mr-2 h-4 w-4" />
+                            View Details
                           </Button>
-
-                          {/* Using our new component here */}
-                          <UpdateOrderStatusDropdown 
-                            order={order}
-                            statusWorkflow={statusWorkflow}
-                            statusIcons={statusIcons}
-                            statusColors={statusColors}
-                            token={currentUser.token}
-                            onStatusUpdated={handleStatusUpdated}
-                            size="xs"
-                          />
+                          
+                          {/* For active orders, show a prominent "Track" button */}
+                          {["PENDING", "CONFIRMED", "PREPARING", "READY_FOR_PICKUP", "OUT_FOR_DELIVERY"].includes(
+                            order.status
+                          ) && (
+                            <Button
+                              gradientDuoTone="purpleToBlue"
+                              size="sm"
+                              onClick={() => openOrderDetails(order)}
+                              className="whitespace-nowrap"
+                            >
+                              <HiOutlineTruck className="mr-2 h-4 w-4" />
+                              Track Order
+                            </Button>
+                          )}
                         </div>
-                      </Table.Cell>
-                    </Table.Row>
-                  ))}
-                </Table.Body>
-              </Table>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
 
-              {/* ReactPaginate Pagination - Style matching menu items */}
+              {/* Pagination */}
               {filteredOrders.length > itemsPerPage && (
-                <div className="py-4 mt-4 border-t border-gray-200 dark:border-gray-700">
+                <div className="py-4 border-t border-gray-200 dark:border-gray-700">
                   <ReactPaginate
                     previousLabel={"Previous"}
                     nextLabel={"Next"}
@@ -579,13 +590,8 @@ export default function DashMyOrdersRestaurantManagement() {
               <p className="text-gray-500 dark:text-gray-400 mt-2">
                 {searchTerm || currentTab !== "all"
                   ? "No orders match your filter criteria."
-                  : "Your restaurant hasn't received any orders yet."}
+                  : "Your do not have any orders."}
               </p>
-              {(searchTerm || currentTab !== "all") && (
-                <Button color="light" className="mt-4" onClick={resetFilters}>
-                  Clear Filters
-                </Button>
-              )}
             </div>
           )}
         </>
@@ -600,40 +606,77 @@ export default function DashMyOrdersRestaurantManagement() {
           dismissible
         >
           <Modal.Header className="text-xl">
-            Order Details #{selectedOrder.id.substring(0, 8)}...
+            <div className="flex items-center">
+              <FaReceipt className="mr-2 text-blue-600" />
+              Order Details #{selectedOrder.id.substring(0, 8)}...
+            </div>
           </Modal.Header>
           <Modal.Body>
             <div className="space-y-6">
-              {/* Order Status and Actions with new visual timeline */}
-              <div>
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-                  <div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">
-                      Current Status
-                    </div>
-                    <OrderStatusBadge status={selectedOrder.status} />
+              {/* Order Status and Tracking */}
+              <Card className="mb-4">
+                <div className="flex flex-col md:flex-row justify-between">
+                  <div className="mb-4 md:mb-0">
+                    <h5 className="text-lg font-bold tracking-tight text-gray-900 dark:text-white flex items-center">
+                      <span className="mr-2">Order Status</span>
+                      <OrderStatusBadge status={selectedOrder.status} />
+                    </h5>
+                    <p className="font-normal text-gray-700 dark:text-gray-400 mt-2">
+                      {selectedOrder.status === "CANCELLED" ? (
+                        <span className="text-red-500">This order has been cancelled</span>
+                      ) : selectedOrder.status === "DELIVERED" ? (
+                        <span className="text-green-500">Order delivered successfully!</span>
+                      ) : (
+                        <>
+                          <span>Estimated time: </span>
+                          <span className="font-medium">{getEstimatedDeliveryTime(selectedOrder.status)}</span>
+                        </>
+                      )}
+                    </p>
                   </div>
-
-                  {/* Use our new component with showAsButton=true for better modal appearance */}
-                  <UpdateOrderStatusDropdown 
-                    order={selectedOrder}
-                    statusWorkflow={statusWorkflow}
-                    statusIcons={statusIcons}
-                    statusColors={statusColors}
-                    token={currentUser.token}
-                    onStatusUpdated={handleStatusUpdated}
-                    size="sm"
-                    showAsButton={true}
-                  />
+                  {selectedOrder.status !== "CANCELLED" && selectedOrder.status !== "DELIVERED" && (
+                    <div className="flex items-center">
+                      <HiOutlineClock className="text-blue-500 mr-2" />
+                      <span className="text-sm font-medium">
+                        Order placed: {formatDate(selectedOrder.createdAt)}
+                      </span>
+                    </div>
+                  )}
                 </div>
                 
-                {/* Visual timeline of order status */}
-                <div className="mt-4 mb-2 relative pt-6 pb-2">
+                <div className="mt-4">
                   <OrderStatusTimeline status={selectedOrder.status} />
                 </div>
-              </div>
+              </Card>
 
-              {/* Order Info and Customer */}
+              {/* Restaurant Info */}
+              <Card>
+                <h5 className="text-lg font-bold tracking-tight text-gray-900 dark:text-white mb-2 flex items-center">
+                  <FaUtensils className="mr-2" />
+                  Restaurant Information
+                </h5>
+                <div className="text-sm space-y-2">
+                  <div className="font-medium text-lg">
+                    {selectedOrder.restaurant?.name || "Restaurant"}
+                  </div>
+                  {selectedOrder.restaurant?.address && (
+                    <div className="flex items-center gap-1">
+                      <HiOutlineLocationMarker className="text-gray-500" />
+                      <span>
+                        {selectedOrder.restaurant.address.street}, {selectedOrder.restaurant.address.city}
+                      </span>
+                    </div>
+                  )}
+                  {selectedOrder.restaurant?.phone && (
+                    <div className="flex items-center gap-1">
+                      <HiOutlinePhone className="text-gray-500" />
+                      <span>{selectedOrder.restaurant.phone}</span>
+                    </div>
+                  )}
+                </div>
+              </Card>
+
+              {/* Order Info and Delivery */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <Card>
                   <h5 className="text-lg font-bold tracking-tight text-gray-900 dark:text-white mb-2 flex items-center">
@@ -679,49 +722,41 @@ export default function DashMyOrdersRestaurantManagement() {
 
                 <Card>
                   <h5 className="text-lg font-bold tracking-tight text-gray-900 dark:text-white mb-2 flex items-center">
-                    <HiOutlineUser className="mr-2" />
-                    Customer Information
+                    <HiOutlineLocationMarker className="mr-2" />
+                    Delivery Details
                   </h5>
                   <div className="space-y-3 text-sm">
-                    <div className="flex items-center gap-2">
-                      <HiOutlineUser className="text-gray-500" />
-                      <span>{selectedOrder.contactInfo.name}</span>
+                    <div>
+                      <div className="font-medium">Delivery Address:</div>
+                      <div>{selectedOrder.deliveryAddress?.street}</div>
+                      <div>
+                        {selectedOrder.deliveryAddress?.city},{" "}
+                        {selectedOrder.deliveryAddress?.state}{" "}
+                        {selectedOrder.deliveryAddress?.zipCode}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <HiOutlinePhone className="text-gray-500" />
-                      <span>{selectedOrder.contactInfo.phone}</span>
+                    <div>
+                      <div className="font-medium">Contact:</div>
+                      <div className="flex items-center gap-1">
+                        <HiOutlineUser className="text-gray-500" />
+                        <span>{selectedOrder.contactInfo?.name}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <HiOutlinePhone className="text-gray-500" />
+                        <span>{selectedOrder.contactInfo?.phone}</span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <HiOutlineMail className="text-gray-500" />
-                      <span>{selectedOrder.contactInfo.email}</span>
-                    </div>
+                    {selectedOrder.deliveryInstructions && (
+                      <div className="mt-2 p-2 bg-gray-50 dark:bg-gray-700 rounded text-sm">
+                        <div className="font-medium">Delivery Instructions:</div>
+                        <div className="italic">
+                          {selectedOrder.deliveryInstructions}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </Card>
               </div>
-
-              {/* Delivery Address */}
-              <Card>
-                <h5 className="text-lg font-bold tracking-tight text-gray-900 dark:text-white mb-2 flex items-center">
-                  <HiOutlineLocationMarker className="mr-2" />
-                  Delivery Address
-                </h5>
-                <div className="text-sm">
-                  <div>{selectedOrder.deliveryAddress.street}</div>
-                  <div>
-                    {selectedOrder.deliveryAddress.city},{" "}
-                    {selectedOrder.deliveryAddress.state}{" "}
-                    {selectedOrder.deliveryAddress.zipCode}
-                  </div>
-                </div>
-                {selectedOrder.deliveryInstructions && (
-                  <div className="mt-2 p-2 bg-gray-50 dark:bg-gray-700 rounded text-sm">
-                    <div className="font-medium">Delivery Instructions:</div>
-                    <div className="italic">
-                      {selectedOrder.deliveryInstructions}
-                    </div>
-                  </div>
-                )}
-              </Card>
 
               {/* Order Items */}
               <Card>
@@ -738,30 +773,25 @@ export default function DashMyOrdersRestaurantManagement() {
                       <Table.HeadCell>Total</Table.HeadCell>
                     </Table.Head>
                     <Table.Body className="divide-y">
-                      {selectedOrder.items.map((item, index) => (
+                      {selectedOrder.items?.map((item, index) => (
                         <Table.Row key={index}>
                           <Table.Cell className="font-medium">
                             {item.name}
+                            {item.addOns && item.addOns.length > 0 && (
+                              <div className="text-xs text-gray-500 mt-1">
+                                {item.addOns.map((addon, i) => (
+                                  <div key={i}>+ {addon.name}</div>
+                                ))}
+                              </div>
+                            )}
                           </Table.Cell>
-                          <Table.Cell>${item.price.toFixed(2)}</Table.Cell>
+                          <Table.Cell>${item.price?.toFixed(2)}</Table.Cell>
                           <Table.Cell>{item.quantity}</Table.Cell>
                           <Table.Cell className="font-medium">
-                            ${item.itemTotal.toFixed(2)}
+                            ${item.itemTotal?.toFixed(2)}
                           </Table.Cell>
                         </Table.Row>
                       ))}
-                      {selectedOrder.items.some(
-                        (item) => item.addOns && item.addOns.length > 0
-                      ) && (
-                        <Table.Row>
-                          <Table.Cell
-                            colSpan={4}
-                            className="bg-gray-50 dark:bg-gray-700 text-sm"
-                          >
-                            Add-ons included in item prices
-                          </Table.Cell>
-                        </Table.Row>
-                      )}
                     </Table.Body>
                   </Table>
                 </div>
@@ -772,34 +802,58 @@ export default function DashMyOrdersRestaurantManagement() {
                     <span className="text-gray-600 dark:text-gray-400">
                       Subtotal:
                     </span>
-                    <span>${selectedOrder.subtotal.toFixed(2)}</span>
+                    <span>${selectedOrder.subtotal?.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600 dark:text-gray-400">
                       Tax:
                     </span>
-                    <span>${selectedOrder.taxAmount.toFixed(2)}</span>
+                    <span>${selectedOrder.taxAmount?.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600 dark:text-gray-400">
                       Delivery Fee:
                     </span>
-                    <span>${selectedOrder.deliveryFee.toFixed(2)}</span>
+                    <span>${selectedOrder.deliveryFee?.toFixed(2)}</span>
                   </div>
                   {selectedOrder.discount > 0 && (
                     <div className="flex justify-between text-sm text-green-600 dark:text-green-400">
                       <span>Discount:</span>
-                      <span>-${selectedOrder.discount.toFixed(2)}</span>
+                      <span>-${selectedOrder.discount?.toFixed(2)}</span>
                     </div>
                   )}
                   <div className="flex justify-between font-bold text-lg mt-1 pt-1 border-t border-gray-200 dark:border-gray-700">
                     <span>Total:</span>
                     <span className="text-blue-600 dark:text-blue-400">
-                      ${selectedOrder.total.toFixed(2)}
+                      ${selectedOrder.total?.toFixed(2)}
                     </span>
                   </div>
                 </div>
               </Card>
+              
+              {/* Help section - only show for active orders */}
+              {["PENDING", "CONFIRMED", "PREPARING", "READY_FOR_PICKUP", "OUT_FOR_DELIVERY"].includes(selectedOrder.status) && (
+                <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 flex gap-3 items-start">
+                  <HiInformationCircle className="text-blue-500 text-xl flex-shrink-0 mt-1" />
+                  <div>
+                    <h3 className="font-medium text-blue-700 dark:text-blue-400">
+                      Need help with this order?
+                    </h3>
+                    <p className="text-sm text-blue-600 dark:text-blue-300 mt-1">
+                      If you need to modify or cancel this order, please contact the restaurant directly 
+                      as soon as possible. For delivery issues, use our customer support.
+                    </p>
+                    <div className="flex gap-3 mt-3">
+                      <Button size="xs" outline gradientDuoTone="cyanToBlue">
+                        Contact Restaurant
+                      </Button>
+                      <Button size="xs" outline gradientDuoTone="purpleToPink">
+                        Customer Support
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </Modal.Body>
           <Modal.Footer>
@@ -809,6 +863,11 @@ export default function DashMyOrdersRestaurantManagement() {
             >
               Close
             </Button>
+            {selectedOrder.status === "DELIVERED" && (
+              <Button color="light">
+                Reorder
+              </Button>
+            )}
           </Modal.Footer>
         </Modal>
       )}
