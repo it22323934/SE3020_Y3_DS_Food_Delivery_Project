@@ -9,7 +9,7 @@ import React, { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { signOutSuccess } from "../redux/user/userSlice";
 import { useDispatch, useSelector } from "react-redux";
-import { FaStore, FaTag, FaUtensils } from "react-icons/fa";
+import { FaReceipt, FaStore, FaTag, FaUtensils } from "react-icons/fa";
 import { GiCook } from "react-icons/gi";
 import { MdRestaurantMenu } from "react-icons/md";
 import { authService } from "../service/authService";
@@ -156,6 +156,16 @@ export default function DashSideBar() {
                   as="div"
                 >
                   My Restaurant
+                </Sidebar.Item>
+              </Link>
+              <Link to="/dashboard?tab=my-restaurant-orders">
+                <Sidebar.Item
+                  active={tab === "my-restaurant-orders"}
+                  icon={FaReceipt} // Changed from FaStore to FaReceipt
+                  labelColor="dark"
+                  as="div"
+                >
+                  My Orders
                 </Sidebar.Item>
               </Link>
             </>

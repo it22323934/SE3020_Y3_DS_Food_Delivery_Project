@@ -9,20 +9,6 @@
         <outputRelativeToContentRoot value="true" />
         <module name="DeliveryLocationService" />
       </profile>
-      <profile name="Annotation profile for restaurantService" enabled="true">
-        <sourceOutputDir name="target/generated-sources/annotations" />
-        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
-        <outputRelativeToContentRoot value="true" />
-        <processorPath useClasspath="false">
-          <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.30/lombok-1.18.30.jar" />
-        </processorPath>
-        <module name="deliveryService" />
-        <module name="paymentService" />
-        <module name="restaurantService" />
-        <module name="orderService" />
-        <module name="apiGateway" />
-        <module name="userService" />
-      </profile>
       <profile name="Annotation profile for notificationService" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
@@ -43,6 +29,20 @@
         <module name="Delivery-Driver" />
         <module name="DriverOrderService" />
         <module name="Delivery_Replication" />
+      </profile>
+      <profile name="Annotation profile for orderService" enabled="true">
+        <sourceOutputDir name="target/generated-sources/annotations" />
+        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
+        <outputRelativeToContentRoot value="true" />
+        <processorPath useClasspath="false">
+          <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.30/lombok-1.18.30.jar" />
+        </processorPath>
+        <module name="deliveryService" />
+        <module name="apiGateway" />
+        <module name="paymentService" />
+        <module name="orderService" />
+        <module name="restaurantService" />
+        <module name="userService" />
       </profile>
     </annotationProcessing>
   </component>
