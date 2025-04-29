@@ -15,8 +15,10 @@ import UserLocationViewer from "../components/UserLocationViewer";
 import AllOrders from "../components/AllOrders";
 
 import DashPromotionManagement from "../components/DashPromotionManagement";
-import DashRestaurant from "../components/DashRestaurant";
-import DashMenuManagement from "../components/DashMenuManagement";
+import DashMyOrdersRestaurantManagement from "../components/DashMyOrdersRestaurantManagement";
+import UserOrdersHistory from "../components/UserOrdersHistory";
+// import DashRestaurant from "../components/DashRestaurant";
+// import DashMenuManagement from "../components/DashMenuManagement";
 export default function Dashboard() {
   const location = useLocation();
   const [tab, setTab] = useState("");
@@ -56,10 +58,12 @@ export default function Dashboard() {
       {tab === "Order-Location" && <UserLocationViewer />}
       {tab === "AllOrders" && <AllOrders />}
 
-
-
       {/** <DashPromotionManagement/> */}
       {tab === "promotion-management" && <DashPromotionManagement />}
+      {/** <DashMyOrders/> */}
+      {tab === "my-restaurant-orders" && <DashMyOrdersRestaurantManagement />}
+      {/** <DashMyUserOrders/> */}
+      {tab === "my-user-restaurant-orders" && <UserOrdersHistory />}
     </div>
   );
 }

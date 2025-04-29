@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useSelector } from "react-redux";
 import {
   Button,
@@ -9,6 +9,8 @@ import {
   TextInput,
   Dropdown,
   Alert,
+  Modal,
+  Tooltip,
 } from "flowbite-react";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -20,6 +22,8 @@ import {
   HiOutlineEye,
   HiFilter,
   HiInformationCircle,
+  HiOutlineDownload,
+  HiOutlineDocumentReport,
 } from "react-icons/hi";
 import {
   FaUtensils,
@@ -27,6 +31,10 @@ import {
   FaListAlt,
   FaEye,
   FaDollarSign,
+  FaFileDownload,
+  FaFileExcel,
+  FaFilePdf,
+  FaFileCsv,
 } from "react-icons/fa";
 import { restaurantService } from "../service/restaurantService";
 import ReactPaginate from "react-paginate";
@@ -36,7 +44,7 @@ import { menuCategoryService } from "../service/menuCategoryService";
 import { menuItemService } from "../service/menuItemService";
 import DeleteMenuItemModal from "./sub-components/menu-item-management/DeleteMenuItemModal";
 import UpdateMenuItemModal from "./sub-components/menu-item-management/UpdateMenuItemModal";
-import LoadingSpinner from "./LoadingSpinner"; // Import the LoadingSpinner component
+import LoadingSpinner from "./LoadingSpinner";
 
 export default function DashMenuItems() {
   const { currentUser } = useSelector((state) => state.user);
@@ -51,12 +59,15 @@ export default function DashMenuItems() {
   const [showViewModal, setShowViewModal] = useState(false);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showDownloadModal, setShowDownloadModal] = useState(false);
   const [selectedMenuItem, setSelectedMenuItem] = useState(null);
   const [categories, setCategories] = useState([]);
   const [pageNumber, setPageNumber] = useState(0);
   const [totalMenuItems, setTotalMenuItems] = useState(0);
   const [availableItems, setAvailableItems] = useState(0);
-  const itemsPerPage = 5; // Changed to match the category management component
+  const [downloadFormat, setDownloadFormat] = useState("csv");
+  const [downloadLoading, setDownloadLoading] = useState(false);
+  const itemsPerPage = 5;
 
   const pageCount = Math.ceil(filteredMenuItems.length / itemsPerPage);
   const displayMenuItems = filteredMenuItems.slice(
@@ -83,9 +94,9 @@ export default function DashMenuItems() {
     }
   }, [restaurant]);
 
-  // Apply filters and search
-  useEffect(() => {
-    if (!menuItems.length) return;
+  // Apply filters and search - Optimized with useMemo
+  const filterMenuItems = useMemo(() => {
+    if (!menuItems || !menuItems.length) return [];
 
     let results = [...menuItems];
 
@@ -111,9 +122,14 @@ export default function DashMenuItems() {
       results = results.filter((item) => !item.available);
     }
 
-    setFilteredMenuItems(results);
-    setPageNumber(0);
-  }, [search, categoryFilter, availabilityFilter, menuItems]);
+    return results;
+  }, [menuItems, search, categoryFilter, availabilityFilter]);
+
+  // Update filtered items when filters change
+  useEffect(() => {
+    setFilteredMenuItems(filterMenuItems);
+    setPageNumber(0); // Reset to first page when filters change
+  }, [filterMenuItems]);
 
   const fetchUserRestaurant = async () => {
     try {
@@ -126,7 +142,7 @@ export default function DashMenuItems() {
       if (response.ok) {
         const data = await response.json();
         if (data && data.length > 0) {
-          setRestaurant(data[0]); // Assuming the user is associated with one restaurant
+          setRestaurant(data[0]);
         } else {
           toast.info(
             "You don't have any restaurants assigned to you. Please contact the system administrator."
@@ -154,10 +170,10 @@ export default function DashMenuItems() {
       );
       if (response.ok) {
         const data = await response.json();
-        setMenuItems(data);
-        setFilteredMenuItems(data);
-        setTotalMenuItems(data.length);
-        setAvailableItems(data.filter((item) => item.available).length);
+        setMenuItems(data || []);
+        setFilteredMenuItems(data || []);
+        setTotalMenuItems(data?.length || 0);
+        setAvailableItems(data?.filter((item) => item.available)?.length || 0);
       } else {
         const errorData = await response.json();
         toast.warning(errorData.error || "No menu items found");
@@ -275,6 +291,82 @@ export default function DashMenuItems() {
     setAvailabilityFilter("");
   };
 
+  // New function to handle download modal
+  const handleDownloadClick = () => {
+    setShowDownloadModal(true);
+  };
+
+  // Download functionality - Simulated with a delay
+  const handleDownload = async () => {
+    try {
+      setDownloadLoading(true);
+      
+      // Get items to download - either filtered or all
+      const itemsToExport = filteredMenuItems.length > 0 ? filteredMenuItems : menuItems;
+      
+      // Get category name for the file name
+      let categoryName = "all-menu-items";
+      if (categoryFilter) {
+        const selectedCategory = categories.find(c => c.id === categoryFilter);
+        if (selectedCategory) {
+          categoryName = selectedCategory.name.toLowerCase().replace(/\s+/g, '-');
+        }
+      }
+
+      // Create filename based on restaurant, category and format
+      const timestamp = new Date().toISOString().split('T')[0];
+      const fileName = `${restaurant?.name || 'restaurant'}-${categoryName}-${timestamp}.${downloadFormat}`;
+      
+      // Simulate download process with a delay
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // Format data based on selected format
+      let fileContent = '';
+      let fileType = '';
+      let dataUri = '';
+      
+      if (downloadFormat === 'csv') {
+        // Create CSV content
+        const headers = 'Name,Price,Category,Description,Availability\n';
+        const rows = itemsToExport.map(item => {
+          const category = categories.find(c => c.id === item.categoryId)?.name || 'Uncategorized';
+          return `"${item.name}",${item.price},"${category}","${item.description || ''}",${item.available ? 'Available' : 'Unavailable'}`;
+        }).join('\n');
+        
+        fileContent = headers + rows;
+        fileType = 'text/csv';
+      } else if (downloadFormat === 'json') {
+        // Create JSON with category names included
+        const formattedData = itemsToExport.map(item => ({
+          ...item,
+          categoryName: categories.find(c => c.id === item.categoryId)?.name || 'Uncategorized'
+        }));
+        
+        fileContent = JSON.stringify(formattedData, null, 2);
+        fileType = 'application/json';
+      }
+      
+      // Create download link
+      dataUri = `data:${fileType};charset=utf-8,${encodeURIComponent(fileContent)}`;
+      
+      // Create temporary link element and trigger download
+      const link = document.createElement('a');
+      link.href = dataUri;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      toast.success(`Menu items exported successfully as ${downloadFormat.toUpperCase()}`);
+      setShowDownloadModal(false);
+    } catch (error) {
+      console.error("Error exporting menu items:", error);
+      toast.error(`Export failed: ${error.message}`);
+    } finally {
+      setDownloadLoading(false);
+    }
+  };
+
   if (loading && !restaurant) {
     return <LoadingSpinner />;
   }
@@ -295,7 +387,7 @@ export default function DashMenuItems() {
     <div className="table-auto overflow-x-scroll md:mx-auto p-3 scrollbar scrollbar-track-slate-100 scrollbar-thumb-slate-300 dark:scrollbar-track-slate-700 dark:scrollbar-thumb-slate-500">
       <ToastContainer position="top-right" autoClose={3000} />
 
-      {/* Stats Cards - Similar to the category management component */}
+      {/* Stats Cards */}
       <div className="p-3 md:mx-auto">
         <div className="flex-wrap flex gap-4 justify-center">
           <div className="flex flex-col p-3 dark:bg-slate-800 gap-4 md:w-72 w-full rounded-md shadow-md">
@@ -352,6 +444,18 @@ export default function DashMenuItems() {
             >
               <HiPlusCircle className="mr-2 h-5 w-5" />
               Add New Item
+            </Button>
+            
+            {/* New Download Button */}
+            <Button
+              outline
+              gradientDuoTone="purpleToBlue"
+              onClick={handleDownloadClick}
+              className="w-full md:w-auto"
+              disabled={!menuItems.length}
+            >
+              <HiOutlineDownload className="mr-2 h-5 w-5" />
+              Export Menu
             </Button>
           </div>
         </div>
@@ -481,7 +585,7 @@ export default function DashMenuItems() {
                       <Table.Cell className="font-medium text-gray-900 dark:text-white">
                         {item.name}
                       </Table.Cell>
-                      <Table.Cell>${item.price.toFixed(2)}</Table.Cell>
+                      <Table.Cell>${item.price?.toFixed(2) || "0.00"}</Table.Cell>
                       <Table.Cell>
                         {categories.find((c) => c.id === item.categoryId)
                           ?.name || "Uncategorized"}
@@ -536,7 +640,7 @@ export default function DashMenuItems() {
                 </Table.Body>
               </Table>
 
-              {/* Pagination - Styled exactly like the category management component */}
+              {/* Pagination */}
               {filteredMenuItems.length > 0 && pageCount > 1 && (
                 <div className="py-4 mt-4 border-t border-gray-200 dark:border-gray-700">
                   <ReactPaginate
@@ -557,6 +661,26 @@ export default function DashMenuItems() {
                   />
                 </div>
               )}
+              
+              {/* Download summary card */}
+              <Card className="mt-6">
+                <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+                  <div>
+                    <h3 className="text-lg font-medium">Menu Export Options</h3>
+                    <p className="text-gray-500 text-sm mt-1">
+                      Export your menu items in different formats for inventory, printing or integrations
+                    </p>
+                  </div>
+                  <Button 
+                    gradientDuoTone="purpleToBlue"
+                    onClick={handleDownloadClick}
+                    className="w-full sm:w-auto"
+                  >
+                    <HiOutlineDownload className="mr-2 h-5 w-5" />
+                    Export Menu Items
+                  </Button>
+                </div>
+              </Card>
             </div>
           ) : (
             <div className="text-center py-10">
@@ -587,7 +711,7 @@ export default function DashMenuItems() {
         </>
       )}
 
-      {/* Modals - No change needed here */}
+      {/* Modals */}
       <CreateMenuItemModal
         show={showCreateModal}
         onClose={() => setShowCreateModal(false)}
@@ -597,7 +721,6 @@ export default function DashMenuItems() {
         categories={categories}
       />
 
-      {/* View Menu Item Modal */}
       <ViewMenuItemModal
         show={showViewModal}
         onClose={() => setShowViewModal(false)}
@@ -608,7 +731,6 @@ export default function DashMenuItems() {
         }
       />
 
-      {/* Delete Menu Item Modal */}
       <DeleteMenuItemModal
         show={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
@@ -625,6 +747,114 @@ export default function DashMenuItems() {
         token={currentUser.token}
         categories={categories}
       />
+      
+      {/* Download Modal */}
+      <Modal
+        show={showDownloadModal}
+        onClose={() => !downloadLoading && setShowDownloadModal(false)}
+        dismissible={!downloadLoading}
+      >
+        <Modal.Header>
+          Export Menu Items
+        </Modal.Header>
+        <Modal.Body>
+          <div className="space-y-6">
+            <p className="text-gray-700 dark:text-gray-300">
+              Export your menu items to use in other applications or for record keeping.
+              {categoryFilter && (
+                <span className="block mt-2 font-medium">
+                  Currently exporting items from category: {categories.find(c => c.id === categoryFilter)?.name || "Selected Category"}
+                </span>
+              )}
+            </p>
+            
+            {/* Export format selection */}
+            <div>
+              <label className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
+                Select export format:
+              </label>
+              <div className="flex flex-wrap gap-4 mt-3">
+                <div 
+                  className={`flex items-center gap-2 p-3 border rounded-lg cursor-pointer transition-colors
+                    ${downloadFormat === 'csv' 
+                      ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/30' 
+                      : 'border-gray-200 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800'}
+                  `}
+                  onClick={() => setDownloadFormat('csv')}
+                >
+                  <FaFileCsv size={24} className={downloadFormat === 'csv' ? 'text-blue-600' : 'text-gray-500'} />
+                  <div>
+                    <div className={`font-medium ${downloadFormat === 'csv' ? 'text-blue-600 dark:text-blue-400' : ''}`}>CSV Format</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">Compatible with Excel, Google Sheets</div>
+                  </div>
+                </div>
+                
+                <div 
+                  className={`flex items-center gap-2 p-3 border rounded-lg cursor-pointer transition-colors
+                    ${downloadFormat === 'json' 
+                      ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/30' 
+                      : 'border-gray-200 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800'}
+                  `}
+                  onClick={() => setDownloadFormat('json')}
+                >
+                  <FaFileDownload size={24} className={downloadFormat === 'json' ? 'text-blue-600' : 'text-gray-500'} />
+                  <div>
+                    <div className={`font-medium ${downloadFormat === 'json' ? 'text-blue-600 dark:text-blue-400' : ''}`}>JSON Format</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">For developers and API integrations</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Stats summary */}
+            <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+              <h4 className="font-medium mb-2">Export Summary</h4>
+              <ul className="space-y-1 text-sm">
+                <li className="flex justify-between">
+                  <span>Items to export:</span>
+                  <span className="font-medium">{filteredMenuItems.length || menuItems.length}</span>
+                </li>
+                <li className="flex justify-between">
+                  <span>Categories included:</span>
+                  <span className="font-medium">
+                    {categoryFilter ? '1' : categories.length || '0'}
+                  </span>
+                </li>
+                <li className="flex justify-between">
+                  <span>Format:</span>
+                  <span className="font-medium uppercase">{downloadFormat}</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button
+            gradientDuoTone="purpleToBlue"
+            onClick={handleDownload}
+            disabled={downloadLoading}
+          >
+            {downloadLoading ? (
+              <>
+                <Spinner size="sm" className="mr-2" />
+                Preparing Download...
+              </>
+            ) : (
+              <>
+                <HiOutlineDownload className="mr-2 h-5 w-5" />
+                Download {downloadFormat.toUpperCase()}
+              </>
+            )}
+          </Button>
+          <Button 
+            color="gray" 
+            onClick={() => setShowDownloadModal(false)}
+            disabled={downloadLoading}
+          >
+            Cancel
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </div>
   );
 }

@@ -39,13 +39,13 @@ export default function Home() {
   const [userLocation, setUserLocation] = useState(null);
   const [locationLoading, setLocationLoading] = useState(false);
   const [locationError, setLocationError] = useState(null);
-  const [distanceRadius, setDistanceRadius] = useState(5); 
+  const [distanceRadius, setDistanceRadius] = useState(5);
   const [showNearby, setShowNearby] = useState(false);
   const [nearbyRestaurants, setNearbyRestaurants] = useState([]);
-  
+
   // New state variables for UI enhancements
   const [showMobileFilters, setShowMobileFilters] = useState(false);
-  
+
   const navigate = useNavigate();
   const { currentUser } = useSelector((state) => state.user);
   const isLoggedIn = !!currentUser;
@@ -300,7 +300,7 @@ export default function Home() {
     navigate("/sign-up");
   };
 
-return (
+  return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
       {/* Enhanced Hero Header Section */}
       <header className="relative bg-gradient-to-r from-orange-500 to-red-600 dark:from-orange-700 dark:to-red-800">
@@ -339,7 +339,6 @@ return (
             </div>
           </div>
         </div>
-        
       </header>
 
       <main className="container mx-auto px-4 py-8 relative z-10">
@@ -390,21 +389,30 @@ return (
 
         {/* Mobile Filters Toggle - Only on Small Screens */}
         <div className="md:hidden mb-4">
-          <Button 
-            fullSized 
-            color="light" 
-            className="flex items-center justify-center" 
+          <Button
+            fullSized
+            color="light"
+            className="flex items-center justify-center"
             onClick={() => setShowMobileFilters(!showMobileFilters)}
           >
             <FaFilter className="mr-2" />
-            Filters {showMobileFilters ? <FaAngleUp className="ml-2" /> : <FaAngleDown className="ml-2" />}
+            Filters{" "}
+            {showMobileFilters ? (
+              <FaAngleUp className="ml-2" />
+            ) : (
+              <FaAngleDown className="ml-2" />
+            )}
           </Button>
         </div>
 
         {/* Two-column Layout for Desktop, Stack for Mobile */}
         <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-4 gap-8">
           {/* Filters Sidebar - Left Side on Desktop, Collapsible on Mobile */}
-          <div className={`md:col-span-1 ${showMobileFilters ? 'block' : 'hidden md:block'}`}>
+          <div
+            className={`md:col-span-1 ${
+              showMobileFilters ? "block" : "hidden md:block"
+            }`}
+          >
             <div className="sticky top-4 bg-white dark:bg-gray-800 shadow-md rounded-lg p-5 space-y-6">
               <h2 className="text-xl font-bold text-gray-900 dark:text-white border-b pb-3 border-gray-200 dark:border-gray-700">
                 Filters
@@ -420,7 +428,9 @@ return (
                     {cuisines.map((cuisine) => (
                       <Button
                         key={cuisine.id}
-                        color={selectedCuisine === cuisine.id ? "success" : "light"}
+                        color={
+                          selectedCuisine === cuisine.id ? "success" : "light"
+                        }
                         size="xs"
                         pill={true}
                         onClick={() => handleCuisineChange(cuisine.id)}
@@ -487,7 +497,9 @@ return (
                     min="1"
                     max="20"
                     value={distanceRadius}
-                    onChange={(e) => handleRadiusChange(parseInt(e.target.value))}
+                    onChange={(e) =>
+                      handleRadiusChange(parseInt(e.target.value))
+                    }
                     className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer"
                   />
                   <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1">
@@ -504,14 +516,53 @@ return (
           <div className="md:col-span-3">
             {/* Loading State */}
             {loading && (
-              <div className="flex justify-center items-center py-16 bg-white dark:bg-gray-800 rounded-lg shadow">
-                <Spinner size="xl" className="text-blue-600 dark:text-blue-400" />
-                <span className="ml-3 text-gray-700 dark:text-gray-300 text-lg">
-                  Loading restaurants...
-                </span>
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-48 animate-pulse"></div>
+                  <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-24 animate-pulse"></div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                  {[...Array(6)].map((_, index) => (
+                    <div
+                      key={index}
+                      className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden flex flex-col h-full"
+                    >
+                      {/* Skeleton Image */}
+                      <div className="w-full h-48 bg-gray-300 dark:bg-gray-700 animate-pulse"></div>
+
+                      {/* Skeleton Content */}
+                      <div className="p-4 flex-grow flex flex-col">
+                        <div className="flex justify-between items-start mb-2">
+                          <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-3/4 animate-pulse"></div>
+                          <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded-full w-10 animate-pulse"></div>
+                        </div>
+
+                        {/* Skeleton Tags */}
+                        <div className="flex flex-wrap gap-1 mt-1 mb-2">
+                          <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-16 animate-pulse"></div>
+                          <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-20 animate-pulse"></div>
+                          <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-14 animate-pulse"></div>
+                        </div>
+
+                        {/* Skeleton Description */}
+                        <div className="space-y-2 mb-3 flex-grow">
+                          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full animate-pulse"></div>
+                          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-5/6 animate-pulse"></div>
+                        </div>
+
+                        <div className="mt-auto pt-3 border-t border-gray-100 dark:border-gray-700">
+                          {/* Skeleton Address */}
+                          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-4/5 animate-pulse mb-2"></div>
+                          {/* Skeleton Delivery Time */}
+                          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-2/3 animate-pulse"></div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
-
             {/* Error State */}
             {error && (
               <Alert color="failure" className="mb-6">
@@ -534,7 +585,11 @@ return (
                     : "There are no restaurants available at the moment"}
                 </p>
                 {searchQuery && (
-                  <Button color="light" className="mt-4" onClick={() => setSearchQuery("")}>
+                  <Button
+                    color="light"
+                    className="mt-4"
+                    onClick={() => setSearchQuery("")}
+                  >
                     Clear Search
                   </Button>
                 )}
@@ -544,7 +599,10 @@ return (
             {/* Results Summary */}
             {!loading && !error && filteredRestaurants.length > 0 && (
               <div className="mb-4 text-gray-700 dark:text-gray-300">
-                Showing {filteredRestaurants.length} {filteredRestaurants.length === 1 ? 'restaurant' : 'restaurants'}
+                Showing {filteredRestaurants.length}{" "}
+                {filteredRestaurants.length === 1
+                  ? "restaurant"
+                  : "restaurants"}
                 {selectedCuisine && " (filtered by cuisine)"}
                 {showNearby && " near you"}
               </div>
@@ -588,11 +646,13 @@ return (
                         <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm">
                           <div className="bg-black bg-opacity-80 p-3 rounded-lg shadow-lg text-white text-center">
                             <FaLock className="mx-auto text-xl mb-1" />
-                            <span className="font-medium">Login to view details</span>
+                            <span className="font-medium">
+                              Login to view details
+                            </span>
                           </div>
                         </div>
                       )}
-                      
+
                       {/* Distance Badge - If available */}
                       {isLoggedIn && distance !== null && (
                         <div className="absolute top-3 right-3 bg-blue-600 text-white px-2 py-1 rounded-full text-xs font-medium shadow-lg">
@@ -631,14 +691,16 @@ return (
                               {cuisine.name}
                             </Badge>
                           ))}
-                        {restaurant.cuisineTypes && restaurant.cuisineTypes.length > 3 && (
-                          <Badge color="gray" className="px-2 py-1" size="xs">
-                            +{restaurant.cuisineTypes.length - 3} more
-                          </Badge>
-                        )}
+                        {restaurant.cuisineTypes &&
+                          restaurant.cuisineTypes.length > 3 && (
+                            <Badge color="gray" className="px-2 py-1" size="xs">
+                              +{restaurant.cuisineTypes.length - 3} more
+                            </Badge>
+                          )}
                         {!isLoggedIn && (
                           <span className="text-sm text-gray-500">
-                            <FaLock className="inline mr-1" /> Login to view cuisine types
+                            <FaLock className="inline mr-1" /> Login to view
+                            cuisine types
                           </span>
                         )}
                       </div>
@@ -655,14 +717,19 @@ return (
                         {restaurant.address && (
                           <div className="flex items-center text-sm text-gray-500 dark:text-gray-400 mb-1">
                             <FaMapMarkerAlt className="mr-1 flex-shrink-0" />
-                            <span className="truncate">{restaurant.address}</span>
+                            <span className="truncate">
+                              {restaurant.address}
+                            </span>
                           </div>
                         )}
 
                         {/* Delivery Time */}
                         <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
                           <FaClock className="mr-1 flex-shrink-0" />
-                          <span>{restaurant.deliveryTime || "30-45"} min delivery time</span>
+                          <span>
+                            {restaurant.deliveryTime || "30-45"} min delivery
+                            time
+                          </span>
                         </div>
                       </div>
 
