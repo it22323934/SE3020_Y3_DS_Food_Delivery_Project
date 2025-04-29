@@ -106,6 +106,7 @@ export default function Header() {
         <Navbar.Link active={path === "/contact-us"} as={"div"}>
           <Link to="/contact-us">Contact Us</Link>
         </Navbar.Link>
+      
       </Navbar.Collapse>
     </Navbar>
   );

@@ -49,6 +49,7 @@ export default function DashSideBar() {
 
   // Helper function to check if user has a specific role
   const hasRole = (role) => {
+    console.log(currentUser?.username); // 👉 This will print "Doe"
     return currentUser?.roles?.includes(role);
   };
 
@@ -58,7 +59,10 @@ export default function DashSideBar() {
 
     if (hasRole("ROLE_ADMIN")) return "Admin";
     if (hasRole("ROLE_RESTAURANT_ADMIN")) return "Restaurant Admin";
-    if (hasRole("ROLE_DRIVER")) return "Driver";
+ //   if (hasRole("ROLE_DRIVER")) return "Driver";
+    if (hasRole("ROLE_DELIVERY_PERSONNEL")) return "Driver";
+    if (hasRole("ROLE_CUSTOMER")) return "User";
+
     return "User";
   };
 
@@ -172,9 +176,89 @@ export default function DashSideBar() {
                   as="div"
                 >
                   My Orders
+              <Link to="/dashboard?tab=delivery-order">
+                <Sidebar.Item
+                  active={tab === "delivery-order"}
+                  icon={FaStore}
+                  labelColor="dark"
+                  as="div"
+                >
+                  Delivery Order
+                </Sidebar.Item>
+              </Link>
+              <Link to="/dashboard?tab=driver-Registration">
+                <Sidebar.Item
+                  active={tab === "driver-Registration"}
+                  icon={FaStore}
+                  labelColor="dark"
+                  as="div"
+                >
+                  Driver Registration
                 </Sidebar.Item>
               </Link>
             </>
+          )}
+
+          {/* Cuisine management for restaurants */}
+          {currentUser && hasRole("ROLE_RESTAURANT") && (
+            <Link to="/dashboard?tab=cuisine-management">
+              <Sidebar.Item
+                active={tab === "cuisine-management"}
+                icon={GiCook}
+                labelColor="dark"
+                as="div"
+              >
+                Cuisine Type
+              </Sidebar.Item>
+            </Link>
+          )}
+
+              {/* Driver Order managment */}
+              {currentUser && hasRole("ROLE_DELIVERY_PERSONNEL") && (
+            <Link to="/dashboard?tab=driver-order">
+              <Sidebar.Item
+                active={tab === "driver-order"}
+                icon={GiCook}
+                labelColor="dark"
+                as="div"
+              >
+                Driver Orders
+              </Sidebar.Item>
+            </Link>
+          )}
+
+            {/* Driver Order managment */}
+            {currentUser && hasRole("ROLE_CUSTOMER") && (
+            <Link to="/dashboard?tab=AllOrders">
+              <Sidebar.Item
+                active={tab === "AllOrders"}
+                icon={GiCook}
+                labelColor="dark"
+                as="div"
+              >
+                Orders
+              </Sidebar.Item>
+            </Link>
+          )}
+
+
+
+           {/* User Order managment */}
+           {currentUser && hasRole("ROLE_CUSTOMER") && (
+            <Link to="/dashboard?tab=Order-Location">
+              <Sidebar.Item
+                active={tab === "Order-Location"}
+                icon={GiCook}
+                labelColor="dark"
+                as="div"
+              >
+                Order-Location
+              </Sidebar.Item>
+            </Link>
+
+            
+
+            
           )}
 
           {/* Profile link for all users */}

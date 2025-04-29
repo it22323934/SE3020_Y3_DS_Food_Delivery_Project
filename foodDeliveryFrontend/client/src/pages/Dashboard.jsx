@@ -8,6 +8,12 @@ import DashMenuManagement from "../components/DashMenuManagement";
 import DashCuisineManagement from "../components/DashCuisineManagement";
 import DashMyRestaurant from "../components/DashMyRestaurant";
 import DashMenuItemCategoryManagement from "../components/DashMenuItemCategoryManagement";
+import DeliveryReplicationView from "../components/DeliveryReplicationView";
+import DeliveryAssignOrders from "../components/DriverAssignOrders";
+import RegisterDeliveryDriver from "../components/RegisterDeliveryDriver";
+import UserLocationViewer from "../components/UserLocationViewer";
+import AllOrders from "../components/AllOrders";
+
 import DashPromotionManagement from "../components/DashPromotionManagement";
 import DashMyOrdersRestaurantManagement from "../components/DashMyOrdersRestaurantManagement";
 import UserOrdersHistory from "../components/UserOrdersHistory";
@@ -45,6 +51,13 @@ export default function Dashboard() {
       {tab === "menu-item-category-management" && (
         <DashMenuItemCategoryManagement />
       )}
+            {/** <Delivery-Ordert/> */}
+      {tab === "delivery-order" && <DeliveryReplicationView />}
+      {tab === "driver-order" && <DeliveryAssignOrders />}
+      {tab === "driver-Registration" && <RegisterDeliveryDriver />}
+      {tab === "Order-Location" && <UserLocationViewer />}
+      {tab === "AllOrders" && <AllOrders />}
+
       {/** <DashPromotionManagement/> */}
       {tab === "promotion-management" && <DashPromotionManagement />}
       {/** <DashMyOrders/> */}
