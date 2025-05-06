@@ -3,6 +3,7 @@ package com.foodDelivery.orderService.service.impl;
 import com.foodDelivery.orderService.client.RestaurantServiceClient;
 import com.foodDelivery.orderService.dto.OrderCreateRequest;
 import com.foodDelivery.orderService.dto.OrderResponse;
+import com.foodDelivery.orderService.exception.BusinessValidationException;
 import com.foodDelivery.orderService.exception.OrderNotFoundException;
 import com.foodDelivery.orderService.exception.RestaurantNotFoundException;
 import com.foodDelivery.orderService.mapper.OrderMapper;
@@ -139,5 +140,26 @@ public class OrderServiceImpl implements OrderService {
     private boolean canCancel(OrderStatus status) {
         return status == OrderStatus.PENDING || 
                status == OrderStatus.CONFIRMED;
+    }
+
+    private void validateOrderRequest(OrderCreateRequest request) {
+        if (request.getItems() == null || request.getItems().isEmpty()) {
+            throw new BusinessValidationException("Order must contain at least one item");
+        }
+
+        if (request.getDeliveryLocation() == null) {
+            throw new BusinessValidationException("Delivery location is required");
+        }
+
+        if (request.getContactInfo() == null) {
+            throw new BusinessValidationException("Contact information is required");
+        }
+
+        // Validate total calculation
+        double calculatedTotal = request.getSubtotal() + request.getTaxAmount() +
+                request.getDeliveryFee() - request.getDiscount();
+        if (Math.abs(calculatedTotal - request.getTotal()) > 0.01) {
+            throw new BusinessValidationException("Invalid order total calculation");
+        }
     }
 }

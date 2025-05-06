@@ -31,7 +31,25 @@ public class Order {
     private double deliveryFee;
     private double discount;
     private double total;
-    private String promotionCode;
+    private Location deliveryLocation;
+    private Location restaurantLocation;
+    private PromotionDetails promotion;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
+    @Data
+    @Builder
+    public static class Location {
+        private double latitude;
+        private double longitude;
+        private String address;
+        private String name; // Optional, used for restaurant location
+    }
+
+    @Data
+    @Builder
+    public static class PromotionDetails {
+        private String code;
+        private double discountAmount;
+    }
 }

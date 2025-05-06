@@ -49,7 +49,6 @@ export default function DashSideBar() {
 
   // Helper function to check if user has a specific role
   const hasRole = (role) => {
-    console.log(currentUser?.username); // 👉 This will print "Doe"
     return currentUser?.roles?.includes(role);
   };
 
@@ -59,7 +58,7 @@ export default function DashSideBar() {
 
     if (hasRole("ROLE_ADMIN")) return "Admin";
     if (hasRole("ROLE_RESTAURANT_ADMIN")) return "Restaurant Admin";
- //   if (hasRole("ROLE_DRIVER")) return "Driver";
+    //   if (hasRole("ROLE_DRIVER")) return "Driver";
     if (hasRole("ROLE_DELIVERY_PERSONNEL")) return "Driver";
     if (hasRole("ROLE_CUSTOMER")) return "User";
 
@@ -176,6 +175,8 @@ export default function DashSideBar() {
                   as="div"
                 >
                   My Orders
+                </Sidebar.Item>
+              </Link>
               <Link to="/dashboard?tab=delivery-order">
                 <Sidebar.Item
                   active={tab === "delivery-order"}
@@ -213,8 +214,8 @@ export default function DashSideBar() {
             </Link>
           )}
 
-              {/* Driver Order managment */}
-              {currentUser && hasRole("ROLE_DELIVERY_PERSONNEL") && (
+          {/* Driver Order managment */}
+          {currentUser && hasRole("ROLE_DELIVERY_PERSONNEL") && (
             <Link to="/dashboard?tab=driver-order">
               <Sidebar.Item
                 active={tab === "driver-order"}
@@ -227,8 +228,8 @@ export default function DashSideBar() {
             </Link>
           )}
 
-            {/* Driver Order managment */}
-            {currentUser && hasRole("ROLE_CUSTOMER") && (
+          {/* Driver Order managment */}
+          {currentUser && hasRole("ROLE_CUSTOMER") && (
             <Link to="/dashboard?tab=AllOrders">
               <Sidebar.Item
                 active={tab === "AllOrders"}
@@ -241,10 +242,8 @@ export default function DashSideBar() {
             </Link>
           )}
 
-
-
-           {/* User Order managment */}
-           {currentUser && hasRole("ROLE_CUSTOMER") && (
+          {/* User Order managment */}
+          {currentUser && hasRole("ROLE_CUSTOMER") && (
             <Link to="/dashboard?tab=Order-Location">
               <Sidebar.Item
                 active={tab === "Order-Location"}
@@ -255,10 +254,6 @@ export default function DashSideBar() {
                 Order-Location
               </Sidebar.Item>
             </Link>
-
-            
-
-            
           )}
 
           {/* Profile link for all users */}

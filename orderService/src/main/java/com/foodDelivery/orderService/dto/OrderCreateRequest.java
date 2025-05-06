@@ -4,7 +4,6 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
 import java.util.List;
 
 @Data
@@ -19,12 +18,14 @@ public class OrderCreateRequest {
     private DeliveryAddressRequest deliveryAddress;
     private String deliveryInstructions;
     private String paymentMethod;
-    private String promotionCode;
     private double subtotal;
     private double taxAmount;
     private double deliveryFee;
     private double discount;
     private double total;
+    private LocationRequest deliveryLocation;
+    private LocationRequest restaurantLocation;
+    private PromotionDetailsRequest promotion;
 }
 
 

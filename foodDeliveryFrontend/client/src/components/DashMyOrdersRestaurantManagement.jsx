@@ -31,6 +31,8 @@ import {
   HiOutlinePhone,
   HiOutlineMail,
   HiOutlineUser,
+  HiOutlineIdentification,
+  HiOutlineClipboard,
 } from "react-icons/hi";
 import {
   FaReceipt,
@@ -60,7 +62,7 @@ export default function DashMyOrdersRestaurantManagement() {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [pageNumber, setPageNumber] = useState(0);
   const itemsPerPage = 5;
-  
+
   // Order status counts
   const [totalOrders, setTotalOrders] = useState(0);
   const [activeOrders, setActiveOrders] = useState(0);
@@ -180,18 +182,23 @@ export default function DashMyOrdersRestaurantManagement() {
         setOrders(sortedOrders);
         setFilteredOrders(sortedOrders);
         setTotalOrders(sortedOrders.length);
-        
+
         // Calculate active and completed orders
-        const active = sortedOrders.filter(order => 
-          ['PENDING', 'CONFIRMED', 'PREPARING', 'READY_FOR_PICKUP', 'OUT_FOR_DELIVERY'].includes(order.status)
+        const active = sortedOrders.filter((order) =>
+          [
+            "PENDING",
+            "CONFIRMED",
+            "PREPARING",
+            "READY_FOR_PICKUP",
+            "OUT_FOR_DELIVERY",
+          ].includes(order.status)
         ).length;
         setActiveOrders(active);
-        
-        const completed = sortedOrders.filter(order => 
-          order.status === 'DELIVERED'
+
+        const completed = sortedOrders.filter(
+          (order) => order.status === "DELIVERED"
         ).length;
         setCompletedOrders(completed);
-        
       } else {
         throw new Error("Failed to fetch orders");
       }
@@ -205,7 +212,7 @@ export default function DashMyOrdersRestaurantManagement() {
 
   const filterOrders = () => {
     if (!orders.length) return;
-    
+
     let result = [...orders];
 
     // Filter by tab/status
@@ -289,13 +296,19 @@ export default function DashMyOrdersRestaurantManagement() {
     }
 
     // Update counts after status change
-    const active = updatedOrders.filter(order => 
-      ['PENDING', 'CONFIRMED', 'PREPARING', 'READY_FOR_PICKUP', 'OUT_FOR_DELIVERY'].includes(order.status)
+    const active = updatedOrders.filter((order) =>
+      [
+        "PENDING",
+        "CONFIRMED",
+        "PREPARING",
+        "READY_FOR_PICKUP",
+        "OUT_FOR_DELIVERY",
+      ].includes(order.status)
     ).length;
     setActiveOrders(active);
-    
-    const completed = updatedOrders.filter(order => 
-      order.status === 'DELIVERED'
+
+    const completed = updatedOrders.filter(
+      (order) => order.status === "DELIVERED"
     ).length;
     setCompletedOrders(completed);
   };
@@ -323,6 +336,25 @@ export default function DashMyOrdersRestaurantManagement() {
       </div>
     );
   }
+
+  // Add this function for distance calculation
+  const calculateDistance = (lat1, lng1, lat2, lng2) => {
+    if (!lat1 || !lng1 || !lat2 || !lng2) return 0;
+
+    const R = 6371; // Radius of Earth in km
+    const dLat = (lat2 - lat1) * (Math.PI / 180);
+    const dLng = (lng2 - lng1) * (Math.PI / 180);
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * (Math.PI / 180)) *
+        Math.cos(lat2 * (Math.PI / 180)) *
+        Math.sin(dLng / 2) *
+        Math.sin(dLng / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const distance = R * c;
+
+    return distance;
+  };
 
   return (
     <div className="table-auto overflow-x-scroll md:mx-auto p-3 scrollbar scrollbar-track-slate-100 scrollbar-thumb-slate-300 dark:scrollbar-track-slate-700 dark:scrollbar-thumb-slate-500">
@@ -384,7 +416,9 @@ export default function DashMyOrdersRestaurantManagement() {
               disabled={loading}
               className="w-full md:w-auto"
             >
-              <HiOutlineRefresh className={`mr-2 h-5 w-5 ${loading ? 'animate-spin' : ''}`} />
+              <HiOutlineRefresh
+                className={`mr-2 h-5 w-5 ${loading ? "animate-spin" : ""}`}
+              />
               Refresh Orders
             </Button>
           </div>
@@ -527,7 +561,7 @@ export default function DashMyOrdersRestaurantManagement() {
                           </Button>
 
                           {/* Using our new component here */}
-                          <UpdateOrderStatusDropdown 
+                          <UpdateOrderStatusDropdown
                             order={order}
                             statusWorkflow={statusWorkflow}
                             statusIcons={statusIcons}
@@ -604,7 +638,7 @@ export default function DashMyOrdersRestaurantManagement() {
           </Modal.Header>
           <Modal.Body>
             <div className="space-y-6">
-              {/* Order Status and Actions with new visual timeline */}
+              {/* Order Status and Actions with visual timeline */}
               <div>
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
                   <div>
@@ -614,8 +648,8 @@ export default function DashMyOrdersRestaurantManagement() {
                     <OrderStatusBadge status={selectedOrder.status} />
                   </div>
 
-                  {/* Use our new component with showAsButton=true for better modal appearance */}
-                  <UpdateOrderStatusDropdown 
+                  {/* Status update dropdown */}
+                  <UpdateOrderStatusDropdown
                     order={selectedOrder}
                     statusWorkflow={statusWorkflow}
                     statusIcons={statusIcons}
@@ -626,7 +660,7 @@ export default function DashMyOrdersRestaurantManagement() {
                     showAsButton={true}
                   />
                 </div>
-                
+
                 {/* Visual timeline of order status */}
                 <div className="mt-4 mb-2 relative pt-6 pb-2">
                   <OrderStatusTimeline status={selectedOrder.status} />
@@ -645,9 +679,28 @@ export default function DashMyOrdersRestaurantManagement() {
                       <span className="text-gray-500 dark:text-gray-400">
                         Order ID:
                       </span>
-                      <span className="font-mono text-sm bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
-                        {selectedOrder.id}
-                      </span>
+                      <div className="relative flex items-center">
+                        <span
+                          className="font-mono text-sm bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-l flex items-center"
+                          title={selectedOrder.id}
+                        >
+                          <HiOutlineIdentification className="mr-1.5 text-blue-500" />
+                          {selectedOrder.id.substring(0, 8)}...
+                          {selectedOrder.id.substring(
+                            selectedOrder.id.length - 4
+                          )}
+                        </span>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(selectedOrder.id);
+                            toast.success("Order ID copied to clipboard!");
+                          }}
+                          className="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded-r text-sm transition-colors"
+                          title="Copy order ID"
+                        >
+                          <HiOutlineClipboard className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-500 dark:text-gray-400">
@@ -664,14 +717,22 @@ export default function DashMyOrdersRestaurantManagement() {
                         {selectedOrder.paymentMethod}
                       </Badge>
                     </div>
-                    {selectedOrder.promotionCode && (
+
+                    {/* Updated promotion display */}
+                    {selectedOrder.promotion && (
                       <div className="flex justify-between">
                         <span className="text-gray-500 dark:text-gray-400">
-                          Promotion Code:
+                          Promotion:
                         </span>
-                        <Badge color="success">
-                          {selectedOrder.promotionCode}
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                          <Badge color="success">
+                            {selectedOrder.promotion.code}
+                          </Badge>
+                          <span className="text-green-600">
+                            -$
+                            {selectedOrder.promotion.discountAmount.toFixed(2)}
+                          </span>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -698,6 +759,91 @@ export default function DashMyOrdersRestaurantManagement() {
                   </div>
                 </Card>
               </div>
+
+              {/* Delivery Location and Map */}
+              {selectedOrder.deliveryLocation ||
+              selectedOrder.restaurantLocation ? (
+                <Card>
+                  <h5 className="text-lg font-bold tracking-tight text-gray-900 dark:text-white mb-4 flex items-center">
+                    <HiOutlineLocationMarker className="mr-2" />
+                    Delivery Location
+                  </h5>
+
+                  {/* Static Map Display - Using Google Maps Static API */}
+                  {selectedOrder.deliveryLocation &&
+                    selectedOrder.restaurantLocation && (
+                      <>
+                        <div className="mb-4 aspect-[16/9] overflow-hidden rounded-lg">
+                          <img
+                            src={`https://maps.googleapis.com/maps/api/staticmap?size=600x300&zoom=14&markers=color:red|label:R|${selectedOrder.restaurantLocation.latitude},${selectedOrder.restaurantLocation.longitude}&markers=color:blue|label:D|${selectedOrder.deliveryLocation.latitude},${selectedOrder.deliveryLocation.longitude}&path=color:0x0000ff|weight:5|${selectedOrder.restaurantLocation.latitude},${selectedOrder.restaurantLocation.longitude}|${selectedOrder.deliveryLocation.latitude},${selectedOrder.deliveryLocation.longitude}&key=AIzaSyCms2-r4afPJIKiStBZUNuRx_4BdU2p9ps`}
+                            alt="Delivery Map"
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
+                          <div className="p-3 bg-blue-50 dark:bg-gray-800 rounded-lg">
+                            <div className="font-medium text-blue-700 dark:text-blue-400 mb-1">
+                              Restaurant Location
+                            </div>
+                            <div className="text-sm text-gray-700 dark:text-gray-300">
+                              {selectedOrder.restaurantLocation.address ||
+                                "Address not available"}
+                            </div>
+                          </div>
+
+                          <div className="p-3 bg-green-50 dark:bg-gray-800 rounded-lg">
+                            <div className="font-medium text-green-700 dark:text-green-400 mb-1">
+                              Delivery Location
+                            </div>
+                            <div className="text-sm text-gray-700 dark:text-gray-300">
+                              {selectedOrder.deliveryLocation.address ||
+                                "Address not available"}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Calculate and show distance */}
+                        {selectedOrder.deliveryLocation &&
+                          selectedOrder.restaurantLocation && (
+                            <div className="mt-3 text-center">
+                              <Badge color="indigo" size="xl">
+                                <HiOutlineTruck className="mr-2" />
+                                {calculateDistance(
+                                  selectedOrder.restaurantLocation.latitude,
+                                  selectedOrder.restaurantLocation.longitude,
+                                  selectedOrder.deliveryLocation.latitude,
+                                  selectedOrder.deliveryLocation.longitude
+                                ).toFixed(1)}{" "}
+                                km delivery distance
+                              </Badge>
+                            </div>
+                          )}
+                      </>
+                    )}
+
+                  {/* If we only have restaurant location */}
+                  {selectedOrder.restaurantLocation &&
+                    !selectedOrder.deliveryLocation && (
+                      <div className="p-3 bg-yellow-50 dark:bg-gray-800 rounded-lg text-center">
+                        <div className="text-yellow-600 dark:text-yellow-400">
+                          <HiInformationCircle className="inline-block mr-2 h-5 w-5" />
+                          No delivery location data available
+                        </div>
+                      </div>
+                    )}
+
+                  {/* If we have neither location */}
+                  {!selectedOrder.restaurantLocation &&
+                    !selectedOrder.deliveryLocation && (
+                      <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg text-center">
+                        <div className="text-gray-500">
+                          No location data available for this order
+                        </div>
+                      </div>
+                    )}
+                </Card>
+              ) : null}
 
               {/* Delivery Address */}
               <Card>
@@ -739,29 +885,35 @@ export default function DashMyOrdersRestaurantManagement() {
                     </Table.Head>
                     <Table.Body className="divide-y">
                       {selectedOrder.items.map((item, index) => (
-                        <Table.Row key={index}>
-                          <Table.Cell className="font-medium">
-                            {item.name}
-                          </Table.Cell>
-                          <Table.Cell>${item.price.toFixed(2)}</Table.Cell>
-                          <Table.Cell>{item.quantity}</Table.Cell>
-                          <Table.Cell className="font-medium">
-                            ${item.itemTotal.toFixed(2)}
-                          </Table.Cell>
-                        </Table.Row>
+                        <React.Fragment key={index}>
+                          <Table.Row>
+                            <Table.Cell className="font-medium">
+                              {item.name}
+                            </Table.Cell>
+                            <Table.Cell>${item.price.toFixed(2)}</Table.Cell>
+                            <Table.Cell>{item.quantity}</Table.Cell>
+                            <Table.Cell className="font-medium">
+                              ${item.itemTotal.toFixed(2)}
+                            </Table.Cell>
+                          </Table.Row>
+                          {/* Show add-ons for this item if any */}
+                          {item.addOns && item.addOns.length > 0 && (
+                            <Table.Row className="bg-gray-50 dark:bg-gray-800">
+                              <Table.Cell colSpan={4} className="px-6 py-2">
+                                <div className="text-xs text-gray-500 dark:text-gray-400">
+                                  <span className="font-medium">Add-ons:</span>{" "}
+                                  {item.addOns.map((addon, idx) => (
+                                    <span key={idx} className="ml-2">
+                                      {addon.name} (${addon.price.toFixed(2)})
+                                      {idx < item.addOns.length - 1 ? ", " : ""}
+                                    </span>
+                                  ))}
+                                </div>
+                              </Table.Cell>
+                            </Table.Row>
+                          )}
+                        </React.Fragment>
                       ))}
-                      {selectedOrder.items.some(
-                        (item) => item.addOns && item.addOns.length > 0
-                      ) && (
-                        <Table.Row>
-                          <Table.Cell
-                            colSpan={4}
-                            className="bg-gray-50 dark:bg-gray-700 text-sm"
-                          >
-                            Add-ons included in item prices
-                          </Table.Cell>
-                        </Table.Row>
-                      )}
                     </Table.Body>
                   </Table>
                 </div>
@@ -803,8 +955,8 @@ export default function DashMyOrdersRestaurantManagement() {
             </div>
           </Modal.Body>
           <Modal.Footer>
-            <Button 
-              gradientDuoTone="purpleToBlue" 
+            <Button
+              gradientDuoTone="purpleToBlue"
               onClick={() => setIsModalOpen(false)}
             >
               Close
