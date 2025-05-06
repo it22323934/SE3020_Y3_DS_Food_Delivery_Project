@@ -21,7 +21,8 @@ public class CorsConfig {
         corsConfiguration.setAllowCredentials(true);
         corsConfiguration.setAllowedOrigins(Arrays.asList(
                 "http://127.0.0.1:3001",
-                "http://localhost:3001"
+                "http://localhost:3001",
+                "http://localhost:5173"
         ));
         corsConfiguration.setAllowedHeaders(Arrays.asList(
                 "Origin",

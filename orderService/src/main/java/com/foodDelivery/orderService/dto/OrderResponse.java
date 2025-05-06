@@ -5,7 +5,6 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -28,7 +27,9 @@ public class OrderResponse {
     private double deliveryFee;
     private double discount;
     private double total;
-    private String promotionCode;
+    private LocationResponse deliveryLocation;
+    private LocationResponse restaurantLocation;
+    private PromotionDetailsResponse promotion;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

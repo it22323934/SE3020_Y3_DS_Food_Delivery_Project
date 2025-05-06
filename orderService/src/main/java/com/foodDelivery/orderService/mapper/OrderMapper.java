@@ -28,7 +28,9 @@ public class OrderMapper {
                 .deliveryFee(request.getDeliveryFee())
                 .discount(request.getDiscount())
                 .total(request.getTotal())
-                .promotionCode(request.getPromotionCode())
+                .deliveryLocation(toLocation(request.getDeliveryLocation()))
+                .restaurantLocation(toLocation(request.getRestaurantLocation()))
+                .promotion(toPromotionDetails(request.getPromotion()))
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
                 .build();
@@ -52,9 +54,31 @@ public class OrderMapper {
                 .deliveryFee(order.getDeliveryFee())
                 .discount(order.getDiscount())
                 .total(order.getTotal())
-                .promotionCode(order.getPromotionCode())
+                .deliveryLocation(toLocationResponse(order.getDeliveryLocation()))
+                .restaurantLocation(toLocationResponse(order.getRestaurantLocation()))
+                .promotion(toPromotionDetailsResponse(order.getPromotion()))
                 .createdAt(order.getCreatedAt())
                 .updatedAt(order.getUpdatedAt())
+                .build();
+    }
+
+    private Order.Location toLocation(LocationRequest request) {
+        if (request == null) return null;
+        return Order.Location.builder()
+                .latitude(request.getLatitude())
+                .longitude(request.getLongitude())
+                .address(request.getAddress())
+                .name(request.getName())
+                .build();
+    }
+
+    private LocationResponse toLocationResponse(Order.Location location) {
+        if (location == null) return null;
+        return LocationResponse.builder()
+                .latitude(location.getLatitude())
+                .longitude(location.getLongitude())
+                .address(location.getAddress())
+                .name(location.getName())
                 .build();
     }
 
@@ -83,6 +107,22 @@ public class OrderMapper {
                 .addOns(item.getAddOns().stream()
                         .map(this::toAddOnResponse)
                         .collect(Collectors.toList()))
+                .build();
+    }
+
+    private Order.PromotionDetails toPromotionDetails(PromotionDetailsRequest request) {
+        if (request == null) return null;
+        return Order.PromotionDetails.builder()
+                .code(request.getCode())
+                .discountAmount(request.getDiscountAmount())
+                .build();
+    }
+
+    private PromotionDetailsResponse toPromotionDetailsResponse(Order.PromotionDetails details) {
+        if (details == null) return null;
+        return PromotionDetailsResponse.builder()
+                .code(details.getCode())
+                .discountAmount(details.getDiscountAmount())
                 .build();
     }
 

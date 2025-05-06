@@ -49,7 +49,6 @@ export default function DashSideBar() {
 
   // Helper function to check if user has a specific role
   const hasRole = (role) => {
-    console.log(currentUser?.username); // 👉 This will print "Doe"
     return currentUser?.roles?.includes(role);
   };
 

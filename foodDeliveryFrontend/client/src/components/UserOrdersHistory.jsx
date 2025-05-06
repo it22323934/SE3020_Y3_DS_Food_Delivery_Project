@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import {
   Button,
   Card,
@@ -13,6 +13,7 @@ import {
 } from "flowbite-react";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { HiOutlineIdentification, HiOutlineClipboard } from "react-icons/hi";
 import {
   HiOutlineRefresh,
   HiOutlineSearch,
@@ -45,6 +46,8 @@ import { orderService } from "../service/orderService";
 import ReactPaginate from "react-paginate";
 import LoadingSpinner from "./LoadingSpinner";
 import OrderStatusTimeline from "./sub-components/order-management/OrderStatusTimeline";
+import { useNavigate } from "react-router-dom";
+import { useCart } from "../context/CartContext";
 
 export default function UserOrderTracking() {
   const { currentUser } = useSelector((state) => state.user);
@@ -58,8 +61,12 @@ export default function UserOrderTracking() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [pageNumber, setPageNumber] = useState(0);
+  const [reordering, setReordering] = useState(false);
+  const { addToCart, clearCart } = useCart();
   const itemsPerPage = 5;
-  
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+
   // Order status counts
   const [totalOrders, setTotalOrders] = useState(0);
   const [activeOrders, setActiveOrders] = useState(0);
@@ -137,18 +144,23 @@ export default function UserOrderTracking() {
         setOrders(sortedOrders);
         setFilteredOrders(sortedOrders);
         setTotalOrders(sortedOrders.length);
-        
+
         // Calculate active and completed orders
-        const active = sortedOrders.filter(order => 
-          ['PENDING', 'CONFIRMED', 'PREPARING', 'READY_FOR_PICKUP', 'OUT_FOR_DELIVERY'].includes(order.status)
+        const active = sortedOrders.filter((order) =>
+          [
+            "PENDING",
+            "CONFIRMED",
+            "PREPARING",
+            "READY_FOR_PICKUP",
+            "OUT_FOR_DELIVERY",
+          ].includes(order.status)
         ).length;
         setActiveOrders(active);
-        
-        const completed = sortedOrders.filter(order => 
-          order.status === 'DELIVERED'
+
+        const completed = sortedOrders.filter(
+          (order) => order.status === "DELIVERED"
         ).length;
         setCompletedOrders(completed);
-        
       } else {
         throw new Error("Failed to fetch orders");
       }
@@ -162,7 +174,7 @@ export default function UserOrderTracking() {
 
   const filterOrders = () => {
     if (!orders || !orders.length) return;
-    
+
     let result = [...orders];
 
     // Filter by tab/status
@@ -193,7 +205,8 @@ export default function UserOrderTracking() {
       result = result.filter(
         (order) =>
           order.id.toLowerCase().includes(search) ||
-          (order.restaurant?.name && order.restaurant.name.toLowerCase().includes(search)) ||
+          (order.restaurant?.name &&
+            order.restaurant.name.toLowerCase().includes(search)) ||
           order.status.toLowerCase().includes(search) ||
           (order.deliveryAddress &&
             `${order.deliveryAddress.street} ${order.deliveryAddress.city}`
@@ -231,6 +244,25 @@ export default function UserOrderTracking() {
     setIsModalOpen(true);
   };
 
+  // Calculate distance between two points using Haversine formula
+  const calculateDistance = (lat1, lng1, lat2, lng2) => {
+    if (!lat1 || !lng1 || !lat2 || !lng2) return 0;
+
+    const R = 6371; // Radius of Earth in km
+    const dLat = (lat2 - lat1) * (Math.PI / 180);
+    const dLng = (lng2 - lng1) * (Math.PI / 180);
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * (Math.PI / 180)) *
+        Math.cos(lat2 * (Math.PI / 180)) *
+        Math.sin(dLng / 2) *
+        Math.sin(dLng / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const distance = R * c;
+
+    return distance;
+  };
+
   // Order status badge component for consistency
   const OrderStatusBadge = ({ status }) => (
     <Badge color={statusColors[status] || "gray"} className="whitespace-nowrap">
@@ -260,33 +292,61 @@ export default function UserOrderTracking() {
         return "Unknown";
     }
   };
-
-  // Empty state component for when no orders are found
-  const EmptyState = ({ title, description, actionLabel, onAction }) => (
-    <div className="text-center py-10">
-      <div className="inline-block p-3 bg-gray-100 dark:bg-gray-700 rounded-full mb-4">
-        <FaReceipt
-          size={30}
-          className="text-gray-400 dark:text-gray-500"
-        />
-      </div>
-      <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-        {title}
-      </h3>
-      <p className="text-gray-500 dark:text-gray-400 mt-2">
-        {description}
-      </p>
-      {actionLabel && (
-        <Button color="light" className="mt-4" onClick={onAction}>
-          {actionLabel}
-        </Button>
-      )}
-    </div>
-  );
-
+  
   if (loading && !orders.length) {
     return <LoadingSpinner />;
   }
+
+  const handleReorder = async (order) => {
+    try {
+      setReordering(true);
+      
+      // Use the CartContext function directly
+      clearCart();
+      
+      // Check if order has items
+      if (!order.items || order.items.length === 0) {
+        toast.error("Cannot reorder: this order has no items");
+        return;
+      }
+      
+      // Set restaurant data first
+      const restaurantName = order.restaurant?.name || order.restaurantLocation?.name || "Restaurant";
+      
+      // Add each item from the order to the cart using the context function
+      order.items.forEach((item) => {
+        // Create cart item matching the expected structure
+        const cartItem = {
+          id: item.itemId, // CartContext expects 'id', not 'itemId'
+          name: item.name,
+          price: Number(item.price), // Ensure it's a number
+          quantity: Number(item.quantity), // Ensure it's a number
+          addOns: item.addOns || [],
+          restaurantId: order.restaurantId,
+          restaurantName: restaurantName
+        };
+        
+        // Use the quantity directly as a parameter rather than in the item
+        addToCart(cartItem, cartItem.quantity, cartItem.addOns);
+      });
+      
+      // Close the modal
+      setIsModalOpen(false);
+      
+      // Show success message
+      toast.success("Items have been added to your cart!");
+      
+      // Wait a moment for the toast to show
+      await new Promise((resolve) => setTimeout(resolve, 800));
+      
+      // Navigate to checkout page
+      navigate('/checkout');
+    } catch (error) {
+      toast.error("Failed to reorder: " + error.message);
+    } finally {
+      setReordering(false);
+    }
+  };
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -310,7 +370,9 @@ export default function UserOrderTracking() {
             onClick={fetchOrders}
             disabled={loading}
           >
-            <HiOutlineRefresh className={`mr-2 h-5 w-5 ${loading ? 'animate-spin' : ''}`} />
+            <HiOutlineRefresh
+              className={`mr-2 h-5 w-5 ${loading ? "animate-spin" : ""}`}
+            />
             Refresh Orders
           </Button>
         </div>
@@ -479,27 +541,33 @@ export default function UserOrderTracking() {
                           </div>
                           <OrderStatusBadge status={order.status} />
                         </div>
-                        
+
                         <div className="flex items-center gap-2 text-sm">
                           <FaRegCalendarAlt className="text-gray-500" />
                           <span>{formatDate(order.createdAt)}</span>
                         </div>
-                        
+
                         <div className="flex gap-2 items-center">
-                          <span className="font-medium text-gray-500">Total:</span>
-                          <span className="font-bold text-lg">${order.total?.toFixed(2)}</span>
+                          <span className="font-medium text-gray-500">
+                            Total:
+                          </span>
+                          <span className="font-bold text-lg">
+                            ${order.total?.toFixed(2)}
+                          </span>
                         </div>
-                        
+
                         <div className="flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400">
                           <HiOutlineLocationMarker />
                           <span>
-                            {order.deliveryAddress?.street}, {order.deliveryAddress?.city}
+                            {order.deliveryAddress?.street},{" "}
+                            {order.deliveryAddress?.city}
                           </span>
                         </div>
-                        
+
                         <div className="flex flex-wrap gap-2 mt-2">
                           <span className="text-sm text-gray-600 dark:text-gray-400">
-                            {order.items?.length || 0} {order.items?.length === 1 ? "item" : "items"}
+                            {order.items?.length || 0}{" "}
+                            {order.items?.length === 1 ? "item" : "items"}
                           </span>
                           {order.items?.slice(0, 2).map((item, i) => (
                             <Badge key={i} color="light" className="text-xs">
@@ -513,7 +581,7 @@ export default function UserOrderTracking() {
                           )}
                         </div>
                       </div>
-                      
+
                       {/* Right side with action button */}
                       <div className="flex flex-col justify-between items-end gap-4">
                         <div className="text-sm text-right">
@@ -522,7 +590,7 @@ export default function UserOrderTracking() {
                             {getEstimatedDeliveryTime(order.status)}
                           </div>
                         </div>
-                        
+
                         <div className="flex flex-col gap-2">
                           <Button
                             color="light"
@@ -532,11 +600,15 @@ export default function UserOrderTracking() {
                             <HiOutlineEye className="mr-2 h-4 w-4" />
                             View Details
                           </Button>
-                          
+
                           {/* For active orders, show a prominent "Track" button */}
-                          {["PENDING", "CONFIRMED", "PREPARING", "READY_FOR_PICKUP", "OUT_FOR_DELIVERY"].includes(
-                            order.status
-                          ) && (
+                          {[
+                            "PENDING",
+                            "CONFIRMED",
+                            "PREPARING",
+                            "READY_FOR_PICKUP",
+                            "OUT_FOR_DELIVERY",
+                          ].includes(order.status) && (
                             <Button
                               gradientDuoTone="purpleToBlue"
                               size="sm"
@@ -623,31 +695,128 @@ export default function UserOrderTracking() {
                     </h5>
                     <p className="font-normal text-gray-700 dark:text-gray-400 mt-2">
                       {selectedOrder.status === "CANCELLED" ? (
-                        <span className="text-red-500">This order has been cancelled</span>
+                        <span className="text-red-500">
+                          This order has been cancelled
+                        </span>
                       ) : selectedOrder.status === "DELIVERED" ? (
-                        <span className="text-green-500">Order delivered successfully!</span>
+                        <span className="text-green-500">
+                          Order delivered successfully!
+                        </span>
                       ) : (
                         <>
                           <span>Estimated time: </span>
-                          <span className="font-medium">{getEstimatedDeliveryTime(selectedOrder.status)}</span>
+                          <span className="font-medium">
+                            {getEstimatedDeliveryTime(selectedOrder.status)}
+                          </span>
                         </>
                       )}
                     </p>
                   </div>
-                  {selectedOrder.status !== "CANCELLED" && selectedOrder.status !== "DELIVERED" && (
-                    <div className="flex items-center">
-                      <HiOutlineClock className="text-blue-500 mr-2" />
-                      <span className="text-sm font-medium">
-                        Order placed: {formatDate(selectedOrder.createdAt)}
-                      </span>
-                    </div>
-                  )}
+                  {selectedOrder.status !== "CANCELLED" &&
+                    selectedOrder.status !== "DELIVERED" && (
+                      <div className="flex items-center">
+                        <HiOutlineClock className="text-blue-500 mr-2" />
+                        <span className="text-sm font-medium">
+                          Order placed: {formatDate(selectedOrder.createdAt)}
+                        </span>
+                      </div>
+                    )}
                 </div>
-                
+
                 <div className="mt-4">
                   <OrderStatusTimeline status={selectedOrder.status} />
                 </div>
               </Card>
+
+              {/* Delivery Location and Map */}
+              {selectedOrder.deliveryLocation ||
+              selectedOrder.restaurantLocation ? (
+                <Card>
+                  <h5 className="text-lg font-bold tracking-tight text-gray-900 dark:text-white mb-4 flex items-center">
+                    <HiOutlineTruck className="mr-2" />
+                    Delivery Map
+                  </h5>
+
+                  {/* Static Map Display - Using Google Maps Static API */}
+                  {selectedOrder.deliveryLocation &&
+                    selectedOrder.restaurantLocation && (
+                      <>
+                        <div className="mb-4 aspect-[16/9] overflow-hidden rounded-lg">
+                          <img
+                            src={`https://maps.googleapis.com/maps/api/staticmap?size=600x300&zoom=14&markers=color:red|label:R|${selectedOrder.restaurantLocation.latitude},${selectedOrder.restaurantLocation.longitude}&markers=color:blue|label:D|${selectedOrder.deliveryLocation.latitude},${selectedOrder.deliveryLocation.longitude}&path=color:0x0000ff|weight:5|${selectedOrder.restaurantLocation.latitude},${selectedOrder.restaurantLocation.longitude}|${selectedOrder.deliveryLocation.latitude},${selectedOrder.deliveryLocation.longitude}&key=AIzaSyCms2-r4afPJIKiStBZUNuRx_4BdU2p9ps`}
+                            alt="Delivery Map"
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
+                          <div className="p-3 bg-blue-50 dark:bg-gray-800 rounded-lg">
+                            <div className="font-medium text-blue-700 dark:text-blue-400 mb-1">
+                              Restaurant Location
+                            </div>
+                            <div className="text-sm text-gray-700 dark:text-gray-300">
+                              {selectedOrder.restaurantLocation.name && (
+                                <div className="font-medium mb-1">
+                                  {selectedOrder.restaurantLocation.name}
+                                </div>
+                              )}
+                              <div>
+                                {selectedOrder.restaurantLocation.address ||
+                                  "Address not available"}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="p-3 bg-green-50 dark:bg-gray-800 rounded-lg">
+                            <div className="font-medium text-green-700 dark:text-green-400 mb-1">
+                              Your Delivery Location
+                            </div>
+                            <div className="text-sm text-gray-700 dark:text-gray-300">
+                              {selectedOrder.deliveryLocation.address ||
+                                "Address not available"}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Calculate and show distance */}
+                        <div className="mt-3 text-center">
+                          <Badge color="indigo" size="xl">
+                            <HiOutlineTruck className="mr-2" />
+                            {calculateDistance(
+                              selectedOrder.restaurantLocation.latitude,
+                              selectedOrder.restaurantLocation.longitude,
+                              selectedOrder.deliveryLocation.latitude,
+                              selectedOrder.deliveryLocation.longitude
+                            ).toFixed(1)}{" "}
+                            km delivery distance
+                          </Badge>
+                        </div>
+                      </>
+                    )}
+
+                  {/* If we only have restaurant location */}
+                  {selectedOrder.restaurantLocation &&
+                    !selectedOrder.deliveryLocation && (
+                      <div className="p-3 bg-yellow-50 dark:bg-gray-800 rounded-lg text-center">
+                        <div className="text-yellow-600 dark:text-yellow-400">
+                          <HiInformationCircle className="inline-block mr-2 h-5 w-5" />
+                          No delivery location coordinates available for this
+                          order
+                        </div>
+                      </div>
+                    )}
+
+                  {/* If neither location is available */}
+                  {!selectedOrder.restaurantLocation &&
+                    !selectedOrder.deliveryLocation && (
+                      <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg text-center">
+                        <div className="text-gray-500">
+                          No location data available for this order
+                        </div>
+                      </div>
+                    )}
+                </Card>
+              ) : null}
 
               {/* Restaurant Info */}
               <Card>
@@ -657,16 +826,26 @@ export default function UserOrderTracking() {
                 </h5>
                 <div className="text-sm space-y-2">
                   <div className="font-medium text-lg">
-                    {selectedOrder.restaurant?.name || "Restaurant"}
+                    {selectedOrder.restaurant?.name ||
+                      selectedOrder.restaurantLocation?.name ||
+                      "Restaurant"}
                   </div>
                   {selectedOrder.restaurant?.address && (
                     <div className="flex items-center gap-1">
                       <HiOutlineLocationMarker className="text-gray-500" />
                       <span>
-                        {selectedOrder.restaurant.address.street}, {selectedOrder.restaurant.address.city}
+                        {selectedOrder.restaurant.address.street},{" "}
+                        {selectedOrder.restaurant.address.city}
                       </span>
                     </div>
                   )}
+                  {selectedOrder.restaurantLocation?.address &&
+                    !selectedOrder.restaurant?.address && (
+                      <div className="flex items-center gap-1">
+                        <HiOutlineLocationMarker className="text-gray-500" />
+                        <span>{selectedOrder.restaurantLocation.address}</span>
+                      </div>
+                    )}
                   {selectedOrder.restaurant?.phone && (
                     <div className="flex items-center gap-1">
                       <HiOutlinePhone className="text-gray-500" />
@@ -688,9 +867,28 @@ export default function UserOrderTracking() {
                       <span className="text-gray-500 dark:text-gray-400">
                         Order ID:
                       </span>
-                      <span className="font-mono text-sm bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
-                        {selectedOrder.id}
-                      </span>
+                      <div className="relative flex items-center">
+                        <span
+                          className="font-mono text-sm bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-l flex items-center"
+                          title={selectedOrder.id}
+                        >
+                          <HiOutlineIdentification className="mr-1.5 text-blue-500" />
+                          {selectedOrder.id.substring(0, 8)}...
+                          {selectedOrder.id.substring(
+                            selectedOrder.id.length - 4
+                          )}
+                        </span>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(selectedOrder.id);
+                            toast.success("Order ID copied to clipboard!");
+                          }}
+                          className="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded-r text-sm transition-colors"
+                          title="Copy order ID"
+                        >
+                          <HiOutlineClipboard className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-500 dark:text-gray-400">
@@ -707,14 +905,21 @@ export default function UserOrderTracking() {
                         {selectedOrder.paymentMethod}
                       </Badge>
                     </div>
-                    {selectedOrder.promotionCode && (
+                    {/* Updated promotion display */}
+                    {selectedOrder.promotion && (
                       <div className="flex justify-between">
                         <span className="text-gray-500 dark:text-gray-400">
-                          Promotion Code:
+                          Promotion:
                         </span>
-                        <Badge color="success">
-                          {selectedOrder.promotionCode}
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                          <Badge color="success">
+                            {selectedOrder.promotion.code}
+                          </Badge>
+                          <span className="text-green-600">
+                            -$
+                            {selectedOrder.promotion.discountAmount.toFixed(2)}
+                          </span>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -745,10 +950,16 @@ export default function UserOrderTracking() {
                         <HiOutlinePhone className="text-gray-500" />
                         <span>{selectedOrder.contactInfo?.phone}</span>
                       </div>
+                      <div className="flex items-center gap-1">
+                        <HiOutlineMail className="text-gray-500" />
+                        <span>{selectedOrder.contactInfo?.email}</span>
+                      </div>
                     </div>
                     {selectedOrder.deliveryInstructions && (
                       <div className="mt-2 p-2 bg-gray-50 dark:bg-gray-700 rounded text-sm">
-                        <div className="font-medium">Delivery Instructions:</div>
+                        <div className="font-medium">
+                          Delivery Instructions:
+                        </div>
                         <div className="italic">
                           {selectedOrder.deliveryInstructions}
                         </div>
@@ -774,23 +985,34 @@ export default function UserOrderTracking() {
                     </Table.Head>
                     <Table.Body className="divide-y">
                       {selectedOrder.items?.map((item, index) => (
-                        <Table.Row key={index}>
-                          <Table.Cell className="font-medium">
-                            {item.name}
-                            {item.addOns && item.addOns.length > 0 && (
-                              <div className="text-xs text-gray-500 mt-1">
-                                {item.addOns.map((addon, i) => (
-                                  <div key={i}>+ {addon.name}</div>
-                                ))}
-                              </div>
-                            )}
-                          </Table.Cell>
-                          <Table.Cell>${item.price?.toFixed(2)}</Table.Cell>
-                          <Table.Cell>{item.quantity}</Table.Cell>
-                          <Table.Cell className="font-medium">
-                            ${item.itemTotal?.toFixed(2)}
-                          </Table.Cell>
-                        </Table.Row>
+                        <React.Fragment key={index}>
+                          <Table.Row>
+                            <Table.Cell className="font-medium">
+                              {item.name}
+                            </Table.Cell>
+                            <Table.Cell>${item.price?.toFixed(2)}</Table.Cell>
+                            <Table.Cell>{item.quantity}</Table.Cell>
+                            <Table.Cell className="font-medium">
+                              ${item.itemTotal?.toFixed(2)}
+                            </Table.Cell>
+                          </Table.Row>
+                          {/* Show add-ons for this item if any */}
+                          {item.addOns && item.addOns.length > 0 && (
+                            <Table.Row className="bg-gray-50 dark:bg-gray-800">
+                              <Table.Cell colSpan={4} className="px-6 py-2">
+                                <div className="text-xs text-gray-500 dark:text-gray-400">
+                                  <span className="font-medium">Add-ons:</span>{" "}
+                                  {item.addOns.map((addon, idx) => (
+                                    <span key={idx} className="ml-2">
+                                      {addon.name} (${addon.price?.toFixed(2)})
+                                      {idx < item.addOns.length - 1 ? ", " : ""}
+                                    </span>
+                                  ))}
+                                </div>
+                              </Table.Cell>
+                            </Table.Row>
+                          )}
+                        </React.Fragment>
                       ))}
                     </Table.Body>
                   </Table>
@@ -830,9 +1052,15 @@ export default function UserOrderTracking() {
                   </div>
                 </div>
               </Card>
-              
+
               {/* Help section - only show for active orders */}
-              {["PENDING", "CONFIRMED", "PREPARING", "READY_FOR_PICKUP", "OUT_FOR_DELIVERY"].includes(selectedOrder.status) && (
+              {[
+                "PENDING",
+                "CONFIRMED",
+                "PREPARING",
+                "READY_FOR_PICKUP",
+                "OUT_FOR_DELIVERY",
+              ].includes(selectedOrder.status) && (
                 <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 flex gap-3 items-start">
                   <HiInformationCircle className="text-blue-500 text-xl flex-shrink-0 mt-1" />
                   <div>
@@ -840,8 +1068,9 @@ export default function UserOrderTracking() {
                       Need help with this order?
                     </h3>
                     <p className="text-sm text-blue-600 dark:text-blue-300 mt-1">
-                      If you need to modify or cancel this order, please contact the restaurant directly 
-                      as soon as possible. For delivery issues, use our customer support.
+                      If you need to modify or cancel this order, please contact
+                      the restaurant directly as soon as possible. For delivery
+                      issues, use our customer support.
                     </p>
                     <div className="flex gap-3 mt-3">
                       <Button size="xs" outline gradientDuoTone="cyanToBlue">
@@ -857,15 +1086,27 @@ export default function UserOrderTracking() {
             </div>
           </Modal.Body>
           <Modal.Footer>
-            <Button 
-              gradientDuoTone="purpleToBlue" 
+            <Button
+              gradientDuoTone="purpleToBlue"
               onClick={() => setIsModalOpen(false)}
             >
               Close
             </Button>
             {selectedOrder.status === "DELIVERED" && (
-              <Button color="light">
-                Reorder
+              <Button
+                color="light"
+                onClick={() => handleReorder(selectedOrder)}
+                disabled={reordering}
+                className="flex items-center gap-2"
+              >
+                {reordering ? (
+                  <Spinner size="sm" className="mr-2" />
+                ) : (
+                  <HiOutlineRefresh
+                    className={`h-4 w-4 ${reordering ? "animate-spin" : ""}`}
+                  />
+                )}
+                {reordering ? "Processing..." : "Reorder Items"}
               </Button>
             )}
           </Modal.Footer>
