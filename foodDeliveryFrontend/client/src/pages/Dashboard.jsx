@@ -15,8 +15,6 @@ import UserLocationViewer from "../components/UserLocationViewer";
 import AllOrders from "../components/AllOrders";
 
 import DashPromotionManagement from "../components/DashPromotionManagement";
-import DashRestaurant from "../components/DashRestaurant";
-import DashMenuManagement from "../components/DashMenuManagement";
 export default function Dashboard() {
   const location = useLocation();
   const [tab, setTab] = useState("");
@@ -44,7 +42,6 @@ export default function Dashboard() {
       {/** <DashCuisineManagement/> */}
       {tab === "cuisine-management" && <DashCuisineManagement />}
       {/** <DashRestaurant/> */}
-      {tab === "my-restaurant" && <DashMyRestaurant />}
       {/** <DashMenuItemCategoryManagement/> */}
       {tab === "menu-item-category-management" && (
         <DashMenuItemCategoryManagement />
