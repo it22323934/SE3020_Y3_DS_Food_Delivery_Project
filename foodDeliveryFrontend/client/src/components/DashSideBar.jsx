@@ -9,7 +9,13 @@ import React, { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { signOutSuccess } from "../redux/user/userSlice";
 import { useDispatch, useSelector } from "react-redux";
-import { FaStore, FaTag, FaUtensils } from "react-icons/fa";
+import {
+  FaHistory,
+  FaReceipt,
+  FaStore,
+  FaTag,
+  FaUtensils,
+} from "react-icons/fa";
 import { GiCook } from "react-icons/gi";
 import { MdRestaurantMenu } from "react-icons/md";
 import { authService } from "../service/authService";
@@ -162,6 +168,14 @@ export default function DashSideBar() {
                   My Restaurant
                 </Sidebar.Item>
               </Link>
+              <Link to="/dashboard?tab=my-restaurant-orders">
+                <Sidebar.Item
+                  active={tab === "my-restaurant-orders"}
+                  icon={FaReceipt} // Changed from FaStore to FaReceipt
+                  labelColor="dark"
+                  as="div"
+                >
+                  My Orders
               <Link to="/dashboard?tab=delivery-order">
                 <Sidebar.Item
                   active={tab === "delivery-order"}
@@ -259,7 +273,16 @@ export default function DashSideBar() {
               Profile
             </Sidebar.Item>
           </Link>
-
+          <Link to="/dashboard?tab=my-user-restaurant-orders">
+            <Sidebar.Item
+              active={tab === "my-user-restaurant-orders"}
+              icon={FaHistory}
+              labelColor="dark"
+              as="div"
+            >
+              My Orders
+            </Sidebar.Item>
+          </Link>
           <Sidebar.Item
             icon={HiArrowSmRight}
             className="cursor-pointer"
