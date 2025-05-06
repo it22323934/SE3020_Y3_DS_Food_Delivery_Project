@@ -71,7 +71,7 @@ public class KafkaProducerServiceImpl implements KafkaProducerService {
                     .timestamp(System.currentTimeMillis())
                     .build();
 
-            kafkaTemplate.send(NOTIFICATION_TOPIC, restaurantId, event)
+            kafkaTemplate.send(PROMOTION_TOPIC, restaurantId, event)
                     .whenComplete((result, ex) -> {
                         if (ex == null) {
                             log.info("Restaurant update notification sent: {}", restaurantName);
@@ -101,7 +101,7 @@ public class KafkaProducerServiceImpl implements KafkaProducerService {
                     .timestamp(System.currentTimeMillis())
                     .build();
 
-            kafkaTemplate.send(NOTIFICATION_TOPIC, promotion.getRestaurantId(), event)
+            kafkaTemplate.send(PROMOTION_TOPIC, promotion.getRestaurantId(), event)
                     .whenComplete((result, ex) -> {
                         if (ex == null) {
                             log.info("Promotion creation notification sent for restaurant: {}",
@@ -134,7 +134,7 @@ public class KafkaProducerServiceImpl implements KafkaProducerService {
                     .timestamp(System.currentTimeMillis())
                     .build();
 
-            kafkaTemplate.send(NOTIFICATION_TOPIC, promotion.getRestaurantId(), event)
+            kafkaTemplate.send(PROMOTION_TOPIC, promotion.getRestaurantId(), event)
                     .whenComplete((result, ex) -> {
                         if (ex == null) {
                             log.info("Promotion update notification sent for restaurant: {}",
@@ -167,7 +167,7 @@ public class KafkaProducerServiceImpl implements KafkaProducerService {
                     .timestamp(System.currentTimeMillis())
                     .build();
 
-            kafkaTemplate.send(NOTIFICATION_TOPIC, promotion.getRestaurantId(), event)
+            kafkaTemplate.send(PROMOTION_TOPIC, promotion.getRestaurantId(), event)
                     .whenComplete((result, ex) -> {
                         if (ex == null) {
                             log.info("Promotion deletion notification sent for restaurant: {}",
