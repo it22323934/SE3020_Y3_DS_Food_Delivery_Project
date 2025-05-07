@@ -46,6 +46,7 @@ export default function Checkout() {
   const [restaurantLocation, setRestaurantLocation] = useState(null);
   const [distanceToRestaurant, setDistanceToRestaurant] = useState(null);
   const [locationError, setLocationError] = useState("");
+  const [restaurantId, setRestaurantId] = useState(null);
 
   const [formData, setFormData] = useState({
     fullName: currentUser?.fullName || "",
@@ -76,31 +77,54 @@ export default function Checkout() {
   };
 
   // Get restaurant location when cart changes
-  // Alternative approach if you need to find the restaurant by ID in the array
   useEffect(() => {
     const fetchRestaurantLocation = async () => {
-      if (!cart.restaurantId) return;
+      // Extract restaurant IDs from cart items - more reliable than cart.restaurantId
+      const cartRestaurantIds = cart.items
+        .filter((item) => item.restaurantId)
+        .map((item) => item.restaurantId);
+
+      // No items with restaurant IDs
+      if (cartRestaurantIds.length === 0) {
+        console.warn("No restaurant IDs found in cart items");
+        return;
+      }
+
+      // Check if all items have the same restaurant ID (they should)
+      const allSameRestaurant = cartRestaurantIds.every(
+        (id) => id === cartRestaurantIds[0]
+      );
+      if (!allSameRestaurant) {
+        console.error(
+          "Mixed restaurant items detected in cart",
+          cartRestaurantIds
+        );
+        // You could handle this situation (perhaps show an error or use the most common ID)
+      }
+
+      // Use the first restaurant ID from cart items
+      const restaurantId = cartRestaurantIds[0];
+      setRestaurantId(restaurantId);
 
       try {
         const response = await restaurantService.getRestaurantById(
-          cart.restaurantId,
+          restaurantId,
           currentUser?.token
         );
 
-
         if (response.ok) {
-          const restaurants = await response.json();
+          const restaurant = await response.json();
 
-          console.log("Restaurant data:", restaurants);
+          console.log("Restaurant data:", restaurant);
 
-          if (restaurants) {
+          if (restaurant) {
             setRestaurantLocation({
-              lat: parseFloat(restaurants.latitude),
-              lng: parseFloat(restaurants.longitude),
-              name: restaurants.name,
-              address: restaurants.address || restaurants.formattedAddress,
+              lat: parseFloat(restaurant.latitude),
+              lng: parseFloat(restaurant.longitude),
+              name: restaurant.name,
+              address: restaurant.address || restaurant.formattedAddress,
               // Store the geoJSON location format for potential geospatial queries
-              geoLocation: restaurants.location,
+              geoLocation: restaurant.location,
             });
           } else {
             console.error("Restaurant not found in the response");
@@ -111,8 +135,11 @@ export default function Checkout() {
       }
     };
 
-    fetchRestaurantLocation();
-  }, [cart.restaurantId, currentUser?.token]);
+    // Only fetch if cart has items
+    if (cart.items.length > 0) {
+      fetchRestaurantLocation();
+    }
+  }, [cart.items, currentUser?.token]); // Use cart.items as the dependency instead of cart.restaurantId
 
   // Calculate distance between two points using Haversine formula
   const calculateDistance = (lat1, lng1, lat2, lng2) => {
@@ -341,7 +368,7 @@ export default function Checkout() {
     // Create order object
     const order = {
       userId: currentUser?.id,
-      restaurantId: cart.restaurantId,
+      restaurantId: restaurantId,
       items: cart.items.map((item) => ({
         itemId: item.id,
         name: item.name,
@@ -369,7 +396,7 @@ export default function Checkout() {
           formData.deliveryLocation.formattedAddress ||
           formData.deliveryLocation.address,
       },
-      restaurantLocation:{
+      restaurantLocation: {
         latitude: restaurantLocation?.lat,
         longitude: restaurantLocation?.lng,
         address: restaurantLocation?.address,
