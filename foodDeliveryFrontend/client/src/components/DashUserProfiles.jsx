@@ -2,45 +2,33 @@ import {
   Badge,
   Button,
   Modal,
-  Select,
   Spinner,
   Table,
   TextInput,
   Card,
-  Avatar,
 } from "flowbite-react";
 import { useEffect, useState } from "react";
 import {
   HiEye,
   HiOutlineExclamationCircle,
   HiOutlineUserGroup,
-  HiOutlineX,
-  HiChartPie,
-  HiClock,
   HiDocumentReport,
   HiOutlinePlus,
-  HiOutlineRefresh,
   HiLocationMarker,
   HiPhone,
-  HiMail,
-  HiOutlineOfficeBuilding,
 } from "react-icons/hi";
 import { useSelector } from "react-redux";
 import {
-  FaCheck,
   FaCheckCircle,
   FaClipboardList,
-  FaTimes,
   FaTimesCircle,
   FaUserTie,
-  FaUtensils,
   FaStore,
 } from "react-icons/fa";
 import ReactSelect from "react-select";
 import { ToastContainer, toast } from "react-toastify";
 import { authService } from "../service/authService";
 import { restaurantService } from "../service/restaurantService";
-import { RiGovernmentLine } from "react-icons/ri";
 import { AiOutlineSearch } from "react-icons/ai";
 import LoadingSpinner from "./LoadingSpinner";
 import ReactPaginate from "react-paginate";
@@ -87,7 +75,7 @@ export default function DashUserProfiles() {
         setTotalUser(data.length);
         const enabledUsers = data.filter((user) => user.enabled);
         setTotalActiveUsers(enabledUsers.length);
-        const disabledUsers = data.filter((user) => user.disabled);
+        const disabledUsers = data.filter((user) => user.enabled === false);
         setTotalInActiveUsers(disabledUsers.length);
       } else if (res.status === 401) {
         toast.error(data.message || "Unauthorized access");
