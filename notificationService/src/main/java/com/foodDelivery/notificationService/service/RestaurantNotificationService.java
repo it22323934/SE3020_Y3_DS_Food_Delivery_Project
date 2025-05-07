@@ -37,9 +37,10 @@ public class RestaurantNotificationService {
     private final UserServiceClient userServiceClient;
     private final RestaurantServiceClient restaurantServiceClient;
     private final RestaurantEmailTemplates restaurantEmailTemplates;
-    private static final String NOTIFICATION_TOPIC = "restaurant-notifications";
+    private static final String RESTAURANT_TOPIC = "restaurant-notifications";
     private static final String PROMOTION_TOPIC = "promotion-notifications";
-    @KafkaListener(topics = NOTIFICATION_TOPIC, containerFactory = "kafkaListenerContainerFactoryBroker2")
+
+    @KafkaListener(topics = RESTAURANT_TOPIC, containerFactory = "kafkaListenerContainerFactoryBroker2")
     public void handleRestaurantEvent(RestaurantEvent event) {
         log.info("Received restaurant event: {} for restaurant: {}", event.getEventType(), event.getRestaurantName());
 

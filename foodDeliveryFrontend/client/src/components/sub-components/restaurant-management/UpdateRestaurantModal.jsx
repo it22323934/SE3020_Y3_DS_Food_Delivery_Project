@@ -473,7 +473,7 @@ export const UpdateRestaurantModal = ({
   // Handle admin selection
   const handleAdminChange = (selectedOptions) => {
     const adminIds = selectedOptions
-      ? selectedOptions.map((option) => option.value)
+      ? selectedOptions.map((option) => option.value.toString())
       : [];
     setFormData({
       ...formData,
@@ -592,7 +592,7 @@ export const UpdateRestaurantModal = ({
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to update restaurant");
+        throw new Error(errorData.message || "Failed to update restaurant");
       }
 
       setSuccess(true);
@@ -617,8 +617,10 @@ export const UpdateRestaurantModal = ({
 
   // Selected admins for the select component
   const selectedAdmins = adminUsers.filter((admin) =>
-    formData.adminIds.includes(admin.value)
+    formData.adminIds.includes(admin.value.toString())
   );
+
+  console.log("Selected Admins:",  selectedAdmins);
 
   const CustomCuisineOption = ({ innerProps, isDisabled, label, data }) => {
     return !isDisabled ? (
