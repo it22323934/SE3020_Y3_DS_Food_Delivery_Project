@@ -17,7 +17,7 @@ import java.util.UUID;
 @Slf4j
 public class KafkaProducerServiceImpl implements KafkaProducerService {
     private final KafkaTemplate<String, Object> kafkaTemplate;
-    private static final String NOTIFICATION_TOPIC = "restaurant-notifications";
+    private static final String RESTAURANT_TOPIC = "restaurant-notifications";
     private static final String PROMOTION_TOPIC = "promotion-notifications";
 
     @Override
@@ -37,7 +37,7 @@ public class KafkaProducerServiceImpl implements KafkaProducerService {
                     .timestamp(System.currentTimeMillis())
                     .build();
 
-            kafkaTemplate.send(NOTIFICATION_TOPIC, restaurantId, event)
+            kafkaTemplate.send(RESTAURANT_TOPIC, restaurantId, event)
                     .whenComplete((result, ex) -> {
                         if (ex == null) {
                             log.info("Restaurant creation notification sent: {}", restaurantName);
@@ -71,7 +71,7 @@ public class KafkaProducerServiceImpl implements KafkaProducerService {
                     .timestamp(System.currentTimeMillis())
                     .build();
 
-            kafkaTemplate.send(NOTIFICATION_TOPIC, restaurantId, event)
+            kafkaTemplate.send(RESTAURANT_TOPIC, restaurantId, event)
                     .whenComplete((result, ex) -> {
                         if (ex == null) {
                             log.info("Restaurant update notification sent: {}", restaurantName);
@@ -101,7 +101,7 @@ public class KafkaProducerServiceImpl implements KafkaProducerService {
                     .timestamp(System.currentTimeMillis())
                     .build();
 
-            kafkaTemplate.send(NOTIFICATION_TOPIC, promotion.getRestaurantId(), event)
+            kafkaTemplate.send(PROMOTION_TOPIC, promotion.getRestaurantId(), event)
                     .whenComplete((result, ex) -> {
                         if (ex == null) {
                             log.info("Promotion creation notification sent for restaurant: {}",
@@ -134,7 +134,7 @@ public class KafkaProducerServiceImpl implements KafkaProducerService {
                     .timestamp(System.currentTimeMillis())
                     .build();
 
-            kafkaTemplate.send(NOTIFICATION_TOPIC, promotion.getRestaurantId(), event)
+            kafkaTemplate.send(PROMOTION_TOPIC, promotion.getRestaurantId(), event)
                     .whenComplete((result, ex) -> {
                         if (ex == null) {
                             log.info("Promotion update notification sent for restaurant: {}",
@@ -167,7 +167,7 @@ public class KafkaProducerServiceImpl implements KafkaProducerService {
                     .timestamp(System.currentTimeMillis())
                     .build();
 
-            kafkaTemplate.send(NOTIFICATION_TOPIC, promotion.getRestaurantId(), event)
+            kafkaTemplate.send(PROMOTION_TOPIC, promotion.getRestaurantId(), event)
                     .whenComplete((result, ex) -> {
                         if (ex == null) {
                             log.info("Promotion deletion notification sent for restaurant: {}",

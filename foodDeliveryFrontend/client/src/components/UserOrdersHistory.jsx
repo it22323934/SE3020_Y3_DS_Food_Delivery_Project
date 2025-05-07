@@ -292,7 +292,7 @@ export default function UserOrderTracking() {
         return "Unknown";
     }
   };
-  
+
   if (loading && !orders.length) {
     return <LoadingSpinner />;
   }
@@ -300,47 +300,52 @@ export default function UserOrderTracking() {
   const handleReorder = async (order) => {
     try {
       setReordering(true);
-      
+
       // Use the CartContext function directly
       clearCart();
-      
+
       // Check if order has items
       if (!order.items || order.items.length === 0) {
         toast.error("Cannot reorder: this order has no items");
         return;
       }
-      
+
       // Set restaurant data first
-      const restaurantName = order.restaurant?.name || order.restaurantLocation?.name || "Restaurant";
-      
+      const restaurantName =
+        order.restaurant?.name ||
+        order.restaurantLocation?.name ||
+        "Restaurant";
+
       // Add each item from the order to the cart using the context function
       order.items.forEach((item) => {
         // Create cart item matching the expected structure
         const cartItem = {
           id: item.itemId, // CartContext expects 'id', not 'itemId'
           name: item.name,
+          description: item.description,
+          imageUrl: item?.image,
           price: Number(item.price), // Ensure it's a number
           quantity: Number(item.quantity), // Ensure it's a number
           addOns: item.addOns || [],
           restaurantId: order.restaurantId,
-          restaurantName: restaurantName
+          restaurantName: restaurantName,
         };
-        
+
         // Use the quantity directly as a parameter rather than in the item
         addToCart(cartItem, cartItem.quantity, cartItem.addOns);
       });
-      
+
       // Close the modal
       setIsModalOpen(false);
-      
+
       // Show success message
       toast.success("Items have been added to your cart!");
-      
+
       // Wait a moment for the toast to show
       await new Promise((resolve) => setTimeout(resolve, 800));
-      
+
       // Navigate to checkout page
-      navigate('/checkout');
+      navigate("/checkout");
     } catch (error) {
       toast.error("Failed to reorder: " + error.message);
     } finally {
@@ -353,9 +358,10 @@ export default function UserOrderTracking() {
       <ToastContainer position="top-right" autoClose={3000} />
 
       {/* Header and Stats */}
-      <div className="mb-6">
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 gap-4">
-          <div>
+      {/* Header and Stats - Enhanced with better container styling */}
+      <div className="mb-6 bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-200 dark:border-gray-700 pb-4 mb-4">
+          <div className="flex-1">
             <h1 className="text-2xl font-bold text-gray-800 dark:text-white flex items-center">
               <FaHistory className="mr-3 text-blue-600" />
               My Order History
@@ -364,71 +370,77 @@ export default function UserOrderTracking() {
               Track and manage all your orders in one place
             </p>
           </div>
-          <Button
-            outline
-            gradientDuoTone="purpleToBlue"
-            onClick={fetchOrders}
-            disabled={loading}
-          >
-            <HiOutlineRefresh
-              className={`mr-2 h-5 w-5 ${loading ? "animate-spin" : ""}`}
-            />
-            Refresh Orders
-          </Button>
+          <div>
+            <Button
+              outline
+              gradientDuoTone="purpleToBlue"
+              onClick={fetchOrders}
+              disabled={loading}
+              className="flex items-center"
+            >
+              <HiOutlineRefresh
+                className={`mr-2 h-5 w-5 ${loading ? "animate-spin" : ""}`}
+              />
+              Refresh Orders
+            </Button>
+          </div>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <Card>
-            <div className="flex justify-between items-center">
-              <div>
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                  Total Orders
-                </p>
-                <h5 className="text-xl font-bold text-gray-900 dark:text-white">
-                  {totalOrders}
-                </h5>
-              </div>
-              <div className="rounded-full p-3 bg-blue-100 dark:bg-blue-900">
-                <FaReceipt className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+        {/* Stats Cards - Styled consistently with other dashboards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+          <div className="flex p-4 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-gray-700 dark:to-gray-800 rounded-lg shadow-sm">
+            <div className="flex-1">
+              <h3 className="text-gray-600 dark:text-gray-300 text-sm font-medium uppercase tracking-wider">
+                Total Orders
+              </h3>
+              <p className="text-2xl font-bold text-gray-800 dark:text-white mt-2">
+                {totalOrders}
+              </p>
+            </div>
+            <div className="flex items-center justify-center">
+              <div className="bg-blue-500 text-white p-3 rounded-lg shadow-lg">
+                <FaReceipt size={24} />
               </div>
             </div>
-          </Card>
-          <Card>
-            <div className="flex justify-between items-center">
-              <div>
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                  Active Orders
-                </p>
-                <h5 className="text-xl font-bold text-gray-900 dark:text-white">
-                  {activeOrders}
-                </h5>
-              </div>
-              <div className="rounded-full p-3 bg-yellow-100 dark:bg-yellow-900">
-                <HiOutlineClock className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
+          </div>
+
+          <div className="flex p-4 bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-gray-700 dark:to-gray-800 rounded-lg shadow-sm">
+            <div className="flex-1">
+              <h3 className="text-gray-600 dark:text-gray-300 text-sm font-medium uppercase tracking-wider">
+                Active Orders
+              </h3>
+              <p className="text-2xl font-bold text-gray-800 dark:text-white mt-2">
+                {activeOrders}
+              </p>
+            </div>
+            <div className="flex items-center justify-center">
+              <div className="bg-yellow-500 text-white p-3 rounded-lg shadow-lg">
+                <HiOutlineClock size={24} />
               </div>
             </div>
-          </Card>
-          <Card>
-            <div className="flex justify-between items-center">
-              <div>
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                  Completed Orders
-                </p>
-                <h5 className="text-xl font-bold text-gray-900 dark:text-white">
-                  {completedOrders}
-                </h5>
-              </div>
-              <div className="rounded-full p-3 bg-green-100 dark:bg-green-900">
-                <HiCheck className="h-6 w-6 text-green-600 dark:text-green-400" />
+          </div>
+
+          <div className="flex p-4 bg-gradient-to-br from-green-50 to-green-100 dark:from-gray-700 dark:to-gray-800 rounded-lg shadow-sm">
+            <div className="flex-1">
+              <h3 className="text-gray-600 dark:text-gray-300 text-sm font-medium uppercase tracking-wider">
+                Completed Orders
+              </h3>
+              <p className="text-2xl font-bold text-gray-800 dark:text-white mt-2">
+                {completedOrders}
+              </p>
+            </div>
+            <div className="flex items-center justify-center">
+              <div className="bg-green-500 text-white p-3 rounded-lg shadow-lg">
+                <HiCheck size={24} />
               </div>
             </div>
-          </Card>
+          </div>
         </div>
 
         {/* Enhanced Filter Section */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div className="col-span-1 md:col-span-2">
+        <div className="space-y-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+          {/* Search */}
+          <div className="w-full">
             <TextInput
               type="text"
               placeholder="Search by restaurant, order ID, status..."
@@ -439,78 +451,202 @@ export default function UserOrderTracking() {
             />
           </div>
 
-          <div className="flex gap-2">
-            <Dropdown
-              label={
-                <div className="flex items-center">
+          {/* Filter Controls */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="col-span-1">
+              <Dropdown
+                label={
+                  <div className="flex items-center justify-between w-full">
+                    <div className="flex items-center">
+                      <HiFilter className="mr-2" />
+                      <span className="truncate">
+                        {currentTab === "all"
+                          ? "All Orders"
+                          : currentTab === "active"
+                          ? "Active Orders"
+                          : currentTab === "completed"
+                          ? "Completed Orders"
+                          : currentTab === "cancelled"
+                          ? "Cancelled Orders"
+                          : `${currentTab.replace("_", " ")} Orders`}
+                      </span>
+                    </div>
+                  </div>
+                }
+                color="light"
+                className="w-full md:w-auto"
+                dismissOnClick={true}
+              >
+                <Dropdown.Item
+                  onClick={() => setCurrentTab("all")}
+                  className="flex items-center"
+                >
+                  <span className="mr-2">🔄</span> All Orders
+                </Dropdown.Item>
+                <Dropdown.Divider />
+                <Dropdown.Item
+                  onClick={() => setCurrentTab("active")}
+                  className={
+                    currentTab === "active"
+                      ? "bg-blue-50 dark:bg-blue-900/20"
+                      : ""
+                  }
+                >
+                  {statusIcons["PENDING"]} Active Orders
+                </Dropdown.Item>
+                <Dropdown.Item
+                  onClick={() => setCurrentTab("PENDING")}
+                  className={
+                    currentTab === "PENDING"
+                      ? "bg-blue-50 dark:bg-blue-900/20"
+                      : ""
+                  }
+                >
+                  {statusIcons["PENDING"]} Pending Orders
+                </Dropdown.Item>
+                <Dropdown.Item
+                  onClick={() => setCurrentTab("CONFIRMED")}
+                  className={
+                    currentTab === "CONFIRMED"
+                      ? "bg-blue-50 dark:bg-blue-900/20"
+                      : ""
+                  }
+                >
+                  {statusIcons["CONFIRMED"]} Confirmed Orders
+                </Dropdown.Item>
+                <Dropdown.Item
+                  onClick={() => setCurrentTab("PREPARING")}
+                  className={
+                    currentTab === "PREPARING"
+                      ? "bg-blue-50 dark:bg-blue-900/20"
+                      : ""
+                  }
+                >
+                  {statusIcons["PREPARING"]} Preparing Orders
+                </Dropdown.Item>
+                <Dropdown.Item
+                  onClick={() => setCurrentTab("READY_FOR_PICKUP")}
+                  className={
+                    currentTab === "READY_FOR_PICKUP"
+                      ? "bg-blue-50 dark:bg-blue-900/20"
+                      : ""
+                  }
+                >
+                  {statusIcons["READY_FOR_PICKUP"]} Ready For Pickup
+                </Dropdown.Item>
+                <Dropdown.Item
+                  onClick={() => setCurrentTab("OUT_FOR_DELIVERY")}
+                  className={
+                    currentTab === "OUT_FOR_DELIVERY"
+                      ? "bg-blue-50 dark:bg-blue-900/20"
+                      : ""
+                  }
+                >
+                  {statusIcons["OUT_FOR_DELIVERY"]} Out For Delivery
+                </Dropdown.Item>
+                <Dropdown.Divider />
+                <Dropdown.Item
+                  onClick={() => setCurrentTab("completed")}
+                  className={
+                    currentTab === "completed"
+                      ? "bg-blue-50 dark:bg-blue-900/20"
+                      : ""
+                  }
+                >
+                  {statusIcons["DELIVERED"]} Completed Orders
+                </Dropdown.Item>
+                <Dropdown.Item
+                  onClick={() => setCurrentTab("cancelled")}
+                  className={
+                    currentTab === "cancelled"
+                      ? "bg-blue-50 dark:bg-blue-900/20"
+                      : ""
+                  }
+                >
+                  {statusIcons["CANCELLED"]} Cancelled Orders
+                </Dropdown.Item>
+              </Dropdown>
+            </div>
+
+            <div className="col-span-1 flex gap-2">
+              <Button
+                color="light"
+                onClick={toggleSortOrder}
+                className="whitespace-nowrap flex items-center flex-1"
+              >
+                {sortOrder === "desc" ? (
+                  <HiOutlineSortDescending className="mr-1" />
+                ) : (
+                  <HiOutlineSortAscending className="mr-1" />
+                )}
+                {sortOrder === "desc" ? "Newest First" : "Oldest First"}
+              </Button>
+
+              {(searchTerm || currentTab !== "all") && (
+                <Button
+                  color="light"
+                  onClick={resetFilters}
+                  className="whitespace-nowrap"
+                >
+                  <HiX className="mr-1" />
+                  Clear Filters
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {/* Active Filters Display */}
+          {(searchTerm || currentTab !== "all") && (
+            <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-gray-200 dark:border-gray-700">
+              <div className="bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 text-xs font-medium px-3 py-1.5 rounded-lg mr-2">
+                <span className="flex items-center">
                   <HiFilter className="mr-2" />
-                  {currentTab === "all"
-                    ? "All Orders"
-                    : currentTab === "active"
+                  Filters Applied
+                </span>
+              </div>
+
+              {searchTerm && (
+                <Badge color="info" className="px-2.5 py-1 text-xs">
+                  Search: "{searchTerm}"
+                </Badge>
+              )}
+
+              {currentTab !== "all" && (
+                <Badge
+                  color={
+                    currentTab === "completed"
+                      ? "success"
+                      : currentTab === "cancelled"
+                      ? "failure"
+                      : currentTab === "active"
+                      ? "warning"
+                      : statusColors[currentTab] || "purple"
+                  }
+                  className="px-2.5 py-1 text-xs"
+                >
+                  {currentTab === "active"
                     ? "Active Orders"
                     : currentTab === "completed"
                     ? "Completed Orders"
                     : currentTab === "cancelled"
                     ? "Cancelled Orders"
-                    : `${currentTab} Orders`}
-                </div>
-              }
-              color="light"
-              className="w-full"
-            >
-              <Dropdown.Item onClick={() => setCurrentTab("all")}>
-                All Orders
-              </Dropdown.Item>
-              <Dropdown.Divider />
-              <Dropdown.Item onClick={() => setCurrentTab("active")}>
-                Active Orders
-              </Dropdown.Item>
-              <Dropdown.Item onClick={() => setCurrentTab("PENDING")}>
-                {statusIcons["PENDING"]} Pending Orders
-              </Dropdown.Item>
-              <Dropdown.Item onClick={() => setCurrentTab("CONFIRMED")}>
-                {statusIcons["CONFIRMED"]} Confirmed Orders
-              </Dropdown.Item>
-              <Dropdown.Item onClick={() => setCurrentTab("PREPARING")}>
-                {statusIcons["PREPARING"]} Preparing Orders
-              </Dropdown.Item>
-              <Dropdown.Item onClick={() => setCurrentTab("READY_FOR_PICKUP")}>
-                {statusIcons["READY_FOR_PICKUP"]} Ready For Pickup
-              </Dropdown.Item>
-              <Dropdown.Item onClick={() => setCurrentTab("OUT_FOR_DELIVERY")}>
-                {statusIcons["OUT_FOR_DELIVERY"]} Out For Delivery
-              </Dropdown.Item>
-              <Dropdown.Divider />
-              <Dropdown.Item onClick={() => setCurrentTab("completed")}>
-                {statusIcons["DELIVERED"]} Completed Orders
-              </Dropdown.Item>
-              <Dropdown.Item onClick={() => setCurrentTab("cancelled")}>
-                {statusIcons["CANCELLED"]} Cancelled Orders
-              </Dropdown.Item>
-            </Dropdown>
-
-            <Button
-              color="light"
-              onClick={toggleSortOrder}
-              className="whitespace-nowrap"
-            >
-              {sortOrder === "desc" ? (
-                <HiOutlineSortDescending className="mr-1" />
-              ) : (
-                <HiOutlineSortAscending className="mr-1" />
+                    : `${currentTab.replace("_", " ")} Orders`}
+                </Badge>
               )}
-              {sortOrder === "desc" ? "Newest" : "Oldest"}
-            </Button>
 
-            {(searchTerm || currentTab !== "all") && (
-              <Button color="light" onClick={resetFilters}>
-                Clear
+              <Button
+                color="light"
+                size="xs"
+                onClick={resetFilters}
+                className="ml-auto"
+              >
+                <HiX className="mr-1 h-3 w-3" />
+                Clear All
               </Button>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </div>
-
       {/* Orders Display Section */}
       {loading ? (
         <LoadingSpinner />
