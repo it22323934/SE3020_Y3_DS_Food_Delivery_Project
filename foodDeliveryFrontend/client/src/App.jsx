@@ -26,6 +26,7 @@ import AllOrders from "./components/AllOrders";
 import CustomerTrackingOrder from "./components/CustomerTrackingOrder"; 
 
 import Checkout from "./pages/Checkout";
+import AllRestaurants from "./pages/AllRestaurants";
 export default function App() {
   return (
     <CartProvider>
@@ -35,6 +36,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/about" element={<About />} />
+        <Route path="/restaurants" element={<AllRestaurants />} />
         <Route path="/sign-in" element={<SignIn />} />
         <Route path="/sign-up" element={<SignUp />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />

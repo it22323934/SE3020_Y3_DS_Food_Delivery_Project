@@ -24,9 +24,13 @@ import {
   HiChevronLeft,
   HiCheck,
   HiClock,
+  HiExclamation,
 } from "react-icons/hi";
 import { FaCcVisa, FaCcMastercard, FaCcPaypal } from "react-icons/fa";
 import { orderService } from "../service/orderService";
+import { LoadScript, GoogleMap, Marker, Circle } from "@react-google-maps/api";
+import GooglePlacesAutocomplete from "react-google-places-autocomplete";
+import { restaurantService } from "../service/restaurantService";
 
 export default function Checkout() {
   const navigate = useNavigate();
@@ -37,6 +41,12 @@ export default function Checkout() {
   const [orderSuccess, setOrderSuccess] = useState(false);
   const [orderError, setOrderError] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("card");
+  const [isMapLoaded, setIsMapLoaded] = useState(false);
+  const [locationValue, setLocationValue] = useState(null);
+  const [restaurantLocation, setRestaurantLocation] = useState(null);
+  const [distanceToRestaurant, setDistanceToRestaurant] = useState(null);
+  const [locationError, setLocationError] = useState("");
+  const [restaurantId, setRestaurantId] = useState(null);
 
   const [formData, setFormData] = useState({
     fullName: currentUser?.fullName || "",
@@ -48,10 +58,136 @@ export default function Checkout() {
       state: "",
       zipCode: "",
     },
+    deliveryLocation: {
+      latitude: "",
+      longitude: "",
+      address: "",
+      formattedAddress: "",
+    },
     deliveryInstructions: "",
   });
 
   const [formErrors, setFormErrors] = useState({});
+
+  // Map configuration
+  const mapContainerStyle = {
+    width: "100%",
+    height: "300px",
+    borderRadius: "0.5rem",
+  };
+
+  // Get restaurant location when cart changes
+  useEffect(() => {
+    const fetchRestaurantLocation = async () => {
+      // Extract restaurant IDs from cart items - more reliable than cart.restaurantId
+      const cartRestaurantIds = cart.items
+        .filter((item) => item.restaurantId)
+        .map((item) => item.restaurantId);
+
+      // No items with restaurant IDs
+      if (cartRestaurantIds.length === 0) {
+        console.warn("No restaurant IDs found in cart items");
+        return;
+      }
+
+      // Check if all items have the same restaurant ID (they should)
+      const allSameRestaurant = cartRestaurantIds.every(
+        (id) => id === cartRestaurantIds[0]
+      );
+      if (!allSameRestaurant) {
+        console.error(
+          "Mixed restaurant items detected in cart",
+          cartRestaurantIds
+        );
+        // You could handle this situation (perhaps show an error or use the most common ID)
+      }
+
+      // Use the first restaurant ID from cart items
+      const restaurantId = cartRestaurantIds[0];
+      setRestaurantId(restaurantId);
+
+      try {
+        const response = await restaurantService.getRestaurantById(
+          restaurantId,
+          currentUser?.token
+        );
+
+        if (response.ok) {
+          const restaurant = await response.json();
+
+          console.log("Restaurant data:", restaurant);
+
+          if (restaurant) {
+            setRestaurantLocation({
+              lat: parseFloat(restaurant.latitude),
+              lng: parseFloat(restaurant.longitude),
+              name: restaurant.name,
+              address: restaurant.address || restaurant.formattedAddress,
+              // Store the geoJSON location format for potential geospatial queries
+              geoLocation: restaurant.location,
+            });
+          } else {
+            console.error("Restaurant not found in the response");
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching restaurant location:", error);
+      }
+    };
+
+    // Only fetch if cart has items
+    if (cart.items.length > 0) {
+      fetchRestaurantLocation();
+    }
+  }, [cart.items, currentUser?.token]); // Use cart.items as the dependency instead of cart.restaurantId
+
+  // Calculate distance between two points using Haversine formula
+  const calculateDistance = (lat1, lng1, lat2, lng2) => {
+    if (!lat1 || !lng1 || !lat2 || !lng2) return null;
+
+    const R = 6371; // Radius of Earth in kilometers
+    const dLat = (lat2 - lat1) * (Math.PI / 180);
+    const dLng = (lng2 - lng1) * (Math.PI / 180);
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * (Math.PI / 180)) *
+        Math.cos(lat2 * (Math.PI / 180)) *
+        Math.sin(dLng / 2) *
+        Math.sin(dLng / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const distance = R * c;
+
+    return distance;
+  };
+
+  // Update distance whenever location changes
+  useEffect(() => {
+    if (
+      restaurantLocation &&
+      formData.deliveryLocation.latitude &&
+      formData.deliveryLocation.longitude
+    ) {
+      const distance = calculateDistance(
+        parseFloat(formData.deliveryLocation.latitude),
+        parseFloat(formData.deliveryLocation.longitude),
+        restaurantLocation.lat,
+        restaurantLocation.lng
+      );
+
+      setDistanceToRestaurant(distance);
+
+      // Validate distance
+      if (distance > 20) {
+        setLocationError(
+          `This location is too far (${distance.toFixed(
+            1
+          )} km) from the restaurant. Maximum delivery distance is 20 km.`
+        );
+      } else {
+        setLocationError("");
+      }
+    }
+  }, [formData.deliveryLocation, restaurantLocation]);
 
   // Redirect if cart is empty
   useEffect(() => {
@@ -59,6 +195,113 @@ export default function Checkout() {
       navigate("/");
     }
   }, [cart.items, navigate, orderSuccess]);
+
+  // Handle location selection from Google Places
+  const handleLocationSelect = (place) => {
+    setLocationValue(place);
+
+    if (place?.value?.place_id && isMapLoaded) {
+      const geocoder = new window.google.maps.Geocoder();
+      geocoder.geocode({ placeId: place.value.place_id }, (results, status) => {
+        if (status === "OK" && results[0]) {
+          const lat = results[0].geometry.location.lat();
+          const lng = results[0].geometry.location.lng();
+
+          // Update delivery location
+          setFormData({
+            ...formData,
+            deliveryLocation: {
+              ...formData.deliveryLocation,
+              latitude: lat,
+              longitude: lng,
+              address: place.label,
+              formattedAddress: place.label,
+            },
+            // Also update address fields based on the selected place
+            address: {
+              ...formData.address,
+              street: extractAddressComponent(
+                results[0],
+                "route",
+                "street_number"
+              ),
+              city: extractAddressComponent(results[0], "locality"),
+              state: extractAddressComponent(
+                results[0],
+                "administrative_area_level_1"
+              ),
+              zipCode: extractAddressComponent(results[0], "postal_code"),
+            },
+          });
+        }
+      });
+    }
+  };
+
+  // Helper function to extract address components from Google Maps result
+  const extractAddressComponent = (result, type, additionalType = null) => {
+    const component = result.address_components.find((component) =>
+      component.types.includes(type)
+    );
+
+    if (additionalType && !component) {
+      const additionalComponent = result.address_components.find((component) =>
+        component.types.includes(additionalType)
+      );
+
+      if (additionalComponent) return additionalComponent.long_name;
+    }
+
+    return component ? component.long_name : "";
+  };
+
+  // Handle map click to set location
+  const handleMapClick = (event) => {
+    const lat = event.latLng.lat();
+    const lng = event.latLng.lng();
+
+    // Update coordinates immediately
+    setFormData({
+      ...formData,
+      deliveryLocation: {
+        ...formData.deliveryLocation,
+        latitude: lat,
+        longitude: lng,
+      },
+    });
+
+    // Only attempt reverse geocoding if map is loaded
+    if (isMapLoaded) {
+      const geocoder = new window.google.maps.Geocoder();
+      geocoder.geocode({ location: { lat, lng } }, (results, status) => {
+        if (status === "OK" && results[0]) {
+          setFormData({
+            ...formData,
+            deliveryLocation: {
+              latitude: lat,
+              longitude: lng,
+              address: results[0].formatted_address,
+              formattedAddress: results[0].formatted_address,
+            },
+            // Update address fields based on the geocoded result
+            address: {
+              street: extractAddressComponent(
+                results[0],
+                "route",
+                "street_number"
+              ),
+              city: extractAddressComponent(results[0], "locality"),
+              state: extractAddressComponent(
+                results[0],
+                "administrative_area_level_1"
+              ),
+              zipCode: extractAddressComponent(results[0], "postal_code"),
+            },
+          });
+        }
+      });
+    }
+  };
 
   const validateForm = () => {
     const errors = {};
@@ -74,6 +317,18 @@ export default function Checkout() {
     if (!formData.address.city) errors.city = "City is required";
     if (!formData.address.state) errors.state = "State is required";
     if (!formData.address.zipCode) errors.zipCode = "ZIP code is required";
+
+    // Validate location
+    if (
+      !formData.deliveryLocation.latitude ||
+      !formData.deliveryLocation.longitude
+    ) {
+      errors.location = "Please select a delivery location on the map";
+    } else if (distanceToRestaurant > 20) {
+      errors.location = `Selected location is too far (${distanceToRestaurant.toFixed(
+        1
+      )} km) from the restaurant. Maximum delivery distance is 20 km.`;
+    }
 
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
@@ -113,7 +368,7 @@ export default function Checkout() {
     // Create order object
     const order = {
       userId: currentUser?.id,
-      restaurantId: cart.restaurantId,
+      restaurantId: restaurantId,
       items: cart.items.map((item) => ({
         itemId: item.id,
         name: item.name,
@@ -134,6 +389,19 @@ export default function Checkout() {
           }
         : null,
       deliveryAddress: formData.address,
+      deliveryLocation: {
+        latitude: formData.deliveryLocation.latitude,
+        longitude: formData.deliveryLocation.longitude,
+        address:
+          formData.deliveryLocation.formattedAddress ||
+          formData.deliveryLocation.address,
+      },
+      restaurantLocation: {
+        latitude: restaurantLocation?.lat,
+        longitude: restaurantLocation?.lng,
+        address: restaurantLocation?.address,
+        name: restaurantLocation?.name,
+      },
       deliveryInstructions: formData.deliveryInstructions,
       contactInfo: {
         name: formData.fullName,
@@ -145,9 +413,6 @@ export default function Checkout() {
     };
 
     try {
-      // Simulate API call delay
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-
       const response = await orderService.createOrder(
         order,
         currentUser?.token
@@ -179,6 +444,31 @@ export default function Checkout() {
     return isNaN(numValue) ? "0.00" : numValue.toFixed(2);
   };
 
+  // Get map center based on available data
+  const getMapCenter = () => {
+    // If user has selected a delivery location, use that
+    if (
+      formData.deliveryLocation.latitude &&
+      formData.deliveryLocation.longitude
+    ) {
+      return {
+        lat: parseFloat(formData.deliveryLocation.latitude),
+        lng: parseFloat(formData.deliveryLocation.longitude),
+      };
+    }
+
+    // If restaurant location is available, use that
+    if (restaurantLocation) {
+      return {
+        lat: restaurantLocation.lat,
+        lng: restaurantLocation.lng,
+      };
+    }
+
+    // Default to a fallback location (e.g., city center)
+    return { lat: 6.9271, lng: 79.8612 }; // Colombo, Sri Lanka
+  };
+
   // Show order confirmation when successful
   if (orderSuccess) {
     return (
@@ -198,7 +488,7 @@ export default function Checkout() {
             <div className="flex flex-col sm:flex-row justify-center gap-4 mt-8">
               <Button
                 color="light"
-                onClick={() => navigate("/")}
+                onClick={() => navigate("/restaurants")}
                 className="flex items-center justify-center"
               >
                 <HiChevronLeft className="mr-1" /> Continue Shopping
@@ -206,7 +496,7 @@ export default function Checkout() {
 
               <Button
                 color="blue"
-                onClick={() => navigate("/orders")}
+                onClick={() => navigate("/dashboard?tab=my-restaurant-orders")}
                 className="flex items-center justify-center"
               >
                 <HiClock className="mr-1" /> View Orders
@@ -284,6 +574,156 @@ export default function Checkout() {
                     required
                   />
                 </div>
+              </div>
+            </Card>
+
+            {/* New Delivery Location Card with Google Maps */}
+            <Card className="mb-6">
+              <h2 className="text-xl font-semibold mb-4 flex items-center">
+                <HiLocationMarker className="mr-2 text-blue-600" /> Delivery
+                Location
+              </h2>
+
+              <div className="space-y-4">
+                <LoadScript
+                  googleMapsApiKey="AIzaSyCms2-r4afPJIKiStBZUNuRx_4BdU2p9ps"
+                  libraries={["places"]}
+                  onLoad={() => {
+                    console.log("Google Maps API loaded successfully");
+                    setIsMapLoaded(true);
+                  }}
+                  onError={(error) =>
+                    console.error("Google Maps API loading failed:", error)
+                  }
+                >
+                  <div className="mb-4">
+                    <Label
+                      htmlFor="location"
+                      value="Search for delivery address"
+                      className="mb-2"
+                    />
+                    <GooglePlacesAutocomplete
+                      apiKey="AIzaSyCms2-r4afPJIKiStBZUNuRx_4BdU2p9ps"
+                      selectProps={{
+                        value: locationValue,
+                        onChange: handleLocationSelect,
+                        placeholder:
+                          formData.deliveryLocation.address ||
+                          "Search for an address...",
+                        styles: {
+                          control: (provided) => ({
+                            ...provided,
+                            padding: "4px",
+                            borderColor: "#D1D5DB",
+                            boxShadow: "none",
+                          }),
+                        },
+                      }}
+                    />
+                  </div>
+
+                  <div className="mt-4 mb-4">
+                    <Label value="Pin Your Delivery Location" />
+                    <p className="text-sm text-gray-500 mb-2">
+                      Click on the map to set your precise delivery location
+                    </p>
+                    {isMapLoaded && (
+                      <GoogleMap
+                        mapContainerStyle={mapContainerStyle}
+                        zoom={14}
+                        center={getMapCenter()}
+                        onClick={handleMapClick}
+                      >
+                        {/* Restaurant marker */}
+                        {restaurantLocation && (
+                          <>
+                            <Marker
+                              position={restaurantLocation}
+                              icon={{
+                                url: "http://maps.google.com/mapfiles/ms/icons/red-dot.png",
+                                labelOrigin: { x: 15, y: -10 },
+                              }}
+                              label={{
+                                text: "Restaurant",
+                                color: "#C53030",
+                                fontWeight: "bold",
+                              }}
+                            />
+                            {/* 20km delivery radius */}
+                            <Circle
+                              center={restaurantLocation}
+                              radius={20000} // 20km in meters
+                              options={{
+                                strokeColor: "#4299E1",
+                                strokeOpacity: 0.8,
+                                strokeWeight: 2,
+                                fillColor: "#4299E1",
+                                fillOpacity: 0.1,
+                              }}
+                            />
+                          </>
+                        )}
+
+                        {/* User's selected delivery location */}
+                        {formData.deliveryLocation.latitude &&
+                          formData.deliveryLocation.longitude && (
+                            <Marker
+                              position={{
+                                lat: parseFloat(
+                                  formData.deliveryLocation.latitude
+                                ),
+                                lng: parseFloat(
+                                  formData.deliveryLocation.longitude
+                                ),
+                              }}
+                              icon={{
+                                url: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png",
+                                labelOrigin: { x: 15, y: -10 },
+                              }}
+                              label={{
+                                text: "Delivery",
+                                color: "#2B6CB0",
+                                fontWeight: "bold",
+                              }}
+                            />
+                          )}
+                      </GoogleMap>
+                    )}
+
+                    {/* Distance information */}
+                    {distanceToRestaurant !== null && (
+                      <div
+                        className={`mt-2 p-2 rounded text-sm ${
+                          distanceToRestaurant > 20
+                            ? "bg-red-50 text-red-700 border border-red-200"
+                            : "bg-green-50 text-green-700 border border-green-200"
+                        }`}
+                      >
+                        <div className="flex items-center">
+                          {distanceToRestaurant > 20 ? (
+                            <HiExclamation className="mr-1 flex-shrink-0" />
+                          ) : (
+                            <HiCheck className="mr-1 flex-shrink-0" />
+                          )}
+                          <span>
+                            Distance to restaurant:{" "}
+                            <strong>
+                              {distanceToRestaurant.toFixed(1)} km
+                            </strong>
+                            {distanceToRestaurant > 20 &&
+                              " (Out of delivery range)"}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    {formErrors.location && (
+                      <p className="text-sm text-red-500 mt-1">
+                        {formErrors.location}
+                      </p>
+                    )}
+                  </div>
+                </LoadScript>
               </div>
             </Card>
 
@@ -459,7 +899,10 @@ export default function Checkout() {
               <Button
                 type="submit"
                 color="success"
-                disabled={orderProcessing}
+                disabled={
+                  orderProcessing ||
+                  (distanceToRestaurant && distanceToRestaurant > 20)
+                }
                 className="px-8"
               >
                 {orderProcessing ? (
@@ -563,6 +1006,24 @@ export default function Checkout() {
                 </div>
                 <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
                   {cart.appliedPromotion.description}
+                </div>
+              </div>
+            )}
+
+            {/* Restaurant info */}
+            {restaurantLocation && (
+              <div className="mt-4 bg-gray-50 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700">
+                <h3 className="font-medium text-gray-800 dark:text-white mb-2">
+                  Restaurant Information
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  {restaurantLocation.name}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-500">
+                  {restaurantLocation.address}
+                </p>
+                <div className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                  Maximum delivery distance: 20 km
                 </div>
               </div>
             )}

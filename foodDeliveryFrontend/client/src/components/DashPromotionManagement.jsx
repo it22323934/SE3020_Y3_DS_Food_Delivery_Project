@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   Table,
   Button,
@@ -7,23 +7,22 @@ import {
   Modal,
   Spinner,
   Alert,
-  Tooltip
+  Tooltip,
 } from "flowbite-react";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import ReactPaginate from "react-paginate";
 import {
-  FaPercent,
   FaTag,
   FaRegCalendarAlt,
   FaExclamationTriangle,
-  FaCheckCircle,
   FaTimesCircle,
   FaPlusCircle,
   FaEdit,
   FaTrashAlt,
   FaStore,
-  FaEye
+  FaEye,
+  FaFilter,
 } from "react-icons/fa";
 import { AiOutlineSearch } from "react-icons/ai";
 import { useSelector } from "react-redux";
@@ -52,6 +51,10 @@ export default function DashPromotionManagement() {
   const [selectedPromotion, setSelectedPromotion] = useState(null);
   const [promotionToDelete, setPromotionToDelete] = useState(null);
   const { currentUser } = useSelector((state) => state.user);
+  const [statusFilter, setStatusFilter] = useState("");
+  const [minDiscount, setMinDiscount] = useState("");
+  const [maxDiscount, setMaxDiscount] = useState("");
+  const [dateRangeFilter, setDateRangeFilter] = useState("all"); // 'all', 'active', 'upcoming', 'expired'
 
   const [pageNumber, setPageNumber] = useState(0);
   const promotionsPerPage = 5;
@@ -70,17 +73,80 @@ export default function DashPromotionManagement() {
 
   useEffect(() => {
     if (promotions.length > 0) {
-      const filtered = search
-        ? promotions.filter(
-            promo =>
-              promo.code.toLowerCase().includes(search.toLowerCase()) ||
-              promo.description.toLowerCase().includes(search.toLowerCase())
-          )
-        : promotions;
+      let filtered = promotions;
+
+      // Text search filter
+      if (search) {
+        filtered = filtered.filter(
+          (promo) =>
+            promo.code.toLowerCase().includes(search.toLowerCase()) ||
+            promo.description.toLowerCase().includes(search.toLowerCase())
+        );
+      }
+
+      // Status filter
+      if (statusFilter) {
+        filtered = filtered.filter((promo) => {
+          const { status } = getPromotionStatus(promo);
+          return status === statusFilter;
+        });
+      }
+
+      // Discount range filter
+      if (minDiscount !== "") {
+        filtered = filtered.filter(
+          (promo) => promo.discountPercentage >= parseInt(minDiscount)
+        );
+      }
+
+      if (maxDiscount !== "") {
+        filtered = filtered.filter(
+          (promo) => promo.discountPercentage <= parseInt(maxDiscount)
+        );
+      }
+
+      // Date range filter
+      if (dateRangeFilter !== "all") {
+        const now = new Date();
+
+        if (dateRangeFilter === "active") {
+          filtered = filtered.filter((promo) => {
+            const startDate = new Date(promo.startDate);
+            const endDate = new Date(promo.endDate);
+            return startDate <= now && endDate >= now && promo.active !== false;
+          });
+        } else if (dateRangeFilter === "upcoming") {
+          filtered = filtered.filter((promo) => {
+            const startDate = new Date(promo.startDate);
+            return startDate > now && promo.active !== false;
+          });
+        } else if (dateRangeFilter === "expired") {
+          filtered = filtered.filter((promo) => {
+            const endDate = new Date(promo.endDate);
+            return endDate < now || promo.active === false;
+          });
+        }
+      }
+
       setFilteredPromotions(filtered);
       setPageNumber(0);
     }
-  }, [search, promotions]);
+  }, [
+    search,
+    promotions,
+    statusFilter,
+    minDiscount,
+    maxDiscount,
+    dateRangeFilter,
+  ]);
+
+  const resetFilters = () => {
+    setSearch("");
+    setStatusFilter("");
+    setMinDiscount("");
+    setMaxDiscount("");
+    setDateRangeFilter("all");
+  };
 
   const fetchRestaurantInfo = async () => {
     try {
@@ -118,19 +184,18 @@ export default function DashPromotionManagement() {
       if (response.ok) {
         const data = await response.json();
         setPromotions(data);
-        
+
         // Calculate statistics
         const now = new Date();
         const active = data.filter(
-          promo => 
-            new Date(promo.endDate) > now && 
-            new Date(promo.startDate) <= now
+          (promo) =>
+            new Date(promo.endDate) > now && new Date(promo.startDate) <= now
         ).length;
-        
+
         const expired = data.filter(
-          promo => new Date(promo.endDate) < now
+          (promo) => new Date(promo.endDate) < now
         ).length;
-        
+
         setTotalPromotions(data.length);
         setActivePromotions(active);
         setExpiredPromotions(expired);
@@ -209,12 +274,12 @@ export default function DashPromotionManagement() {
     if (promotion.active === false) {
       return { status: "inactive", label: "Inactive", color: "gray" };
     }
-  
+
     // If not manually deactivated, check date-based status
     const now = new Date();
     const startDate = new Date(promotion.startDate);
     const endDate = new Date(promotion.endDate);
-  
+
     if (startDate > now) {
       return { status: "upcoming", label: "Upcoming", color: "warning" };
     } else if (endDate < now) {
@@ -225,8 +290,10 @@ export default function DashPromotionManagement() {
   };
 
   const pageCount = Math.ceil(filteredPromotions.length / promotionsPerPage);
-  const displayedPromotions = filteredPromotions
-    .slice(pageNumber * promotionsPerPage, (pageNumber + 1) * promotionsPerPage);
+  const displayedPromotions = filteredPromotions.slice(
+    pageNumber * promotionsPerPage,
+    (pageNumber + 1) * promotionsPerPage
+  );
 
   if (loading && !restaurant) {
     return <LoadingSpinner />;
@@ -247,59 +314,83 @@ export default function DashPromotionManagement() {
   return (
     <div className="table-auto overflow-x-scroll md:mx-auto p-3 scrollbar scrollbar-track-slate-100 scrollbar-thumb-slate-300 dark:scrollbar-track-slate-700 dark:scrollbar-thumb-slate-500">
       <ToastContainer />
-      
-      {/* Stats Cards */}
-      <div className="p-3 md:mx-auto">
-        <div className="flex-wrap flex gap-4 justify-center">
-          <div className="flex flex-col p-3 dark:bg-slate-800 gap-4 md:w-72 w-full rounded-md shadow-md">
-            <div className="flex justify-between">
-              <div>
-                <h3 className="text-gray-500 text-md uppercase">
-                  Total Promotions
-                </h3>
-                <p className="text-2xl">{totalPromotions}</p>
+
+      {/* Stats Cards - Enhanced with better styling and container */}
+      <div className="p-4 md:mx-auto mb-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
+        <h2 className="text-lg font-medium text-gray-700 dark:text-white mb-4 flex items-center">
+          <FaFilter className="mr-2 text-blue-600" />
+          Promotion Statistics
+        </h2>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="flex p-4 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-gray-700 dark:to-gray-800 rounded-lg shadow-sm">
+            <div className="flex-1">
+              <h3 className="text-gray-600 dark:text-gray-300 text-sm font-medium uppercase tracking-wider">
+                Total Promotions
+              </h3>
+              <p className="text-2xl font-bold text-gray-800 dark:text-white mt-2">
+                {totalPromotions}
+              </p>
+            </div>
+            <div className="flex items-center justify-center">
+              <div className="bg-blue-500 text-white p-3 rounded-lg shadow-lg">
+                <FaTag size={24} />
               </div>
-              <FaTag className="bg-blue-500 text-white text-5xl p-3 shadow-lg rounded-lg" />
             </div>
           </div>
-          <div className="flex flex-col p-3 dark:bg-slate-800 gap-4 md:w-72 w-full rounded-md shadow-md">
-            <div className="flex justify-between">
-              <div>
-                <h3 className="text-gray-500 text-md uppercase">
-                  Active Promotions
-                </h3>
-                <p className="text-2xl">{activePromotions}</p>
+
+          <div className="flex p-4 bg-gradient-to-br from-green-50 to-green-100 dark:from-gray-700 dark:to-gray-800 rounded-lg shadow-sm">
+            <div className="flex-1">
+              <h3 className="text-gray-600 dark:text-gray-300 text-sm font-medium uppercase tracking-wider">
+                Active Promotions
+              </h3>
+              <p className="text-2xl font-bold text-gray-800 dark:text-white mt-2">
+                {activePromotions}
+              </p>
+            </div>
+            <div className="flex items-center justify-center">
+              <div className="bg-green-500 text-white p-3 rounded-lg shadow-lg">
+                <FaTag size={24} />
               </div>
-              <FaTag className="bg-green-500 text-white text-5xl p-3 shadow-lg rounded-lg" />
             </div>
           </div>
-          <div className="flex flex-col p-3 dark:bg-slate-800 gap-4 md:w-72 w-full rounded-md shadow-md">
-            <div className="flex justify-between">
-              <div>
-                <h3 className="text-gray-500 text-md uppercase">
-                  Expired Promotions
-                </h3>
-                <p className="text-2xl">{expiredPromotions}</p>
+
+          <div className="flex p-4 bg-gradient-to-br from-red-50 to-red-100 dark:from-gray-700 dark:to-gray-800 rounded-lg shadow-sm">
+            <div className="flex-1">
+              <h3 className="text-gray-600 dark:text-gray-300 text-sm font-medium uppercase tracking-wider">
+                Expired Promotions
+              </h3>
+              <p className="text-2xl font-bold text-gray-800 dark:text-white mt-2">
+                {expiredPromotions}
+              </p>
+            </div>
+            <div className="flex items-center justify-center">
+              <div className="bg-red-500 text-white p-3 rounded-lg shadow-lg">
+                <FaRegCalendarAlt size={24} />
               </div>
-              <FaRegCalendarAlt className="bg-red-500 text-white text-5xl p-3 shadow-lg rounded-lg" />
             </div>
           </div>
         </div>
       </div>
 
-      <div className="mb-6">
-        <div className="flex items-center justify-between mb-4">
+      {/* Page Header and Actions */}
+      <div className="mb-8 bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-200 dark:border-gray-700 pb-4 mb-4">
           <div className="flex-1">
             <h2 className="text-xl font-semibold text-gray-800 dark:text-white flex items-center">
               <FaStore className="mr-2 text-blue-600" />
               {restaurant.name} - Promotions & Discounts
             </h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              Manage discounts and special offers for your customers
+            </p>
           </div>
           <div>
             <Button
               outline
               gradientDuoTone="greenToBlue"
               onClick={() => setShowCreateModal(true)}
+              className="flex items-center"
             >
               <FaPlusCircle className="mr-2" />
               Create Promotion
@@ -307,14 +398,192 @@ export default function DashPromotionManagement() {
           </div>
         </div>
 
-        <div className="w-full md:max-w-md">
-          <TextInput
-            type="text"
-            placeholder="Search promotions by code or description..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            rightIcon={AiOutlineSearch}
-          />
+        {/* Filters Section */}
+        <div className="space-y-5">
+          {/* Search */}
+          <div className="w-full">
+            <TextInput
+              type="text"
+              placeholder="Search promotions by code or description..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              rightIcon={AiOutlineSearch}
+            />
+          </div>
+
+          {/* Filter Controls */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Status Filter */}
+            <div className="col-span-1">
+              <label
+                htmlFor="statusFilter"
+                className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+              >
+                Status
+              </label>
+              <select
+                id="statusFilter"
+                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+              >
+                <option value="">All Statuses</option>
+                <option value="active">Active</option>
+                <option value="upcoming">Upcoming</option>
+                <option value="expired">Expired</option>
+                <option value="inactive">Inactive</option>
+              </select>
+            </div>
+
+            {/* Date Range Filter */}
+            <div className="col-span-1">
+              <label
+                htmlFor="dateRangeFilter"
+                className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+              >
+                Date Range
+              </label>
+              <select
+                id="dateRangeFilter"
+                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                value={dateRangeFilter}
+                onChange={(e) => setDateRangeFilter(e.target.value)}
+              >
+                <option value="all">All Dates</option>
+                <option value="active">Currently Active</option>
+                <option value="upcoming">Upcoming</option>
+                <option value="expired">Expired</option>
+              </select>
+            </div>
+
+            {/* Discount Range Filter */}
+            <div className="col-span-1">
+              <label className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
+                Discount Range (%)
+              </label>
+              <div className="flex items-center gap-3">
+                <TextInput
+                  id="minDiscount"
+                  type="number"
+                  placeholder="Min %"
+                  value={minDiscount}
+                  onChange={(e) => setMinDiscount(e.target.value)}
+                  className="flex-1"
+                  min="0"
+                  max="100"
+                />
+                <span className="text-gray-500 dark:text-gray-400">to</span>
+                <TextInput
+                  id="maxDiscount"
+                  type="number"
+                  placeholder="Max %"
+                  value={maxDiscount}
+                  onChange={(e) => setMaxDiscount(e.target.value)}
+                  className="flex-1"
+                  min="0"
+                  max="100"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Active Filters Display */}
+          <div className="pt-4 border-t border-gray-200 dark:border-gray-700 flex flex-wrap items-center gap-3">
+            {search ||
+            statusFilter ||
+            minDiscount ||
+            maxDiscount ||
+            dateRangeFilter !== "all" ? (
+              <>
+                <div className="bg-blue-50 text-blue-800 px-3 py-2 rounded-lg text-sm flex items-center dark:bg-blue-900/30 dark:text-blue-300 mr-auto">
+                  <FaFilter className="mr-2" />
+                  <span className="font-medium">Filters Applied:</span>
+                  <span className="ml-1">
+                    {filteredPromotions.length} of {promotions.length}{" "}
+                    promotions shown
+                  </span>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  {search && (
+                    <Badge
+                      color="info"
+                      className="px-3 py-1.5 text-sm flex items-center"
+                    >
+                      Search: "{search}"
+                      <button
+                        onClick={() => setSearch("")}
+                        className="ml-2 hover:text-red-500"
+                      >
+                        <FaTimesCircle />
+                      </button>
+                    </Badge>
+                  )}
+
+                  {statusFilter && (
+                    <Badge
+                      color="purple"
+                      className="px-3 py-1.5 text-sm flex items-center"
+                    >
+                      Status:{" "}
+                      {statusFilter.charAt(0).toUpperCase() +
+                        statusFilter.slice(1)}
+                      <button
+                        onClick={() => setStatusFilter("")}
+                        className="ml-2 hover:text-red-500"
+                      >
+                        <FaTimesCircle />
+                      </button>
+                    </Badge>
+                  )}
+
+                  {dateRangeFilter !== "all" && (
+                    <Badge
+                      color="indigo"
+                      className="px-3 py-1.5 text-sm flex items-center"
+                    >
+                      Date:{" "}
+                      {dateRangeFilter.charAt(0).toUpperCase() +
+                        dateRangeFilter.slice(1)}
+                      <button
+                        onClick={() => setDateRangeFilter("all")}
+                        className="ml-2 hover:text-red-500"
+                      >
+                        <FaTimesCircle />
+                      </button>
+                    </Badge>
+                  )}
+
+                  {(minDiscount || maxDiscount) && (
+                    <Badge
+                      color="success"
+                      className="px-3 py-1.5 text-sm flex items-center"
+                    >
+                      Discount: {minDiscount || "0"}% to {maxDiscount || "100"}%
+                      <button
+                        onClick={() => {
+                          setMinDiscount("");
+                          setMaxDiscount("");
+                        }}
+                        className="ml-2 hover:text-red-500"
+                      >
+                        <FaTimesCircle />
+                      </button>
+                    </Badge>
+                  )}
+
+                  <Button color="light" size="xs" onClick={resetFilters}>
+                    <FaTimesCircle className="mr-2" />
+                    Clear All
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                No filters applied. Showing all promotions.
+              </p>
+            )}
+          </div>
         </div>
       </div>
 
@@ -356,10 +625,12 @@ export default function DashPromotionManagement() {
                     <Table.Cell>
                       <div className="text-xs">
                         <div className="mb-1">
-                          Start: {new Date(promotion.startDate).toLocaleDateString()}
+                          Start:{" "}
+                          {new Date(promotion.startDate).toLocaleDateString()}
                         </div>
                         <div>
-                          End: {new Date(promotion.endDate).toLocaleDateString()}
+                          End:{" "}
+                          {new Date(promotion.endDate).toLocaleDateString()}
                         </div>
                       </div>
                     </Table.Cell>
@@ -406,7 +677,7 @@ export default function DashPromotionManagement() {
               })}
             </Table.Body>
           </Table>
-          
+
           {filteredPromotions.length > 0 && pageCount > 1 && (
             <div className="py-4 mt-4 border-t border-gray-200 dark:border-gray-700">
               <ReactPaginate
@@ -437,9 +708,9 @@ export default function DashPromotionManagement() {
             No promotions found
           </h3>
           <p className="text-gray-500 dark:text-gray-400 mt-2">
-            {search ? 
-              "No promotions match your search." : 
-              "This restaurant doesn't have any promotions yet."}
+            {search
+              ? "No promotions match your search."
+              : "This restaurant doesn't have any promotions yet."}
           </p>
           <Button
             gradientDuoTone="greenToBlue"

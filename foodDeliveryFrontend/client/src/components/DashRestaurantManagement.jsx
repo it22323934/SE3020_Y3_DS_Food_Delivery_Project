@@ -258,182 +258,197 @@ export default function DashRestaurantManagement() {
         </div>
       ) : (
         <>
-          {/* Stats Cards */}
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-6">
-              Restaurant Management Dashboard
-            </h2>
+{/* Stats Cards - Enhanced with better styling and container */}
+<div className="p-4 md:mx-auto mb-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
+  <h2 className="text-lg font-medium text-gray-700 dark:text-white mb-4 flex items-center">
+    <FaStore className="mr-2 text-blue-600" />
+    Restaurant Management Dashboard
+  </h2>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <Card className="hover:shadow-lg transition-shadow duration-300">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <p className="text-sm font-medium uppercase text-gray-500">
-                      Total Restaurants
-                    </p>
-                    <h5 className="text-3xl font-bold text-gray-800 dark:text-white">
-                      {totalRestaurants}
-                    </h5>
-                  </div>
-                  <div className="p-3 rounded-full bg-yellow-100">
-                    <FaStore className="text-yellow-500 text-2xl" />
-                  </div>
-                </div>
-              </Card>
+  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div className="flex p-4 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-gray-700 dark:to-gray-800 rounded-lg shadow-sm">
+      <div className="flex-1">
+        <h3 className="text-gray-600 dark:text-gray-300 text-sm font-medium uppercase tracking-wider">
+          Total Restaurants
+        </h3>
+        <p className="text-2xl font-bold text-gray-800 dark:text-white mt-2">
+          {totalRestaurants}
+        </p>
+      </div>
+      <div className="flex items-center justify-center">
+        <div className="bg-blue-500 text-white p-3 rounded-lg shadow-lg">
+          <FaStore size={24} />
+        </div>
+      </div>
+    </div>
+    
+    <div className="flex p-4 bg-gradient-to-br from-green-50 to-green-100 dark:from-gray-700 dark:to-gray-800 rounded-lg shadow-sm">
+      <div className="flex-1">
+        <h3 className="text-gray-600 dark:text-gray-300 text-sm font-medium uppercase tracking-wider">
+          Active Restaurants
+        </h3>
+        <p className="text-2xl font-bold text-green-600 dark:text-green-400 mt-2">
+          {activeRestaurants}
+        </p>
+      </div>
+      <div className="flex items-center justify-center">
+        <div className="bg-green-500 text-white p-3 rounded-lg shadow-lg">
+          <FaCheckCircle size={24} />
+        </div>
+      </div>
+    </div>
+    
+    <div className="flex p-4 bg-gradient-to-br from-red-50 to-red-100 dark:from-gray-700 dark:to-gray-800 rounded-lg shadow-sm">
+      <div className="flex-1">
+        <h3 className="text-gray-600 dark:text-gray-300 text-sm font-medium uppercase tracking-wider">
+          Inactive Restaurants
+        </h3>
+        <p className="text-2xl font-bold text-red-600 dark:text-red-400 mt-2">
+          {inactiveRestaurants}
+        </p>
+      </div>
+      <div className="flex items-center justify-center">
+        <div className="bg-red-500 text-white p-3 rounded-lg shadow-lg">
+          <FaTimesCircle size={24} />
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
-              <Card className="hover:shadow-lg transition-shadow duration-300">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <p className="text-sm font-medium uppercase text-gray-500">
-                      Active Restaurants
-                    </p>
-                    <h5 className="text-3xl font-bold text-green-600">
-                      {activeRestaurants}
-                    </h5>
-                  </div>
-                  <div className="p-3 rounded-full bg-green-100">
-                    <FaStore className="text-green-500 text-2xl" />
-                  </div>
-                </div>
-              </Card>
+{/* Action Bar - Improved layout with better hierarchy */}
+<div className="mb-6 bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
+  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-200 dark:border-gray-700 pb-4 mb-4">
+    <div className="flex-1">
+      <h2 className="text-xl font-semibold text-gray-800 dark:text-white flex items-center">
+        <FaStore className="mr-2 text-blue-600" />
+        Restaurant Management
+      </h2>
+      <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+        Create, edit and generate reports for your restaurants
+      </p>
+    </div>
+    <div>
+      <Button
+        gradientDuoTone="purpleToBlue"
+        className="flex items-center"
+        onClick={() => setShowCreateModal(true)}
+      >
+        <HiOutlinePlus className="mr-2 h-5 w-5" />
+        New Restaurant
+      </Button>
+    </div>
+  </div>
 
-              <Card className="hover:shadow-lg transition-shadow duration-300">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <p className="text-sm font-medium uppercase text-gray-500">
-                      Inactive Restaurants
-                    </p>
-                    <h5 className="text-3xl font-bold text-red-600">
-                      {inactiveRestaurants}
-                    </h5>
-                  </div>
-                  <div className="p-3 rounded-full bg-red-100">
-                    <FaStore className="text-red-500 text-2xl" />
-                  </div>
-                </div>
-              </Card>
-            </div>
-          </div>
+  {/* Enhanced Filter Section */}
+  <div className="space-y-4">
+    {/* Search */}
+    <div className="w-full">
+      <TextInput
+        type="text"
+        placeholder="Search by name, email or phone"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        rightIcon={AiOutlineSearch}
+        className="w-full"
+      />
+    </div>
 
-          {/* Action Bar */}
-          <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow mb-6">
-            <div className="flex flex-wrap items-center gap-4">
-              {/* Create Button */}
-              <Button
-                gradientDuoTone="purpleToBlue"
-                className="flex items-center"
-                onClick={() => setShowCreateModal(true)}
-              >
-                <HiOutlinePlus className="mr-2 h-5 w-5" />
-                New Restaurant
-              </Button>
+    {/* Report Generation Controls */}
+    <div className="flex flex-wrap gap-4 items-center pt-3 border-t border-gray-200 dark:border-gray-700">
+      <div className="flex-1 text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center">
+        <HiDocumentReport className="mr-2 text-blue-600" />
+        Generate Restaurant Report
+      </div>
+      
+      <div className="flex flex-wrap gap-3 items-center">
+        <div className="w-48">
+          <Select
+            placeholder="Select restaurant"
+            isSearchable
+            isClearable
+            options={restaurants.map((restaurant) => ({
+              value: restaurant.id || restaurant._id,
+              label: restaurant.name,
+            }))}
+            onChange={(selected) => setSelectedRestaurantForReport(selected)}
+            styles={{
+              control: (baseStyles) => ({
+                ...baseStyles,
+                backgroundColor: "white",
+                borderColor: "#D1D5DB",
+              }),
+              option: (baseStyles, { isFocused }) => ({
+                ...baseStyles,
+                backgroundColor: isFocused ? "#E5E7EB" : "white",
+                color: "black",
+              }),
+            }}
+          />
+        </div>
+        
+        <Button
+          gradientDuoTone="cyanToBlue"
+          className="flex items-center"
+          onClick={async () => {
+            if (!selectedRestaurantForReport) {
+              toast.warning("Please select a restaurant first");
+              return;
+            }
 
-              {/* Search Input */}
-              <div className="flex-grow md:max-w-md">
-                <TextInput
-                  type="text"
-                  placeholder="Search by name, email or phone"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  rightIcon={AiOutlineSearch}
-                  className="w-full"
-                />
-              </div>
+            setIsDownloading(true);
+            try {
+              const response = await restaurantService.generateRestaurantReport(
+                selectedRestaurantForReport.value,
+                currentUser.token
+              );
 
-              <div className="flex flex-wrap gap-4 ml-auto">
-                {/* Restaurant selector */}
-                <div className="w-48">
-                  <Select
-                    placeholder="Filter by restaurant"
-                    isSearchable
-                    isClearable
-                    options={restaurants.map((restaurant) => ({
-                      value: restaurant.id || restaurant._id,
-                      label: restaurant.name,
-                    }))}
-                    onChange={(selected) =>
-                      setSelectedRestaurantForReport(selected)
-                    }
-                    styles={{
-                      control: (baseStyles) => ({
-                        ...baseStyles,
-                        backgroundColor: "white",
-                        borderColor: "#D1D5DB",
-                      }),
-                      option: (baseStyles, { isFocused }) => ({
-                        ...baseStyles,
-                        backgroundColor: isFocused ? "#E5E7EB" : "white",
-                        color: "black",
-                      }),
-                    }}
-                  />
-                </div>
+              if (response.ok) {
+                // Convert response to blob
+                const blob = await response.blob();
 
-                {/* Generate Report Button */}
-                <Button
-                  gradientDuoTone="cyanToBlue"
-                  className="flex items-center"
-                  onClick={async () => {
-                    if (!selectedRestaurantForReport) {
-                      toast.warning("Please select a restaurant first");
-                      return;
-                    }
+                // Create download link and trigger download
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.style.display = "none";
+                a.href = url;
+                a.download = `restaurant-report-${selectedRestaurantForReport.label}.pdf`;
+                document.body.appendChild(a);
+                a.click();
 
-                    setIsDownloading(true);
-                    try {
-                      const response =
-                        await restaurantService.generateRestaurantReport(
-                          selectedRestaurantForReport.value,
-                          currentUser.token
-                        );
+                // Clean up
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
 
-                      if (response.ok) {
-                        // Convert response to blob
-                        const blob = await response.blob();
-
-                        // Create download link and trigger download
-                        const url = window.URL.createObjectURL(blob);
-                        const a = document.createElement("a");
-                        a.style.display = "none";
-                        a.href = url;
-                        a.download = `restaurant-report-${selectedRestaurantForReport.label}.pdf`;
-                        document.body.appendChild(a);
-                        a.click();
-
-                        // Clean up
-                        window.URL.revokeObjectURL(url);
-                        document.body.removeChild(a);
-
-                        toast.success("Report downloaded successfully");
-                      } else {
-                        throw new Error(
-                          `Failed to download report: ${response.status}`
-                        );
-                      }
-                    } catch (error) {
-                      console.error(error);
-                      toast.error("Failed to download report");
-                    } finally {
-                      setIsDownloading(false);
-                    }
-                  }}
-                  disabled={isDownloading || !selectedRestaurantForReport}
-                >
-                  {isDownloading ? (
-                    <>
-                      <Spinner className="mr-2" size="sm" />
-                      Generating...
-                    </>
-                  ) : (
-                    <>
-                      <HiDocumentReport className="mr-2 h-5 w-5" />
-                      Generate Report
-                    </>
-                  )}
-                </Button>
-              </div>
-            </div>
-          </div>
+                toast.success("Report downloaded successfully");
+              } else {
+                throw new Error(`Failed to download report: ${response.status}`);
+              }
+            } catch (error) {
+              console.error(error);
+              toast.error("Failed to download report");
+            } finally {
+              setIsDownloading(false);
+            }
+          }}
+          disabled={isDownloading || !selectedRestaurantForReport}
+        >
+          {isDownloading ? (
+            <>
+              <Spinner className="mr-2" size="sm" />
+              Generating...
+            </>
+          ) : (
+            <>
+              <HiDocumentReport className="mr-2 h-5 w-5" />
+              Generate Report
+            </>
+          )}
+        </Button>
+      </div>
+    </div>
+  </div>
+</div>
 
           {/* Restaurants Table */}
           <Card className="overflow-hidden">

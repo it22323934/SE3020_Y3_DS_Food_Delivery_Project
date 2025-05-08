@@ -300,64 +300,83 @@ export default function DashMenuItems() {
   const handleDownload = async () => {
     try {
       setDownloadLoading(true);
-      
+
       // Get items to download - either filtered or all
-      const itemsToExport = filteredMenuItems.length > 0 ? filteredMenuItems : menuItems;
-      
+      const itemsToExport =
+        filteredMenuItems.length > 0 ? filteredMenuItems : menuItems;
+
       // Get category name for the file name
       let categoryName = "all-menu-items";
       if (categoryFilter) {
-        const selectedCategory = categories.find(c => c.id === categoryFilter);
+        const selectedCategory = categories.find(
+          (c) => c.id === categoryFilter
+        );
         if (selectedCategory) {
-          categoryName = selectedCategory.name.toLowerCase().replace(/\s+/g, '-');
+          categoryName = selectedCategory.name
+            .toLowerCase()
+            .replace(/\s+/g, "-");
         }
       }
 
       // Create filename based on restaurant, category and format
-      const timestamp = new Date().toISOString().split('T')[0];
-      const fileName = `${restaurant?.name || 'restaurant'}-${categoryName}-${timestamp}.${downloadFormat}`;
-      
+      const timestamp = new Date().toISOString().split("T")[0];
+      const fileName = `${
+        restaurant?.name || "restaurant"
+      }-${categoryName}-${timestamp}.${downloadFormat}`;
+
       // Simulate download process with a delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+
       // Format data based on selected format
-      let fileContent = '';
-      let fileType = '';
-      let dataUri = '';
-      
-      if (downloadFormat === 'csv') {
+      let fileContent = "";
+      let fileType = "";
+      let dataUri = "";
+
+      if (downloadFormat === "csv") {
         // Create CSV content
-        const headers = 'Name,Price,Category,Description,Availability\n';
-        const rows = itemsToExport.map(item => {
-          const category = categories.find(c => c.id === item.categoryId)?.name || 'Uncategorized';
-          return `"${item.name}",${item.price},"${category}","${item.description || ''}",${item.available ? 'Available' : 'Unavailable'}`;
-        }).join('\n');
-        
+        const headers = "Name,Price,Category,Description,Availability\n";
+        const rows = itemsToExport
+          .map((item) => {
+            const category =
+              categories.find((c) => c.id === item.categoryId)?.name ||
+              "Uncategorized";
+            return `"${item.name}",${item.price},"${category}","${
+              item.description || ""
+            }",${item.available ? "Available" : "Unavailable"}`;
+          })
+          .join("\n");
+
         fileContent = headers + rows;
-        fileType = 'text/csv';
-      } else if (downloadFormat === 'json') {
+        fileType = "text/csv";
+      } else if (downloadFormat === "json") {
         // Create JSON with category names included
-        const formattedData = itemsToExport.map(item => ({
+        const formattedData = itemsToExport.map((item) => ({
           ...item,
-          categoryName: categories.find(c => c.id === item.categoryId)?.name || 'Uncategorized'
+          categoryName:
+            categories.find((c) => c.id === item.categoryId)?.name ||
+            "Uncategorized",
         }));
-        
+
         fileContent = JSON.stringify(formattedData, null, 2);
-        fileType = 'application/json';
+        fileType = "application/json";
       }
-      
+
       // Create download link
-      dataUri = `data:${fileType};charset=utf-8,${encodeURIComponent(fileContent)}`;
-      
+      dataUri = `data:${fileType};charset=utf-8,${encodeURIComponent(
+        fileContent
+      )}`;
+
       // Create temporary link element and trigger download
-      const link = document.createElement('a');
+      const link = document.createElement("a");
       link.href = dataUri;
       link.download = fileName;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
 
-      toast.success(`Menu items exported successfully as ${downloadFormat.toUpperCase()}`);
+      toast.success(
+        `Menu items exported successfully as ${downloadFormat.toUpperCase()}`
+      );
       setShowDownloadModal(false);
     } catch (error) {
       console.error("Error exporting menu items:", error);
@@ -386,72 +405,92 @@ export default function DashMenuItems() {
   return (
     <div className="table-auto overflow-x-scroll md:mx-auto p-3 scrollbar scrollbar-track-slate-100 scrollbar-thumb-slate-300 dark:scrollbar-track-slate-700 dark:scrollbar-thumb-slate-500">
       <ToastContainer position="top-right" autoClose={3000} />
+      {/* Stats Cards - Enhanced with consistent styling and better spacing */}
+      <div className="p-4 md:mx-auto mb-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
+        <h2 className="text-lg font-medium text-gray-700 dark:text-white mb-4 flex items-center">
+          <HiInformationCircle className="mr-2 text-blue-600" />
+          Menu Statistics
+        </h2>
 
-      {/* Stats Cards */}
-      <div className="p-3 md:mx-auto">
-        <div className="flex-wrap flex gap-4 justify-center">
-          <div className="flex flex-col p-3 dark:bg-slate-800 gap-4 md:w-72 w-full rounded-md shadow-md">
-            <div className="flex justify-between">
-              <div>
-                <h3 className="text-gray-500 text-md uppercase">
-                  Total Menu Items
-                </h3>
-                <p className="text-2xl">{totalMenuItems}</p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="flex p-4 bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-gray-700 dark:to-gray-800 rounded-lg shadow-sm">
+            <div className="flex-1">
+              <h3 className="text-gray-600 dark:text-gray-300 text-sm font-medium uppercase tracking-wider">
+                Total Menu Items
+              </h3>
+              <p className="text-2xl font-bold text-gray-800 dark:text-white mt-2">
+                {totalMenuItems}
+              </p>
+            </div>
+            <div className="flex items-center justify-center">
+              <div className="bg-yellow-500 text-white p-3 rounded-lg shadow-lg">
+                <FaUtensils size={24} />
               </div>
-              <FaUtensils className="bg-yellow-500 text-white text-5xl p-3 shadow-lg rounded-lg" />
             </div>
           </div>
-          <div className="flex flex-col p-3 dark:bg-slate-800 gap-4 md:w-72 w-full rounded-md shadow-md">
-            <div className="flex justify-between">
-              <div>
-                <h3 className="text-gray-500 text-md uppercase">
-                  Available Items
-                </h3>
-                <p className="text-2xl">{availableItems}</p>
+
+          <div className="flex p-4 bg-gradient-to-br from-green-50 to-green-100 dark:from-gray-700 dark:to-gray-800 rounded-lg shadow-sm">
+            <div className="flex-1">
+              <h3 className="text-gray-600 dark:text-gray-300 text-sm font-medium uppercase tracking-wider">
+                Available Items
+              </h3>
+              <p className="text-2xl font-bold text-gray-800 dark:text-white mt-2">
+                {availableItems}
+              </p>
+            </div>
+            <div className="flex items-center justify-center">
+              <div className="bg-green-500 text-white p-3 rounded-lg shadow-lg">
+                <FaUtensils size={24} />
               </div>
-              <FaUtensils className="bg-green-500 text-white text-5xl p-3 shadow-lg rounded-lg" />
             </div>
           </div>
-          <div className="flex flex-col p-3 dark:bg-slate-800 gap-4 md:w-72 w-full rounded-md shadow-md">
-            <div className="flex justify-between">
-              <div>
-                <h3 className="text-gray-500 text-md uppercase">
-                  Unavailable Items
-                </h3>
-                <p className="text-2xl">{totalMenuItems - availableItems}</p>
+
+          <div className="flex p-4 bg-gradient-to-br from-red-50 to-red-100 dark:from-gray-700 dark:to-gray-800 rounded-lg shadow-sm">
+            <div className="flex-1">
+              <h3 className="text-gray-600 dark:text-gray-300 text-sm font-medium uppercase tracking-wider">
+                Unavailable Items
+              </h3>
+              <p className="text-2xl font-bold text-gray-800 dark:text-white mt-2">
+                {totalMenuItems - availableItems}
+              </p>
+            </div>
+            <div className="flex items-center justify-center">
+              <div className="bg-red-500 text-white p-3 rounded-lg shadow-lg">
+                <FaUtensils size={24} />
               </div>
-              <FaUtensils className="bg-red-500 text-white text-5xl p-3 shadow-lg rounded-lg" />
             </div>
           </div>
         </div>
       </div>
 
-      {/* Header and Actions */}
-      <div className="mb-6">
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-4 gap-4">
+      {/* Header and Actions - Improved layout with better hierarchy */}
+      <div className="mb-6 bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-200 dark:border-gray-700 pb-4 mb-4">
           <div className="flex-1">
             <h2 className="text-xl font-semibold text-gray-800 dark:text-white flex items-center">
               <FaUtensils className="mr-2 text-blue-600" />
               {restaurant.name} - Menu Items
             </h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              Manage all menu items for your restaurant
+            </p>
           </div>
-          <div className="flex gap-4 w-full md:w-auto">
+          <div className="flex gap-3 w-full md:w-auto">
             <Button
               outline
               gradientDuoTone="greenToBlue"
               onClick={handleCreateMenuItem}
-              className="w-full md:w-auto"
+              className="flex-1 md:flex-none"
             >
               <HiPlusCircle className="mr-2 h-5 w-5" />
               Add New Item
             </Button>
-            
-            {/* New Download Button */}
+
             <Button
               outline
               gradientDuoTone="purpleToBlue"
               onClick={handleDownloadClick}
-              className="w-full md:w-auto"
+              className="flex-1 md:flex-none"
               disabled={!menuItems.length}
             >
               <HiOutlineDownload className="mr-2 h-5 w-5" />
@@ -460,12 +499,13 @@ export default function DashMenuItems() {
           </div>
         </div>
 
-        {/* Improved Filter Section */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-          <div className="col-span-1 md:col-span-3 lg:col-span-1">
+        {/* Improved Filter Section with better layout and consistency */}
+        <div className="space-y-4">
+          {/* Search */}
+          <div className="w-full">
             <TextInput
               type="text"
-              placeholder="Search menu items..."
+              placeholder="Search menu items by name or description..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               icon={HiOutlineSearch}
@@ -473,75 +513,149 @@ export default function DashMenuItems() {
             />
           </div>
 
-          <div className="flex gap-2 col-span-1 md:col-span-2 lg:col-span-1">
-            <Dropdown
-              label={
-                <div className="flex items-center">
-                  <HiFilter className="mr-2" />
-                  {categoryFilter
-                    ? `Category: ${
-                        categories.find((c) => c.id === categoryFilter)?.name ||
-                        "Selected"
-                      }`
-                    : "Filter by Category"}
-                </div>
-              }
-              color="light"
-              className="w-full"
-            >
-              <Dropdown.Item onClick={() => setCategoryFilter("")}>
-                All Categories
-              </Dropdown.Item>
-              <Dropdown.Divider />
-              {categories.map((category) => (
-                <Dropdown.Item
-                  key={category.id}
-                  onClick={() => setCategoryFilter(category.id)}
-                >
-                  {category.name}
-                </Dropdown.Item>
-              ))}
-            </Dropdown>
-            <Dropdown
-              label={
-                <div className="flex items-center">
-                  <HiFilter className="mr-2" />
-                  {availabilityFilter === "available"
-                    ? "Available Items"
-                    : availabilityFilter === "unavailable"
-                    ? "Unavailable Items"
-                    : "Filter by Availability"}
-                </div>
-              }
-              color="light"
+          {/* Filter Controls - Better organized with even spacing */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+            {/* Category Filter Dropdown */}
+            <div className="row-span-1">
+              <Dropdown
+                label={
+                  <div className="flex items-center justify-between w-full">
+                    <div className="flex items-center">
+                      <HiFilter className="mr-2" />
+                      <span className="truncate">
+                        {categoryFilter
+                          ? `Category: ${
+                              categories.find((c) => c.id === categoryFilter)
+                                ?.name || "Selected"
+                            }`
+                          : "Filter by Category"}
+                      </span>
+                    </div>
+                  </div>
+                }
+                color="light"
               className="w-full md:w-auto"
-            >
-              <Dropdown.Item onClick={() => setAvailabilityFilter("")}>
-                All Items
-              </Dropdown.Item>
-              <Dropdown.Divider />
-              <Dropdown.Item onClick={() => setAvailabilityFilter("available")}>
-                Available Only
-              </Dropdown.Item>
-              <Dropdown.Item
-                onClick={() => setAvailabilityFilter("unavailable")}
+                dismissOnClick={true}
               >
-                Unavailable Only
-              </Dropdown.Item>
-            </Dropdown>
+                <Dropdown.Item
+                  onClick={() => setCategoryFilter("")}
+                  className="flex items-center"
+                >
+                  <span className="mr-2">🔄</span> All Categories
+                </Dropdown.Item>
+                <Dropdown.Divider />
+                {categories.map((category) => (
+                  <Dropdown.Item
+                    key={category.id}
+                    onClick={() => setCategoryFilter(category.id)}
+                    className={`${
+                      category.id === categoryFilter
+                        ? "bg-blue-50 dark:bg-blue-900/20"
+                        : ""
+                    }`}
+                  >
+                    {category.name}
+                  </Dropdown.Item>
+                ))}
+              </Dropdown>
+            </div>
+            {/* Availability Filter Dropdown */}
+            <div className="row-span-1 ">
+              <Dropdown
+                label={
+                  <div className="flex items-center justify-between w-full">
+                    <div className="flex items-center">
+                      <HiFilter className="mr-2" />
+                      <span className="truncate">
+                        {availabilityFilter === "available"
+                          ? "Available Items"
+                          : availabilityFilter === "unavailable"
+                          ? "Unavailable Items"
+                          : "Filter by Availability"}
+                      </span>
+                    </div>
+                  </div>
+                }
+                color="light"
+              className="w-full md:w-auto"
+                dismissOnClick={true}
+              >
+                <Dropdown.Item
+                  onClick={() => setAvailabilityFilter("")}
+                  className="flex items-center"
+                >
+                  <span className="mr-2">🔄</span> All Items
+                </Dropdown.Item>
+                <Dropdown.Divider />
+                <Dropdown.Item
+                  onClick={() => setAvailabilityFilter("available")}
+                  className={`${
+                    availabilityFilter === "available"
+                      ? "bg-blue-50 dark:bg-blue-900/20"
+                      : ""
+                  }`}
+                >
+                  <span className="mr-2 text-green-500">✓</span> Available Only
+                </Dropdown.Item>
+                <Dropdown.Item
+                  onClick={() => setAvailabilityFilter("unavailable")}
+                  className={`${
+                    availabilityFilter === "unavailable"
+                      ? "bg-blue-50 dark:bg-blue-900/20"
+                      : ""
+                  }`}
+                >
+                  <span className="mr-2 text-red-500">✕</span> Unavailable Only
+                </Dropdown.Item>
+              </Dropdown>
+            </div>
           </div>
 
-          <div className="flex flex-wrap gap-2 col-span-1 md:col-span-3 lg:col-span-1">
-            {(search || categoryFilter || availabilityFilter) && (
+          {/* Active Filters Display - Show what filters are currently applied */}
+          {(search || categoryFilter || availabilityFilter) && (
+            <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-gray-200 dark:border-gray-700">
+              <div className="bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 text-xs font-medium px-3 py-1.5 rounded-lg mr-2">
+                Filters Applied
+              </div>
+
+              {search && (
+                <Badge color="info" className="px-2.5 py-1 text-xs">
+                  Search: "{search}"
+                </Badge>
+              )}
+
+              {categoryFilter && (
+                <Badge color="purple" className="px-2.5 py-1 text-xs">
+                  Category:{" "}
+                  {categories.find((c) => c.id === categoryFilter)?.name ||
+                    "Selected"}
+                </Badge>
+              )}
+
+              {availabilityFilter && (
+                <Badge
+                  color={
+                    availabilityFilter === "available" ? "success" : "failure"
+                  }
+                  className="px-2.5 py-1 text-xs"
+                >
+                  {availabilityFilter === "available"
+                    ? "Available Only"
+                    : "Unavailable Only"}
+                </Badge>
+              )}
+
               <Button
                 color="light"
+                size="xs"
                 onClick={resetFilters}
-                className="w-full md:w-auto mt-2 md:mt-0"
+                className="ml-auto"
               >
-                Clear Filters
+                <HiFilter className="mr-1 h-3 w-3" />
+                Clear All
               </Button>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -585,7 +699,9 @@ export default function DashMenuItems() {
                       <Table.Cell className="font-medium text-gray-900 dark:text-white">
                         {item.name}
                       </Table.Cell>
-                      <Table.Cell>${item.price?.toFixed(2) || "0.00"}</Table.Cell>
+                      <Table.Cell>
+                        ${item.price?.toFixed(2) || "0.00"}
+                      </Table.Cell>
                       <Table.Cell>
                         {categories.find((c) => c.id === item.categoryId)
                           ?.name || "Uncategorized"}
@@ -661,17 +777,18 @@ export default function DashMenuItems() {
                   />
                 </div>
               )}
-              
+
               {/* Download summary card */}
               <Card className="mt-6">
                 <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
                   <div>
                     <h3 className="text-lg font-medium">Menu Export Options</h3>
                     <p className="text-gray-500 text-sm mt-1">
-                      Export your menu items in different formats for inventory, printing or integrations
+                      Export your menu items in different formats for inventory,
+                      printing or integrations
                     </p>
                   </div>
-                  <Button 
+                  <Button
                     gradientDuoTone="purpleToBlue"
                     onClick={handleDownloadClick}
                     className="w-full sm:w-auto"
@@ -747,60 +864,99 @@ export default function DashMenuItems() {
         token={currentUser.token}
         categories={categories}
       />
-      
+
       {/* Download Modal */}
       <Modal
         show={showDownloadModal}
         onClose={() => !downloadLoading && setShowDownloadModal(false)}
         dismissible={!downloadLoading}
       >
-        <Modal.Header>
-          Export Menu Items
-        </Modal.Header>
+        <Modal.Header>Export Menu Items</Modal.Header>
         <Modal.Body>
           <div className="space-y-6">
             <p className="text-gray-700 dark:text-gray-300">
-              Export your menu items to use in other applications or for record keeping.
+              Export your menu items to use in other applications or for record
+              keeping.
               {categoryFilter && (
                 <span className="block mt-2 font-medium">
-                  Currently exporting items from category: {categories.find(c => c.id === categoryFilter)?.name || "Selected Category"}
+                  Currently exporting items from category:{" "}
+                  {categories.find((c) => c.id === categoryFilter)?.name ||
+                    "Selected Category"}
                 </span>
               )}
             </p>
-            
+
             {/* Export format selection */}
             <div>
               <label className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
                 Select export format:
               </label>
               <div className="flex flex-wrap gap-4 mt-3">
-                <div 
+                <div
                   className={`flex items-center gap-2 p-3 border rounded-lg cursor-pointer transition-colors
-                    ${downloadFormat === 'csv' 
-                      ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/30' 
-                      : 'border-gray-200 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800'}
+                    ${
+                      downloadFormat === "csv"
+                        ? "border-blue-600 bg-blue-50 dark:bg-blue-900/30"
+                        : "border-gray-200 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
+                    }
                   `}
-                  onClick={() => setDownloadFormat('csv')}
+                  onClick={() => setDownloadFormat("csv")}
                 >
-                  <FaFileCsv size={24} className={downloadFormat === 'csv' ? 'text-blue-600' : 'text-gray-500'} />
+                  <FaFileCsv
+                    size={24}
+                    className={
+                      downloadFormat === "csv"
+                        ? "text-blue-600"
+                        : "text-gray-500"
+                    }
+                  />
                   <div>
-                    <div className={`font-medium ${downloadFormat === 'csv' ? 'text-blue-600 dark:text-blue-400' : ''}`}>CSV Format</div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">Compatible with Excel, Google Sheets</div>
+                    <div
+                      className={`font-medium ${
+                        downloadFormat === "csv"
+                          ? "text-blue-600 dark:text-blue-400"
+                          : ""
+                      }`}
+                    >
+                      CSV Format
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                      Compatible with Excel, Google Sheets
+                    </div>
                   </div>
                 </div>
-                
-                <div 
+
+                <div
                   className={`flex items-center gap-2 p-3 border rounded-lg cursor-pointer transition-colors
-                    ${downloadFormat === 'json' 
-                      ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/30' 
-                      : 'border-gray-200 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800'}
+                    ${
+                      downloadFormat === "json"
+                        ? "border-blue-600 bg-blue-50 dark:bg-blue-900/30"
+                        : "border-gray-200 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
+                    }
                   `}
-                  onClick={() => setDownloadFormat('json')}
+                  onClick={() => setDownloadFormat("json")}
                 >
-                  <FaFileDownload size={24} className={downloadFormat === 'json' ? 'text-blue-600' : 'text-gray-500'} />
+                  <FaFileDownload
+                    size={24}
+                    className={
+                      downloadFormat === "json"
+                        ? "text-blue-600"
+                        : "text-gray-500"
+                    }
+                  />
                   <div>
-                    <div className={`font-medium ${downloadFormat === 'json' ? 'text-blue-600 dark:text-blue-400' : ''}`}>JSON Format</div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">For developers and API integrations</div>
+                    <div
+                      className={`font-medium ${
+                        downloadFormat === "json"
+                          ? "text-blue-600 dark:text-blue-400"
+                          : ""
+                      }`}
+                    >
+                      JSON Format
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                      For developers and API integrations
+                    </div>
                   </div>
                 </div>
               </div>
@@ -812,17 +968,21 @@ export default function DashMenuItems() {
               <ul className="space-y-1 text-sm">
                 <li className="flex justify-between">
                   <span>Items to export:</span>
-                  <span className="font-medium">{filteredMenuItems.length || menuItems.length}</span>
+                  <span className="font-medium">
+                    {filteredMenuItems.length || menuItems.length}
+                  </span>
                 </li>
                 <li className="flex justify-between">
                   <span>Categories included:</span>
                   <span className="font-medium">
-                    {categoryFilter ? '1' : categories.length || '0'}
+                    {categoryFilter ? "1" : categories.length || "0"}
                   </span>
                 </li>
                 <li className="flex justify-between">
                   <span>Format:</span>
-                  <span className="font-medium uppercase">{downloadFormat}</span>
+                  <span className="font-medium uppercase">
+                    {downloadFormat}
+                  </span>
                 </li>
               </ul>
             </div>
@@ -846,8 +1006,8 @@ export default function DashMenuItems() {
               </>
             )}
           </Button>
-          <Button 
-            color="gray" 
+          <Button
+            color="gray"
             onClick={() => setShowDownloadModal(false)}
             disabled={downloadLoading}
           >

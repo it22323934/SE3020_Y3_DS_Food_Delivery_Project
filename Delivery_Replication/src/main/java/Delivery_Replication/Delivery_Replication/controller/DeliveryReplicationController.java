@@ -89,7 +89,6 @@ public class DeliveryReplicationController {
     }
 
 
-
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public DeliveryReplicationResponse createDelivery(@RequestBody DeliveryReplicationRequest request) {

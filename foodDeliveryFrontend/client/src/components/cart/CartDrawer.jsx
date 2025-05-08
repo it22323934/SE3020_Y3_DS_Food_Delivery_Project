@@ -1,6 +1,14 @@
 import React, { useState } from "react";
 import { Button, Avatar, TextInput, Spinner } from "flowbite-react";
-import { HiOutlineX, HiTrash, HiPlus, HiMinus, HiTag, HiCheckCircle, HiX } from "react-icons/hi";
+import {
+  HiOutlineX,
+  HiTrash,
+  HiPlus,
+  HiMinus,
+  HiTag,
+  HiCheckCircle,
+  HiX,
+} from "react-icons/hi";
 import { FaMoneyBillWave } from "react-icons/fa";
 import { useCart } from "../../context/CartContext";
 import { promotionService } from "../../service/promotionService";
@@ -17,7 +25,7 @@ export default function CartDrawer() {
     clearCart,
     getCartItemKey,
     applyPromotion,
-    removePromotion
+    removePromotion,
   } = useCart();
 
   const [promoCode, setPromoCode] = useState("");
@@ -28,7 +36,7 @@ export default function CartDrawer() {
 
   const formatPrice = (value) => {
     const numValue = Number(value);
-    return isNaN(numValue) ? '0.00' : numValue.toFixed(2);
+    return isNaN(numValue) ? "0.00" : numValue.toFixed(2);
   };
 
   const handleApplyPromo = async () => {
@@ -37,10 +45,31 @@ export default function CartDrawer() {
       return;
     }
 
-    if (!cart.restaurantId) {
-      setPromoError("Cannot apply promotion - restaurant information missing");
+    // Get restaurant ID from cart items for more reliable validation
+    if (cart.items.length === 0) {
+      setPromoError("Your cart is empty");
       return;
     }
+
+    // Extract restaurant ID from the cart items - this is more reliable
+    const cartItemRestaurantIds = cart.items
+      .filter((item) => item.restaurantId)
+      .map((item) => item.restaurantId);
+
+    // Check if all items are from the same restaurant
+    const allSameRestaurant = cartItemRestaurantIds.every(
+      (id) => id === cartItemRestaurantIds[0]
+    );
+
+    if (!allSameRestaurant || cartItemRestaurantIds.length === 0) {
+      setPromoError(
+        "Cannot apply promotion - items from multiple restaurants or missing restaurant info"
+      );
+      return;
+    }
+
+    // Use the restaurant ID from the cart items
+    const actualRestaurantId = cartItemRestaurantIds[0];
 
     setValidatingPromo(true);
     setPromoError("");
@@ -48,13 +77,16 @@ export default function CartDrawer() {
     try {
       const validationData = {
         code: promoCode,
-        restaurantId: cart.restaurantId,
-        userId:currentUser.id,
+        restaurantId: actualRestaurantId, // Use actual restaurant ID from cart items
+        userId: currentUser.id,
         orderAmount: cart.subtotal,
       };
 
-      const response = await promotionService.validatePromotion(validationData, currentUser?.token);
-      
+      const response = await promotionService.validatePromotion(
+        validationData,
+        currentUser?.token
+      );
+
       if (response.ok) {
         const promoData = await response.json();
         applyPromotion(promoData);
@@ -182,7 +214,9 @@ export default function CartDrawer() {
                             >
                               <HiMinus className="h-3.5 w-3.5" />
                             </button>
-                            <span className="px-3 py-1">{isNaN(item.quantity) ? 1 : item.quantity}</span>
+                            <span className="px-3 py-1">
+                              {isNaN(item.quantity) ? 1 : item.quantity}
+                            </span>
                             <button
                               onClick={() =>
                                 updateQuantity(cartItemKey, item.quantity + 1)
@@ -213,7 +247,7 @@ export default function CartDrawer() {
                 <HiTag className="mr-1 text-blue-500" />
                 Apply Promotion Code
               </p>
-              
+
               {cart.appliedPromotion ? (
                 <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg border border-green-200 dark:border-green-800">
                   <div className="flex justify-between items-center">
@@ -225,7 +259,8 @@ export default function CartDrawer() {
                         </span>
                       </div>
                       <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
-                        {cart.appliedPromotion.discountPercentage}% discount applied
+                        {cart.appliedPromotion.discountPercentage}% discount
+                        applied
                       </p>
                     </div>
                     <button
@@ -257,7 +292,7 @@ export default function CartDrawer() {
                   </Button>
                 </div>
               )}
-              
+
               {promoError && (
                 <p className="text-red-500 text-xs mt-1">{promoError}</p>
               )}
@@ -268,11 +303,9 @@ export default function CartDrawer() {
               <div className="space-y-1.5 mb-4">
                 <div className="flex justify-between text-gray-600 dark:text-gray-400">
                   <span>Subtotal</span>
-                  <span>
-                    ${formatPrice(cart.subtotal)}
-                  </span>
+                  <span>${formatPrice(cart.subtotal)}</span>
                 </div>
-                
+
                 {/* Display discount if a promotion is applied */}
                 {cart.discountAmount > 0 && (
                   <div className="flex justify-between text-green-600 dark:text-green-400">
@@ -280,26 +313,20 @@ export default function CartDrawer() {
                     <span>-${formatPrice(cart.discountAmount)}</span>
                   </div>
                 )}
-                
+
                 <div className="flex justify-between text-gray-600 dark:text-gray-400">
                   <span>Tax</span>
-                  <span>
-                    ${formatPrice(cart.taxAmount)}
-                  </span>
+                  <span>${formatPrice(cart.taxAmount)}</span>
                 </div>
-                
+
                 <div className="flex justify-between text-gray-600 dark:text-gray-400">
                   <span>Delivery Fee</span>
-                  <span>
-                    ${formatPrice(cart.deliveryFee || 0)}
-                  </span>
+                  <span>${formatPrice(cart.deliveryFee || 0)}</span>
                 </div>
-                
+
                 <div className="flex justify-between font-bold text-gray-900 dark:text-white pt-2 border-t dark:border-gray-700">
                   <span>Total</span>
-                  <span>
-                    ${formatPrice(cart.total)}
-                  </span>
+                  <span>${formatPrice(cart.total)}</span>
                 </div>
               </div>
 
