@@ -786,32 +786,70 @@ export default function DashMyOrdersRestaurantManagement() {
           </Modal.Header>
           <Modal.Body>
             <div className="space-y-6">
-              {/* Order Status and Actions with visual timeline */}
+              {/* Order Status Section - Enhanced with better styling */}
               <div>
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-                  <div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">
+                {/* Status Card with Visual Improvements */}
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-gradient-to-r from-blue-50 to-white dark:from-gray-800 dark:to-gray-750 p-5 rounded-lg shadow-md border border-blue-100 dark:border-gray-700 mb-8 transition-all duration-200">
+                  <div className="flex flex-col">
+                    <div className="text-sm text-blue-600 dark:text-blue-400 mb-2 uppercase tracking-wide font-medium flex items-center">
+                      <HiInformationCircle className="mr-1.5 h-4 w-4" />
                       Current Status
                     </div>
-                    <OrderStatusBadge status={selectedOrder.status} />
+                    <div className="scale-110 origin-left transition-transform hover:scale-105 mb-1">
+                      <OrderStatusBadge status={selectedOrder.status} />
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-2 flex items-center">
+                      <HiOutlineClock className="mr-1.5 h-3.5 w-3.5" />
+                      Last updated:{" "}
+                      {new Date(
+                        selectedOrder.updatedAt || selectedOrder.createdAt
+                      ).toLocaleString()}
+                    </div>
                   </div>
 
-                  {/* Status update dropdown */}
-                  <UpdateOrderStatusDropdown
-                    order={selectedOrder}
-                    statusWorkflow={statusWorkflow}
-                    statusIcons={statusIcons}
-                    statusColors={statusColors}
-                    token={currentUser.token}
-                    onStatusUpdated={handleStatusUpdated}
-                    size="sm"
-                    showAsButton={true}
-                  />
+                  {/* Status update dropdown - keeping all props the same */}
+                  <div className="sm:self-center">
+                    <UpdateOrderStatusDropdown
+                      order={selectedOrder}
+                      statusWorkflow={statusWorkflow}
+                      statusIcons={statusIcons}
+                      statusColors={statusColors}
+                      token={currentUser.token}
+                      onStatusUpdated={handleStatusUpdated}
+                      size="sm"
+                      showAsButton={true}
+                    />
+                  </div>
                 </div>
 
-                {/* Visual timeline of order status */}
-                <div className="mt-4 mb-2 relative pt-6 pb-2">
-                  <OrderStatusTimeline status={selectedOrder.status} />
+                {/* Visual timeline with enhanced styling */}
+                <div className="relative pt-3 pb-8 px-2 mb-8">
+                  {/* Timeline track background */}
+                  <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-gray-100 via-blue-50 to-gray-100 dark:from-gray-700 dark:via-blue-900/20 dark:to-gray-700 rounded-full shadow-inner"></div>
+
+                  {/* Add a subtle animation for the timeline */}
+                  <style jsx>{`
+                    @keyframes fadeIn {
+                      from {
+                        opacity: 0;
+                        transform: translateY(10px);
+                      }
+                      to {
+                        opacity: 1;
+                        transform: translateY(0);
+                      }
+                    }
+                    .animate-timeline-fadeIn {
+                      animation: fadeIn 0.6s ease-out forwards;
+                    }
+                  `}</style>
+
+                  <div className="animate-timeline-fadeIn">
+                    <OrderStatusTimeline
+                      status={selectedOrder.status}
+                      className="mt-4"
+                    />
+                  </div>
                 </div>
               </div>
 
