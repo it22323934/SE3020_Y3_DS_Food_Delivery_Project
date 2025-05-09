@@ -23,6 +23,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import org.springframework.kafka.core.KafkaTemplate;
+import com.foodDelivery.paymentService.event.PaymentSuccessEvent;
 
 @Service
 public class PaymentServiceImpl implements PaymentService {
@@ -38,6 +40,13 @@ public class PaymentServiceImpl implements PaymentService {
     public void init() {
         Stripe.apiKey = stripeSecretKey;
     }
+
+    @Autowired
+    private KafkaTemplate<String, PaymentSuccessEvent> kafkaTemplate;
+
+//    @Autowired
+//    private EmailService emailService;
+
 
     @Override
     public PaymentResponse processPayment(PaymentRequest paymentRequest) {
@@ -260,6 +269,7 @@ public class PaymentServiceImpl implements PaymentService {
             Payment savedPayment = paymentRepository.save(payment);
             logger.info("Saved payment record with ID: {}", savedPayment.getId());
 
+
             // 4. Return response
             PaymentResponse response = new PaymentResponse();
             response.setOrderId(orderId);
@@ -268,9 +278,13 @@ public class PaymentServiceImpl implements PaymentService {
             response.setCustomerEmail(customerEmail);
             response.setAmount(payment.getAmount());
 
+             //Send Kafka event for successful payments
+
+
             return response;
         } catch (Exception e) {
             logger.error("Error in confirmPayment: ", e);
             throw new RuntimeException("Payment processing error", e);
         }
     }}
+

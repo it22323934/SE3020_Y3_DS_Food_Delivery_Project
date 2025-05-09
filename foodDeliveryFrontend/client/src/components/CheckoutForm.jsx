@@ -16,10 +16,13 @@ export default function CheckoutForm({ onSuccess, clientSecret }) {
   const handleSubmit = async (event) => {
     event.preventDefault();
 
+ const handleSubmit = async (event) => {
+    event.preventDefault();
+
     if (!stripe || !elements) {
       return;
     }
-
+}
     setProcessing(true);
     setError(null);
 
