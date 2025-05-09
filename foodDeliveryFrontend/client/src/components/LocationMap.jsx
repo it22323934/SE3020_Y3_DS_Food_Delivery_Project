@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { GoogleMap, LoadScript, Marker } from '@react-google-maps/api';
 import axios from 'axios';
 import { useParams } from "react-router-dom";
+import { Button } from '@mui/material'; // ✅ Import MUI Button properly
 
 const containerStyle = {
   width: '100%',
@@ -10,11 +11,13 @@ const containerStyle = {
 
 function LocationMap() {
   const [currentLocation, setCurrentLocation] = useState(null);
- const { orderId } = useParams();
-  
+ const { orderId, userId } = useParams();
+
 
   useEffect(() => {
     console.log("Order ID:"+orderId);
+    console.log("User ID:"+userId);
+
     const watchId = navigator.geolocation.watchPosition(
       (position) => {
         setCurrentLocation({
@@ -50,7 +53,7 @@ function LocationMap() {
       const response = await axios.post('http://localhost:8089/api/location', {
         latitude: currentLocation.lat,
         longitude: currentLocation.lng,
-        userId:"R1",
+        userId:userId,
         orderId:orderId,
       });
 
@@ -79,7 +82,25 @@ function LocationMap() {
         )}
       </LoadScript>
 
-      <button onClick={handleSendLocation}>Send Location</button>
+      <div style={{ marginTop: '32px', marginBottom:"2rem",display: 'flex', justifyContent: 'center' }}>
+  <Button
+    variant="contained"
+    size="small"
+    onClick={handleSendLocation}
+    sx={{
+      textTransform: "none",
+      fontWeight: "bold",
+      borderRadius: 2,
+      boxShadow: 1,
+      backgroundColor: "#52be80",
+      "&:hover": {
+        backgroundColor: "#45a163",
+      },
+    }}
+  >
+    Send Location
+  </Button>
+</div>
     </div>
   );
 }

@@ -2,10 +2,7 @@ import { Sidebar } from "flowbite-react";
 import {
   HiUser,
   HiArrowSmRight,
-  HiDocument,
-  HiDocumentText,
   HiOutlineUserGroup,
-  HiAnnotation,
   HiChartPie,
 } from "react-icons/hi";
 import React, { useEffect, useState } from "react";
@@ -13,16 +10,14 @@ import { Link, useLocation } from "react-router-dom";
 import { signOutSuccess } from "../redux/user/userSlice";
 import { useDispatch, useSelector } from "react-redux";
 import {
-  FaMapMarkerAlt,
-  FaTrashAlt,
-  FaTruck,
-  FaCreditCard,
+  FaHistory,
+  FaReceipt,
   FaStore,
+  FaTag,
   FaUtensils,
 } from "react-icons/fa";
-import { GiCook, GiRecycle } from "react-icons/gi";
-import { RiGovernmentLine } from "react-icons/ri";
-import { MdLocalShipping, MdRestaurantMenu } from "react-icons/md";
+import { GiCook } from "react-icons/gi";
+import { MdRestaurantMenu } from "react-icons/md";
 import { authService } from "../service/authService";
 
 export default function DashSideBar() {
@@ -63,7 +58,10 @@ export default function DashSideBar() {
 
     if (hasRole("ROLE_ADMIN")) return "Admin";
     if (hasRole("ROLE_RESTAURANT_ADMIN")) return "Restaurant Admin";
-    if (hasRole("ROLE_DRIVER")) return "Driver";
+    //   if (hasRole("ROLE_DRIVER")) return "Driver";
+    if (hasRole("ROLE_DELIVERY_PERSONNEL")) return "Driver";
+    if (hasRole("ROLE_CUSTOMER")) return "User";
+
     return "User";
   };
 
@@ -86,45 +84,19 @@ export default function DashSideBar() {
                   </Sidebar.Item>
                 </Link>
 
-                {/* Restaurant Management - visible to both admin types */}
-                <Link to="/dashboard?tab=restaurant-management">
-                  <Sidebar.Item
-                    active={tab === "restaurant-management"}
-                    icon={FaStore}
-                    labelColor="dark"
-                    as="div"
-                  >
-                    Restaurant
-                  </Sidebar.Item>
-                </Link>
-
-                {/* Menu Management - visible to both admin types */}
-                <Link to="/dashboard?tab=menu-management">
-                  <Sidebar.Item
-                    active={tab === "menu-management"}
-                    icon={FaUtensils}
-                    labelColor="dark"
-                    as="div"
-                  >
-                    Menu Item
-                  </Sidebar.Item>
-                </Link>
-
-                {/* Payment Management - visible to both admin types */}
-                <Link to="/dashboard?tab=payment-management">
-                  <Sidebar.Item
-                    active={tab === "payment-management"}
-                    icon={FaCreditCard}
-                    labelColor="dark"
-                    as="div"
-                  >
-                    Payments
-                  </Sidebar.Item>
-                </Link>
-
                 {/* Items that only the main admin should see */}
                 {hasRole("ROLE_ADMIN") && (
                   <>
+                    <Link to="/dashboard?tab=restaurant-management">
+                      <Sidebar.Item
+                        active={tab === "restaurant-management"}
+                        icon={FaStore}
+                        labelColor="dark"
+                        as="div"
+                      >
+                        Restaurant
+                      </Sidebar.Item>
+                    </Link>
                     <Link to="/dashboard?tab=user-management">
                       <Sidebar.Item
                         active={tab === "user-management"}
@@ -155,6 +127,26 @@ export default function DashSideBar() {
 
           {currentUser && hasRole("ROLE_RESTAURANT_ADMIN") && (
             <>
+              <Link to="/dashboard?tab=promotion-management">
+                <Sidebar.Item
+                  active={tab === "promotion-management"}
+                  icon={FaTag}
+                  labelColor="dark"
+                  as="div"
+                >
+                  Promotions
+                </Sidebar.Item>
+              </Link>
+              <Link to="/dashboard?tab=menu-management">
+                <Sidebar.Item
+                  active={tab === "menu-management"}
+                  icon={FaUtensils}
+                  labelColor="dark"
+                  as="div"
+                >
+                  Menu Item
+                </Sidebar.Item>
+              </Link>
               <Link to="/dashboard?tab=menu-item-category-management">
                 <Sidebar.Item
                   active={tab === "menu-item-category-management"}
@@ -175,6 +167,36 @@ export default function DashSideBar() {
                   My Restaurant
                 </Sidebar.Item>
               </Link>
+              <Link to="/dashboard?tab=my-restaurant-orders">
+                <Sidebar.Item
+                  active={tab === "my-restaurant-orders"}
+                  icon={FaReceipt} // Changed from FaStore to FaReceipt
+                  labelColor="dark"
+                  as="div"
+                >
+                  My Orders
+                </Sidebar.Item>
+              </Link>
+              <Link to="/dashboard?tab=delivery-order">
+                <Sidebar.Item
+                  active={tab === "delivery-order"}
+                  icon={FaStore}
+                  labelColor="dark"
+                  as="div"
+                >
+                  Delivery Order
+                </Sidebar.Item>
+              </Link>
+              <Link to="/dashboard?tab=driver-Registration">
+                <Sidebar.Item
+                  active={tab === "driver-Registration"}
+                  icon={FaStore}
+                  labelColor="dark"
+                  as="div"
+                >
+                  Driver Registration
+                </Sidebar.Item>
+              </Link>
             </>
           )}
 
@@ -192,6 +214,48 @@ export default function DashSideBar() {
             </Link>
           )}
 
+          {/* Driver Order managment */}
+          {currentUser && hasRole("ROLE_DELIVERY_PERSONNEL") && (
+            <Link to="/dashboard?tab=driver-order">
+              <Sidebar.Item
+                active={tab === "driver-order"}
+                icon={GiCook}
+                labelColor="dark"
+                as="div"
+              >
+                Driver Orders
+              </Sidebar.Item>
+            </Link>
+          )}
+
+          {/* Driver Order managment */}
+          {currentUser && hasRole("ROLE_CUSTOMER") && (
+            <Link to="/dashboard?tab=AllOrders">
+              <Sidebar.Item
+                active={tab === "AllOrders"}
+                icon={GiCook}
+                labelColor="dark"
+                as="div"
+              >
+                Orders
+              </Sidebar.Item>
+            </Link>
+          )}
+
+          {/* User Order managment */}
+          {currentUser && hasRole("ROLE_CUSTOMER") && (
+            <Link to="/dashboard?tab=Order-Location">
+              <Sidebar.Item
+                active={tab === "Order-Location"}
+                icon={GiCook}
+                labelColor="dark"
+                as="div"
+              >
+                Order-Location
+              </Sidebar.Item>
+            </Link>
+          )}
+
           {/* Profile link for all users */}
           <Link to="/dashboard?tab=profile">
             <Sidebar.Item
@@ -204,7 +268,16 @@ export default function DashSideBar() {
               Profile
             </Sidebar.Item>
           </Link>
-
+          <Link to="/dashboard?tab=my-user-restaurant-orders">
+            <Sidebar.Item
+              active={tab === "my-user-restaurant-orders"}
+              icon={FaHistory}
+              labelColor="dark"
+              as="div"
+            >
+              My Orders
+            </Sidebar.Item>
+          </Link>
           <Sidebar.Item
             icon={HiArrowSmRight}
             className="cursor-pointer"

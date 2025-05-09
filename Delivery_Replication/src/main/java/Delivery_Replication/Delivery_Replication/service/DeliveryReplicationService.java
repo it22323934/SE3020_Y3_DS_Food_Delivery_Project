@@ -320,6 +320,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.scheduling.annotation.Scheduled;
 
 import java.util.List;
 import java.util.Optional;
@@ -379,7 +380,7 @@ public class DeliveryReplicationService implements IDeliveryReplicationService {
     //Fetch the Driver Orders
     @KafkaListener(topics = "unassigned-deliveries", groupId = "delivery-group")
     public void FetchDriverOrders(String driverId,DeliveryReplication delivery) {
-        logger.info("🟡 Received driverId from Kafka: {}", driverId);
+        logger.info("🟡 Received driverId from Kafka topic: {}", driverId);
 
         String url = "http://localhost:9005/api/driver-orders/orders/incomplete/" + driverId;
 
@@ -438,32 +439,7 @@ public class DeliveryReplicationService implements IDeliveryReplicationService {
     }
 
 
-
-
-
-
-
-
-    public DeliveryReplicationResponse createDeliveryReplication(DeliveryReplicationRequest request) {
-        DeliveryReplication deliveryReplication = new DeliveryReplication(
-                request.orderId(),
-                request.userId(),
-                request.userName(),
-                request.userPhoneNo(),
-                request.restaurantId(),
-                request.deliveryAddress(),
-                request.orderItems(),
-                request.price(),
-                request.orderDate(),
-                request.orderTime(),
-                request.isAssignDriver(),
-                request.driverId(),
-                request.driverName(),
-                request.driverPhoneNo(),
-                request.isOrderDeliveredComplete(),
-                request.driverRemark(),
-                request.userRemark()
-        );
+    public DeliveryReplicationResponse createDeliveryReplication(DeliveryReplication deliveryReplication) {
 
         deliveryReplcationRepository.save(deliveryReplication);
         logger.info("Delivery replication created successfully: {}", deliveryReplication);
@@ -488,6 +464,7 @@ public class DeliveryReplicationService implements IDeliveryReplicationService {
                 deliveryReplication.getDriverRemark(),
                 deliveryReplication.getUserRemark()
         );
+
     }
 
     public List<DeliveryReplicationResponse> getAllDeliveryReplicationResponses() {
@@ -529,8 +506,9 @@ public class DeliveryReplicationService implements IDeliveryReplicationService {
     }
 
     // Updated method to return List<DeliveryReplicationResponse>
-    public List<DeliveryReplicationResponse> getDeliveriesByAssignDriver(Boolean isAssignDriver) {
-        List<DeliveryReplication> deliveries = deliveryReplcationRepository.findByIsAssignDriver(isAssignDriver);
+    @Scheduled(fixedRate = 120000) // every 2 minutes
+    public List<DeliveryReplicationResponse> getDeliveriesByAssignDriver() {
+        List<DeliveryReplication> deliveries = deliveryReplcationRepository.findByIsAssignDriver(false);
 
         // 🔁 Loop through each unassigned delivery and manually call the Kafka logic
         deliveries.forEach(delivery -> {

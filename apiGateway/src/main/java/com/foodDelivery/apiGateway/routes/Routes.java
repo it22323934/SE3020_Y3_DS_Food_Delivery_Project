@@ -173,16 +173,19 @@ public class Routes {
     @Bean
     public RouterFunction<ServerResponse> orderServiceRoutes() {
         return GatewayRouterFunctions.route("order_service")
-                .route(RequestPredicates.path("/api/orders/**"), HandlerFunctions.http(orderServiceUrl))
-                .filter((request, next) -> {
-                    HttpServletRequest httpRequest = request.servletRequest();
-                    boolean authenticated = jwtAuthFilter.isAuthenticated(httpRequest);
-                    if (!authenticated) {
-                        return ServerResponse.status(HttpStatus.UNAUTHORIZED)
-                                .body("Access denied: Authentication required");
-                    }
-                    return next.handle(request);
-                })
+                // Public routes (no authentication required)
+                .route(RequestPredicates.path("/api/orders/public/**"),
+                        HandlerFunctions.http(orderServiceUrl))
+                // Protected routes (authentication required)
+                .route(RequestPredicates.path("/api/orders/**"),
+                        request -> {
+                            HttpServletRequest httpRequest = request.servletRequest();
+                            if (!jwtAuthFilter.isAuthenticated(httpRequest)) {
+                                return ServerResponse.status(HttpStatus.UNAUTHORIZED)
+                                        .body("Access denied: Authentication required");
+                            }
+                            return HandlerFunctions.http(orderServiceUrl).handle(request);
+                        })
                 .filter(CircuitBreakerFilterFunctions.circuitBreaker("orderServiceCircuitBreaker",
                         URI.create("forward:/fallbackRoute")))
                 .build();

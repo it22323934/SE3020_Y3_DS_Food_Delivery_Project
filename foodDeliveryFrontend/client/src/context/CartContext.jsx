@@ -14,12 +14,12 @@ const initialState = {
   restaurantName: null,
   items: [],
   subtotal: 0,
-  taxRate: 0.10, // 10% tax rate
+  taxRate: 0.1, // 10% tax rate
   taxAmount: 0,
   deliveryFee: 3.99,
   discountAmount: 0,
   appliedPromotion: null,
-  total: 0
+  total: 0,
 };
 
 const getInitialState = () => {
@@ -41,7 +41,7 @@ const actionTypes = {
   SET_RESTAURANT: "SET_RESTAURANT",
   UPDATE_TOTALS: "UPDATE_TOTALS",
   APPLY_PROMOTION: "APPLY_PROMOTION",
-  REMOVE_PROMOTION: "REMOVE_PROMOTION"
+  REMOVE_PROMOTION: "REMOVE_PROMOTION",
 };
 
 // Helper to create a unique key for a cart item including its addons
@@ -83,7 +83,7 @@ const calculateItemTotal = (item, quantity, selectedAddOns) => {
     ? item.discountedPrice || 0
     : item.price || 0;
 
-    const qty = quantity || item.quantity || 0;
+  const qty = quantity || item.quantity || 0;
   const addOnTotal = calculateAddOnTotal(selectedAddOns);
 
   return basePrice * qty + addOnTotal;
@@ -103,9 +103,8 @@ function cartReducer(state, action) {
         state.items.length > 0
       ) {
         return {
-          ...state,
+          ...initialState,
           items: [
-            ...state.items,
             {
               id: item.id,
               name: item.name,
@@ -115,7 +114,6 @@ function cartReducer(state, action) {
               originalPrice: Number(item.price || 0),
               quantity: Number(item.quantity || quantity || 1),
               imageUrl: item.imageUrl,
-              // Store the complete selectedAddOns array with quantity information
               addOns: selectedAddOns || [],
               itemTotal: calculateItemTotal(
                 item,
@@ -125,7 +123,8 @@ function cartReducer(state, action) {
               restaurantId,
             },
           ],
-          restaurantId: restaurantId || state.restaurantId,
+          restaurantId: restaurantId,
+          restaurantName: item.restaurantName || null,
         };
       }
 
@@ -191,14 +190,15 @@ function cartReducer(state, action) {
       // If no items left, reset restaurantId and applied promotion
       const updatedRestaurantId =
         updatedItems.length > 0 ? state.restaurantId : null;
-      const updatedPromotion = updatedItems.length > 0 ? state.appliedPromotion : null;
+      const updatedPromotion =
+        updatedItems.length > 0 ? state.appliedPromotion : null;
 
       return {
         ...state,
         items: updatedItems,
         restaurantId: updatedRestaurantId,
         appliedPromotion: updatedPromotion,
-        discountAmount: updatedPromotion ? state.discountAmount : 0
+        discountAmount: updatedPromotion ? state.discountAmount : 0,
       };
     }
 
@@ -263,7 +263,7 @@ function cartReducer(state, action) {
       const { promotion } = action.payload;
       return {
         ...state,
-        appliedPromotion: promotion
+        appliedPromotion: promotion,
       };
     }
 
@@ -271,7 +271,7 @@ function cartReducer(state, action) {
       return {
         ...state,
         appliedPromotion: null,
-        discountAmount: 0
+        discountAmount: 0,
       };
     }
 
@@ -283,7 +283,7 @@ function cartReducer(state, action) {
 export function CartProvider({ children }) {
   const [state, dispatch] = useReducer(cartReducer, getInitialState());
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
-  
+
   useEffect(() => {
     try {
       localStorage.setItem("cart", JSON.stringify(state));
@@ -299,34 +299,44 @@ export function CartProvider({ children }) {
         (total, item) => total + Number(item.itemTotal || 0),
         0
       );
-      
+
       // Calculate discount if promotion is applied
       let discountAmount = 0;
       if (state.appliedPromotion) {
         // Calculate discount based on percentage
-        const rawDiscount = subtotal * (state.appliedPromotion.discountPercentage / 100);
-        
+        const rawDiscount =
+          subtotal * (state.appliedPromotion.discountPercentage / 100);
+
         // Apply max discount limit if available
-        if (state.appliedPromotion.maxDiscount && rawDiscount > state.appliedPromotion.maxDiscount) {
+        if (
+          state.appliedPromotion.maxDiscount &&
+          rawDiscount > state.appliedPromotion.maxDiscount
+        ) {
           discountAmount = state.appliedPromotion.maxDiscount;
         } else {
           discountAmount = rawDiscount;
         }
       }
-      
+
       // Apply discount to the subtotal
       const discountedSubtotal = subtotal - discountAmount;
-      
+
       // Calculate tax on the discounted subtotal
       const taxAmount = discountedSubtotal * Number(state.taxRate || 0.1);
-      
+
       const deliveryFee =
         state.items.length > 0 ? Number(state.deliveryFee || 0) : 0;
-        
+
       const total = discountedSubtotal + taxAmount + deliveryFee;
 
       // Debug totals
-      console.log("Cart totals:", { subtotal, discountAmount, taxAmount, deliveryFee, total });
+      console.log("Cart totals:", {
+        subtotal,
+        discountAmount,
+        taxAmount,
+        deliveryFee,
+        total,
+      });
 
       dispatch({
         type: actionTypes.UPDATE_TOTALS,
@@ -336,7 +346,7 @@ export function CartProvider({ children }) {
       console.error("Error calculating totals:", error);
     }
   }, [state.items, state.taxRate, state.deliveryFee, state.appliedPromotion]);
-
+  
   const addToCart = (item, quantity, selectedAddOns) => {
     if (!item || quantity <= 0) return;
 
@@ -346,14 +356,21 @@ export function CartProvider({ children }) {
       price: item.priceValue || item.price || 0,
       discountedPrice: item.discountedValue || item.discountedPrice || 0,
       quantity: item.quantity || 1,
+      restaurantId: item.restaurantId,
     };
 
-    // Check if adding from a different restaurant
-    if (
-      state.restaurantId &&
-      state.restaurantId !== safeItem.restaurantId &&
-      state.items.length > 0
-    ) {
+    // Find restaurant IDs in the current cart items
+    const cartRestaurantIds = state.items
+      .filter((cartItem) => cartItem.restaurantId)
+      .map((cartItem) => cartItem.restaurantId);
+
+    // Check if this item belongs to a different restaurant than any existing items
+    const hasDifferentRestaurant =
+      state.items.length > 0 &&
+      cartRestaurantIds.length > 0 &&
+      !cartRestaurantIds.includes(item.restaurantId);
+
+    if (hasDifferentRestaurant) {
       // Confirm with user before clearing cart
       const confirmed = window.confirm(
         "Your cart contains items from a different restaurant. Adding this item will clear your current cart. Continue?"
@@ -361,10 +378,10 @@ export function CartProvider({ children }) {
 
       if (!confirmed) return;
 
+      // Clear the cart first
+      dispatch({ type: actionTypes.CLEAR_CART });
       toast.info("Cart cleared - items from previous restaurant removed");
     }
-
-    console.log("Safe item created:", safeItem);
 
     // Use the safe item in the dispatch
     dispatch({
@@ -373,7 +390,7 @@ export function CartProvider({ children }) {
         item: safeItem,
         quantity: item.quantity || quantity,
         selectedAddOns: item.addOns || selectedAddOns,
-        restaurantId: safeItem.restaurantId,
+        restaurantId: item.restaurantId,
       },
     });
   };
@@ -409,28 +426,32 @@ export function CartProvider({ children }) {
       payload: { restaurant },
     });
   };
-  
+
   const applyPromotion = (promotion) => {
     // Check if the minimum order amount is met
     if (state.subtotal < promotion.minOrderAmount) {
-      toast.error(`Minimum order amount of $${promotion.minOrderAmount.toFixed(2)} not met`);
+      toast.error(
+        `Minimum order amount of $${promotion.minOrderAmount.toFixed(
+          2
+        )} not met`
+      );
       return false;
     }
-    
+
     dispatch({
       type: actionTypes.APPLY_PROMOTION,
-      payload: { promotion }
+      payload: { promotion },
     });
-    
+
     toast.success(`Promotion ${promotion.code} applied successfully!`);
     return true;
   };
-  
+
   const removePromotion = () => {
     dispatch({
-      type: actionTypes.REMOVE_PROMOTION
+      type: actionTypes.REMOVE_PROMOTION,
     });
-    
+
     toast.info("Promotion removed");
   };
 
@@ -448,7 +469,7 @@ export function CartProvider({ children }) {
     closeCartDrawer,
     getCartItemKey, // Export helper function for components
     applyPromotion,
-    removePromotion
+    removePromotion,
   };
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

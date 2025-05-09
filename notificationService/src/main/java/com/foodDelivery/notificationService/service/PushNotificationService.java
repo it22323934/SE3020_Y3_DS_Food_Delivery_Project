@@ -1,4 +1,3 @@
-// notificationService/src/main/java/com/foodDelivery/notificationService/service/PushNotificationService.java
 package com.foodDelivery.notificationService.service;
 
 import org.slf4j.Logger;

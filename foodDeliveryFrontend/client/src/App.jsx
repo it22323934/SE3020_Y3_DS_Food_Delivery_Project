@@ -22,12 +22,13 @@ import UserLocationViewer from "./components/UserLocationViewer";
 import { CreateUserModal } from "./components/sub-components/user-management/CreateUserModal";
 import { CartProvider } from "./context/CartContext";
 import CartDrawer from "./components/cart/CartDrawer";
-import CheckoutPage from "./pages/CheckoutPage";
-import { AuthProvider } from './context/AuthContext';
-import OrderSuccessPage from './pages/OrderSuccessPage';
+import AllOrders from "./components/AllOrders";
+import CustomerTrackingOrder from "./components/CustomerTrackingOrder"; 
+
+import Checkout from "./pages/Checkout";
+import AllRestaurants from "./pages/AllRestaurants";
 export default function App() {
   return (
-  <AuthProvider>
     <CartProvider>
       <CartDrawer />
     <BrowserRouter>
@@ -35,6 +36,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/about" element={<About />} />
+        <Route path="/restaurants" element={<AllRestaurants />} />
         <Route path="/sign-in" element={<SignIn />} />
         <Route path="/sign-up" element={<SignUp />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -45,20 +47,20 @@ export default function App() {
         <Route path="/DeliveryReplicationView" element={<DeliveryReplicationView />} />
         <Route path="/DeliveryAssignOrders" element={<DeliveryAssignOrders />} />
         <Route path="/update-order/:orderId" element={<UpdateOrderPage />} />
-        <Route path="/location-map/:orderId" element={<LocationMap />} />
+        <Route path="/location-map/:orderId/:userId" element={<LocationMap />} />
         <Route path="/UserLocationViewer" element={<UserLocationViewer />} />
         <Route path="/CreateUserModal" element={<CreateUserModal />} />
         <Route element={<PrivateRoute/>}>
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/checkout" element={<Checkout/>}/>
         </Route>
         <Route path="/contact-us" element={<ContactUs />} />
-        <Route path="/checkout" element={<CheckoutPage />} />
-        <Route path="order-success" element={<OrderSuccessPage />} />
+        <Route path="/AllOrders" element={<AllOrders />} />
+        <Route path="/CustomerTrackingOrder/:userId/:orderId" element={<CustomerTrackingOrder />} /> {/* ✅ Added Route */}
+
       </Routes>
       <FooterComp/>
-
     </BrowserRouter>
     </CartProvider>
-     </AuthProvider>
   );
 }

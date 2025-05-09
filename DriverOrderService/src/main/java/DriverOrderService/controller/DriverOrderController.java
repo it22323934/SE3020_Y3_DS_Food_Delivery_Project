@@ -11,7 +11,6 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/driver-orders")
-@CrossOrigin(origins = "*") // Enable this if you're testing with a frontend app
 public class DriverOrderController {
 
     @Autowired

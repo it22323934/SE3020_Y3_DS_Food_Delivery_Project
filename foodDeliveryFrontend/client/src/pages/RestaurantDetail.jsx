@@ -24,6 +24,7 @@ import {
   FaTag,
   FaPercent,
   FaAward,
+  FaInfoCircle,
 } from "react-icons/fa";
 import { HiPlus, HiMinus, HiOutlineX, HiCheck } from "react-icons/hi";
 import { publicRestaurantService } from "../service/public/publicService";
@@ -175,13 +176,13 @@ export default function RestaurantDetail() {
       >
         <div className="absolute inset-0 bg-black bg-opacity-50"></div>
         <div className="container mx-auto px-4 pb-4 relative">
-          <Link to="/">
+          <Link to="/restaurants">
             <Button
               color="light"
               className="z-10 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600"
             >
               <FaArrowLeft className="mr-2" />
-              Back to Home
+              Back to Restaurants
             </Button>
           </Link>
         </div>
@@ -382,24 +383,80 @@ export default function RestaurantDetail() {
               </div>
             </div>
 
-            {/* Restaurant Hours or Additional Info can be added here */}
+            {/* Restaurant Hours */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-gray-700 p-6">
-              <h3 className="text-lg font-semibold mb-3 text-gray-800 dark:text-white">
-                Opening Hours
-              </h3>
-              <div className="space-y-2 text-gray-600 dark:text-gray-300">
-                <div className="flex justify-between">
-                  <span>Monday - Friday</span>
-                  <span>9:00 AM - 10:00 PM</span>
+              <div className="flex items-center mb-4">
+                <div className="bg-purple-100 dark:bg-purple-900/30 p-2 rounded-full mr-3">
+                  <FaClock className="text-purple-600 dark:text-purple-400" />
                 </div>
-                <div className="flex justify-between">
-                  <span>Saturday</span>
-                  <span>10:00 AM - 11:00 PM</span>
+                <h3 className="text-lg font-semibold text-gray-800 dark:text-white">
+                  Opening Hours
+                </h3>
+              </div>
+
+              {restaurant.openingHours ? (
+                <div className="space-y-2.5">
+                  {[
+                    "Monday",
+                    "Tuesday",
+                    "Wednesday",
+                    "Thursday",
+                    "Friday",
+                    "Saturday",
+                    "Sunday",
+                  ].map((day, index) => {
+                    const dayData = restaurant.openingHours.find(
+                      (h) => h.dayOfWeek === index + 1
+                    );
+
+                    // Format the time from 24-hour to 12-hour format
+                    const formatTime = (time) => {
+                      if (!time) return "";
+                      const [hours, minutes] = time.split(":");
+                      const hour = parseInt(hours, 10);
+                      return `${hour > 12 ? hour - 12 : hour}:${minutes} ${
+                        hour >= 12 ? "PM" : "AM"
+                      }`;
+                    };
+
+                    return (
+                      <div
+                        key={day}
+                        className="flex justify-between items-center"
+                      >
+                        <span
+                          className={`font-medium ${
+                            dayData?.closed
+                              ? "text-gray-400 dark:text-gray-500"
+                              : "text-gray-700 dark:text-gray-300"
+                          }`}
+                        >
+                          {day}
+                        </span>
+
+                        {dayData?.closed ? (
+                          <span className="text-red-500 font-medium">
+                            Closed
+                          </span>
+                        ) : (
+                          <span className="text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 px-3 py-1 rounded-full text-sm">
+                            {formatTime(dayData?.openTime)} -{" "}
+                            {formatTime(dayData?.closeTime)}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
-                <div className="flex justify-between">
-                  <span>Sunday</span>
-                  <span>10:00 AM - 9:00 PM</span>
+              ) : (
+                <div className="text-center text-gray-500 dark:text-gray-400 py-4">
+                  No opening hours available
                 </div>
+              )}
+
+              <div className="mt-4 pt-3 border-t border-gray-200 dark:border-gray-700 flex items-center text-sm text-blue-600 dark:text-blue-400">
+                <FaInfoCircle className="mr-2" />
+                <span>Hours may vary on holidays</span>
               </div>
             </div>
           </div>

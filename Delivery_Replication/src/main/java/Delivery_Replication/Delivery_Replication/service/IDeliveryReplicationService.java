@@ -8,10 +8,10 @@ import java.util.List;
 
 public interface IDeliveryReplicationService {
 
-    DeliveryReplicationResponse createDeliveryReplication(DeliveryReplicationRequest request);
+    DeliveryReplicationResponse createDeliveryReplication(DeliveryReplication request);
     List<DeliveryReplicationResponse> getAllDeliveryReplicationResponses();
     void deleteDeliveryReplication(String id);
-    List<DeliveryReplicationResponse> getDeliveriesByAssignDriver(Boolean isAssignDriver);
+    List<DeliveryReplicationResponse> getDeliveriesByAssignDriver();
     DeliveryReplicationResponse updateDeliveryReplication(String orderId, DeliveryReplication request);
     DeliveryReplicationResponse getDeliveryReplicationByOrderId(String orderId);
     DeliveryReplicationResponse updateDeliveryReplicationDriver(String orderId, DeliveryReplication request);
