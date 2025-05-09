@@ -25,7 +25,7 @@ import CartDrawer from "./components/cart/CartDrawer";
 import AllOrders from "./components/AllOrders";
 import CustomerTrackingOrder from "./components/CustomerTrackingOrder"; 
 
-import Checkout from "./pages/Checkout";
+import CheckoutPage from "./pages/CheckoutPage";
 import AllRestaurants from "./pages/AllRestaurants";
 export default function App() {
   return (
@@ -40,6 +40,7 @@ export default function App() {
         <Route path="/sign-in" element={<SignIn />} />
         <Route path="/sign-up" element={<SignUp />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
+
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/restaurant/:id" element={<RestaurantDetail />} />
         <Route path="/RegisterDeliveryDriver" element={<RegisterDeliveryDriver />} />
@@ -51,12 +52,14 @@ export default function App() {
         <Route path="/UserLocationViewer" element={<UserLocationViewer />} />
         <Route path="/CreateUserModal" element={<CreateUserModal />} />
         <Route element={<PrivateRoute/>}>
+        <Route path="/checkout" element={<CheckoutPage/>}/>
         <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/checkout" element={<Checkout/>}/>
+
         </Route>
         <Route path="/contact-us" element={<ContactUs />} />
         <Route path="/AllOrders" element={<AllOrders />} />
         <Route path="/CustomerTrackingOrder/:userId/:orderId" element={<CustomerTrackingOrder />} /> {/* ✅ Added Route */}
+
 
       </Routes>
       <FooterComp/>

@@ -27,11 +27,15 @@ public class Routes {
     @Value("${user.service.url}")
     private String userServiceUrl;
 
+
     @Value("${restaurant.service.url}")
     private String restaurantServiceUrl;
 
     @Value("${order.service.url}")
     private String orderServiceUrl;
+
+    @Value("${payment.service.url}")
+    private String paymentServiceUrl;
 
     @Value("${delivery.service.url}")
     private String deliveryServiceUrl;
@@ -187,6 +191,25 @@ public class Routes {
                 .build();
     }
 
+    // Payment service routes - require authentication
+    @Bean
+    public RouterFunction<ServerResponse> paymentServiceRoutes() {
+        return GatewayRouterFunctions.route("payment_service")
+                .route(RequestPredicates.path("/api/payments/**"), HandlerFunctions.http(paymentServiceUrl))
+                .filter((request, next) -> {
+                    HttpServletRequest httpRequest = request.servletRequest();
+                    boolean authenticated = jwtAuthFilter.isAuthenticated(httpRequest);
+                    if (!authenticated) {
+                        return ServerResponse.status(HttpStatus.UNAUTHORIZED)
+                                .body("Access denied: Authentication required");
+                    }
+                    return next.handle(request);
+                })
+                .filter(CircuitBreakerFilterFunctions.circuitBreaker("paymentServiceCircuitBreaker",
+                        URI.create("forward:/fallbackRoute")))
+                .build();
+    }
+
     // Delivery service routes - require authentication
     @Bean
     public RouterFunction<ServerResponse> deliveryServiceRoutes() {
@@ -230,6 +253,15 @@ public class Routes {
         return GatewayRouterFunctions.route("order_service_swagger")
                 .route(RequestPredicates.path("/aggregate/order-service/v3/api-docs"),
                         HandlerFunctions.http(orderServiceUrl))
+                .filter(setPath("/v3/api-docs"))
+                .build();
+    }
+
+    @Bean
+    public RouterFunction<ServerResponse> paymentSwaggerRoute() {
+        return GatewayRouterFunctions.route("payment_service_swagger")
+                .route(RequestPredicates.path("/aggregate/payment-service/v3/api-docs"),
+                        HandlerFunctions.http(paymentServiceUrl))
                 .filter(setPath("/v3/api-docs"))
                 .build();
     }

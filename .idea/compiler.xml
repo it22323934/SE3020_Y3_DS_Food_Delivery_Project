@@ -19,16 +19,6 @@
         </processorPath>
         <module name="notificationService" />
       </profile>
-      <profile name="Annotation profile for Delivery_Replication" enabled="true">
-        <sourceOutputDir name="target/generated-sources/annotations" />
-        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
-        <outputRelativeToContentRoot value="true" />
-        <processorPath useClasspath="false">
-          <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.36/lombok-1.18.36.jar" />
-          <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.36/lombok-1.18.36.jar" />
-        </processorPath>
-        <module name="Delivery_Replication" />
-      </profile>
       <profile name="Annotation profile for DriverOrderService" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
@@ -38,8 +28,9 @@
         </processorPath>
         <module name="Delivery-Driver" />
         <module name="DriverOrderService" />
+        <module name="Delivery_Replication" />
       </profile>
-      <profile name="Annotation profile for userService" enabled="true">
+      <profile name="Annotation profile for paymentService" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
@@ -48,9 +39,9 @@
         </processorPath>
         <module name="apiGateway" />
         <module name="paymentService" />
-        <module name="userService" />
-        <module name="restaurantService" />
         <module name="orderService" />
+        <module name="restaurantService" />
+        <module name="userService" />
       </profile>
     </annotationProcessing>
     <bytecodeTargetLevel>
