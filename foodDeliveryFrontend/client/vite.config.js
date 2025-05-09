@@ -13,4 +13,11 @@ export default defineConfig({
     },
   },
   plugins: [react()],
+  optimizeDeps: {
+    include: [
+      '@emotion/react',
+      '@stripe/stripe-js',
+      '@stripe/stripe-react-components'
+    ]
+  }
 })

@@ -17,6 +17,7 @@ import AllOrders from "../components/AllOrders";
 import DashPromotionManagement from "../components/DashPromotionManagement";
 import DashMyOrdersRestaurantManagement from "../components/DashMyOrdersRestaurantManagement";
 import UserOrdersHistory from "../components/UserOrdersHistory";
+import DashPaymentManagement from "../components/DashPaymentManagement";
 // import DashRestaurant from "../components/DashRestaurant";
 // import DashMenuManagement from "../components/DashMenuManagement";
 export default function Dashboard() {
@@ -64,6 +65,8 @@ export default function Dashboard() {
       {tab === "my-restaurant-orders" && <DashMyOrdersRestaurantManagement />}
       {/** <DashMyUserOrders/> */}
       {tab === "my-user-restaurant-orders" && <UserOrdersHistory />}
+       {/** <DashPaymentManagement/> */}
+            {tab === "payment-management" && <DashPaymentManagement />}
     </div>
   );
 }

@@ -31,3 +31,6 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# Ignore the mysql folder inside payment-service
+paymentService/mysql/

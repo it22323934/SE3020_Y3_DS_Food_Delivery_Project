@@ -1,23 +1,31 @@
 import { Sidebar } from "flowbite-react";
 import {
-  HiUser,
-  HiArrowSmRight,
-  HiOutlineUserGroup,
-  HiChartPie,
+   HiUser,
+    HiArrowSmRight,
+    HiDocument,
+    HiDocumentText,
+    HiOutlineUserGroup,
+    HiAnnotation,
+    HiChartPie,
 } from "react-icons/hi";
 import React, { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { signOutSuccess } from "../redux/user/userSlice";
 import { useDispatch, useSelector } from "react-redux";
 import {
+  FaMapMarkerAlt,
+  FaTrashAlt,
+  FaTruck,
+  FaCreditCard,
   FaHistory,
   FaReceipt,
   FaStore,
   FaTag,
   FaUtensils,
 } from "react-icons/fa";
-import { GiCook } from "react-icons/gi";
-import { MdRestaurantMenu } from "react-icons/md";
+import { GiCook,GiRecycle } from "react-icons/gi";
+import { RiGovernmentLine } from "react-icons/ri";
+import {  MdLocalShipping,MdRestaurantMenu } from "react-icons/md";
 import { authService } from "../service/authService";
 
 export default function DashSideBar() {
@@ -83,6 +91,17 @@ export default function DashSideBar() {
                     Dashboard
                   </Sidebar.Item>
                 </Link>
+                {/* Payment Management - visible to both admin types */}
+                     <Link to="/dashboard?tab=payment-management">
+                          <Sidebar.Item
+                                    active={tab === "payment-management"}
+                                    icon={FaCreditCard}
+                                    labelColor="dark"
+                                    as="div"
+                                  >
+                                    Payments
+                                  </Sidebar.Item>
+                                </Link>
 
                 {/* Items that only the main admin should see */}
                 {hasRole("ROLE_ADMIN") && (
