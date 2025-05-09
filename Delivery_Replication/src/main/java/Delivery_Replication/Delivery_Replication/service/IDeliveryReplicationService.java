@@ -8,7 +8,7 @@ import java.util.List;
 
 public interface IDeliveryReplicationService {
 
-    DeliveryReplicationResponse createDeliveryReplication(DeliveryReplicationRequest request);
+    DeliveryReplicationResponse createDeliveryReplication(DeliveryReplication request);
     List<DeliveryReplicationResponse> getAllDeliveryReplicationResponses();
     void deleteDeliveryReplication(String id);
     List<DeliveryReplicationResponse> getDeliveriesByAssignDriver();

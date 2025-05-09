@@ -72,7 +72,7 @@ public class OrderServiceImpl implements OrderService {
         order.setUpdatedAt(LocalDateTime.now());
         order = orderRepository.save(order);
 
-        if (status == OrderStatus.OUT_FOR_DELIVERY) {
+        if (status == OrderStatus.READY_FOR_PICKUP) {
             // Convert Order to OrderCreateRequest
             OrderCreateRequest orderDetails = OrderCreateRequest.builder()
                     .userId(order.getUserId())

@@ -380,7 +380,7 @@ public class DeliveryReplicationService implements IDeliveryReplicationService {
     //Fetch the Driver Orders
     @KafkaListener(topics = "unassigned-deliveries", groupId = "delivery-group")
     public void FetchDriverOrders(String driverId,DeliveryReplication delivery) {
-        logger.info("🟡 Received driverId from Kafka: {}", driverId);
+        logger.info("🟡 Received driverId from Kafka topic: {}", driverId);
 
         String url = "http://localhost:9005/api/driver-orders/orders/incomplete/" + driverId;
 
@@ -439,32 +439,7 @@ public class DeliveryReplicationService implements IDeliveryReplicationService {
     }
 
 
-
-
-
-
-
-
-    public DeliveryReplicationResponse createDeliveryReplication(DeliveryReplicationRequest request) {
-        DeliveryReplication deliveryReplication = new DeliveryReplication(
-                request.orderId(),
-                request.userId(),
-                request.userName(),
-                request.userPhoneNo(),
-                request.restaurantId(),
-                request.deliveryAddress(),
-                request.orderItems(),
-                request.price(),
-                request.orderDate(),
-                request.orderTime(),
-                request.isAssignDriver(),
-                request.driverId(),
-                request.driverName(),
-                request.driverPhoneNo(),
-                request.isOrderDeliveredComplete(),
-                request.driverRemark(),
-                request.userRemark()
-        );
+    public DeliveryReplicationResponse createDeliveryReplication(DeliveryReplication deliveryReplication) {
 
         deliveryReplcationRepository.save(deliveryReplication);
         logger.info("Delivery replication created successfully: {}", deliveryReplication);
@@ -489,6 +464,7 @@ public class DeliveryReplicationService implements IDeliveryReplicationService {
                 deliveryReplication.getDriverRemark(),
                 deliveryReplication.getUserRemark()
         );
+
     }
 
     public List<DeliveryReplicationResponse> getAllDeliveryReplicationResponses() {
