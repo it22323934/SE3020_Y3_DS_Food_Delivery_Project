@@ -380,7 +380,7 @@ public class DeliveryReplicationService implements IDeliveryReplicationService {
     //Fetch the Driver Orders
     @KafkaListener(topics = "unassigned-deliveries", groupId = "delivery-group")
     public void FetchDriverOrders(String driverId,DeliveryReplication delivery) {
-        logger.info("🟡 Received driverId from Kafka: {}", driverId);
+        logger.info("🟡 Received driverId from Kafka topic: {}", driverId);
 
         String url = "http://localhost:9005/api/driver-orders/orders/incomplete/" + driverId;
 
