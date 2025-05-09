@@ -21,49 +21,48 @@ import LocationMap from "./components/LocationMap";
 import UserLocationViewer from "./components/UserLocationViewer";
 import { CreateUserModal } from "./components/sub-components/user-management/CreateUserModal";
 import { CartProvider } from "./context/CartContext";
+import { AuthProvider } from "./context/AuthContext";
 import CartDrawer from "./components/cart/CartDrawer";
 import AllOrders from "./components/AllOrders";
-import CustomerTrackingOrder from "./components/CustomerTrackingOrder"; 
-
+import CustomerTrackingOrder from "./components/CustomerTrackingOrder";
 import CheckoutPage from "./pages/CheckoutPage";
 import AllRestaurants from "./pages/AllRestaurants";
+
 export default function App() {
   return (
-    <CartProvider>
-      <CartDrawer />
-    <BrowserRouter>
-      <Header />
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/about" element={<About />} />
-        <Route path="/restaurants" element={<AllRestaurants />} />
-        <Route path="/sign-in" element={<SignIn />} />
-        <Route path="/sign-up" element={<SignUp />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-
-        <Route path="/reset-password" element={<ResetPassword />} />
-        <Route path="/restaurant/:id" element={<RestaurantDetail />} />
-        <Route path="/RegisterDeliveryDriver" element={<RegisterDeliveryDriver />} />
-        <Route path="/ViewDeliveryDrivers" element={<ViewDeliveryDrivers />} />
-        <Route path="/DeliveryReplicationView" element={<DeliveryReplicationView />} />
-        <Route path="/DeliveryAssignOrders" element={<DeliveryAssignOrders />} />
-        <Route path="/update-order/:orderId" element={<UpdateOrderPage />} />
-        <Route path="/location-map/:orderId/:userId" element={<LocationMap />} />
-        <Route path="/UserLocationViewer" element={<UserLocationViewer />} />
-        <Route path="/CreateUserModal" element={<CreateUserModal />} />
-        <Route element={<PrivateRoute/>}>
-        <Route path="/checkout" element={<CheckoutPage/>}/>
-        <Route path="/dashboard" element={<Dashboard />} />
-
-        </Route>
-        <Route path="/contact-us" element={<ContactUs />} />
-        <Route path="/AllOrders" element={<AllOrders />} />
-        <Route path="/CustomerTrackingOrder/:userId/:orderId" element={<CustomerTrackingOrder />} /> {/* ✅ Added Route */}
-
-
-      </Routes>
-      <FooterComp/>
-    </BrowserRouter>
-    </CartProvider>
+    <AuthProvider>
+      <CartProvider>
+        <CartDrawer />
+        <BrowserRouter>
+          <Header />
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/restaurants" element={<AllRestaurants />} />
+            <Route path="/sign-in" element={<SignIn />} />
+            <Route path="/sign-up" element={<SignUp />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/restaurant/:id" element={<RestaurantDetail />} />
+            <Route path="/RegisterDeliveryDriver" element={<RegisterDeliveryDriver />} />
+            <Route path="/ViewDeliveryDrivers" element={<ViewDeliveryDrivers />} />
+            <Route path="/DeliveryReplicationView" element={<DeliveryReplicationView />} />
+            <Route path="/DeliveryAssignOrders" element={<DeliveryAssignOrders />} />
+            <Route path="/update-order/:orderId" element={<UpdateOrderPage />} />
+            <Route path="/location-map/:orderId/:userId" element={<LocationMap />} />
+            <Route path="/UserLocationViewer" element={<UserLocationViewer />} />
+            <Route path="/CreateUserModal" element={<CreateUserModal />} />
+            <Route element={<PrivateRoute/>}>
+              <Route path="/checkout" element={<CheckoutPage/>}/>
+              <Route path="/dashboard" element={<Dashboard />} />
+            </Route>
+            <Route path="/contact-us" element={<ContactUs />} />
+            <Route path="/AllOrders" element={<AllOrders />} />
+            <Route path="/CustomerTrackingOrder/:userId/:orderId" element={<CustomerTrackingOrder />} />
+          </Routes>
+          <FooterComp/>
+        </BrowserRouter>
+      </CartProvider>
+    </AuthProvider>
   );
 }
