@@ -37,7 +37,6 @@
         <processorPath useClasspath="false">
           <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.30/lombok-1.18.30.jar" />
         </processorPath>
-        <module name="deliveryService" />
         <module name="apiGateway" />
         <module name="paymentService" />
         <module name="orderService" />
@@ -45,6 +44,9 @@
         <module name="userService" />
       </profile>
     </annotationProcessing>
+    <bytecodeTargetLevel>
+      <module name="deliveryService" target="21" />
+    </bytecodeTargetLevel>
   </component>
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
