@@ -37,6 +37,7 @@ public class KafkaProducerServiceImpl implements KafkaProducerService {
                     .deliveryAddress(orderDetails.getDeliveryAddress())
                     .deliveryInstructions(orderDetails.getDeliveryInstructions())
                     .paymentMethod(orderDetails.getPaymentMethod())
+                    .status(OrderStatus.PENDING)
                     .subtotal(orderDetails.getSubtotal())
                     .taxAmount(orderDetails.getTaxAmount())
                     .deliveryFee(orderDetails.getDeliveryFee())
