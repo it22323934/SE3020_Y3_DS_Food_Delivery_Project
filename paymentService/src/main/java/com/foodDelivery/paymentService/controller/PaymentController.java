@@ -42,7 +42,6 @@ public class PaymentController {
             return ResponseEntity.badRequest().body(errorResponse);
         }
     }
-
     /**
      * Get all payments for a specific user (by email).
      */
