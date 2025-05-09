@@ -144,7 +144,7 @@ export default function DashUserProfiles() {
       setLoadingRestaurants(false);
     }
   };
-  
+
   const handleViewRestaurants = async (user) => {
     setSelectedUserForRestaurant(user);
     setShowRestaurantModal(true);
@@ -426,251 +426,253 @@ export default function DashUserProfiles() {
         </div>
       ) : (
         <>
-{/* Stats Cards - Enhanced with better styling and container */}
-<div className="p-4 md:mx-auto mb-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
-  <h2 className="text-lg font-medium text-gray-700 dark:text-white mb-4 flex items-center">
-    <HiOutlineUserGroup className="mr-2 text-blue-600" />
-    User Management Dashboard
-  </h2>
+          {/* Stats Cards - Enhanced with better styling and container */}
+          <div className="p-4 md:mx-auto mb-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
+            <h2 className="text-lg font-medium text-gray-700 dark:text-white mb-4 flex items-center">
+              <HiOutlineUserGroup className="mr-2 text-blue-600" />
+              User Management Dashboard
+            </h2>
 
-  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-    <div className="flex p-4 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-gray-700 dark:to-gray-800 rounded-lg shadow-sm">
-      <div className="flex-1">
-        <h3 className="text-gray-600 dark:text-gray-300 text-sm font-medium uppercase tracking-wider">
-          Total Users
-        </h3>
-        <p className="text-2xl font-bold text-gray-800 dark:text-white mt-2">
-          {totalUsers}
-        </p>
-      </div>
-      <div className="flex items-center justify-center">
-        <div className="bg-blue-500 text-white p-3 rounded-lg shadow-lg">
-          <HiOutlineUserGroup size={24} />
-        </div>
-      </div>
-    </div>
-    
-    <div className="flex p-4 bg-gradient-to-br from-green-50 to-green-100 dark:from-gray-700 dark:to-gray-800 rounded-lg shadow-sm">
-      <div className="flex-1">
-        <h3 className="text-gray-600 dark:text-gray-300 text-sm font-medium uppercase tracking-wider">
-          Active Users
-        </h3>
-        <p className="text-2xl font-bold text-green-600 dark:text-green-400 mt-2">
-          {totalActiveUsers}
-        </p>
-      </div>
-      <div className="flex items-center justify-center">
-        <div className="bg-green-500 text-white p-3 rounded-lg shadow-lg">
-          <FaCheckCircle size={24} />
-        </div>
-      </div>
-    </div>
-    
-    <div className="flex p-4 bg-gradient-to-br from-red-50 to-red-100 dark:from-gray-700 dark:to-gray-800 rounded-lg shadow-sm">
-      <div className="flex-1">
-        <h3 className="text-gray-600 dark:text-gray-300 text-sm font-medium uppercase tracking-wider">
-          Inactive Users
-        </h3>
-        <p className="text-2xl font-bold text-red-600 dark:text-red-400 mt-2">
-          {totalInActiveUsers}
-        </p>
-      </div>
-      <div className="flex items-center justify-center">
-        <div className="bg-red-500 text-white p-3 rounded-lg shadow-lg">
-          <FaTimesCircle size={24} />
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="flex p-4 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-gray-700 dark:to-gray-800 rounded-lg shadow-sm">
+                <div className="flex-1">
+                  <h3 className="text-gray-600 dark:text-gray-300 text-sm font-medium uppercase tracking-wider">
+                    Total Users
+                  </h3>
+                  <p className="text-2xl font-bold text-gray-800 dark:text-white mt-2">
+                    {totalUsers}
+                  </p>
+                </div>
+                <div className="flex items-center justify-center">
+                  <div className="bg-blue-500 text-white p-3 rounded-lg shadow-lg">
+                    <HiOutlineUserGroup size={24} />
+                  </div>
+                </div>
+              </div>
 
-{/* Action Bar - Improved layout with better hierarchy */}
-<div className="mb-6 bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
-  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-200 dark:border-gray-700 pb-4 mb-4">
-    <div className="flex-1">
-      <h2 className="text-xl font-semibold text-gray-800 dark:text-white flex items-center">
-        <FaUserTie className="mr-2 text-blue-600" />
-        User Management
-      </h2>
-      <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-        Create, edit and manage user accounts and access permissions
-      </p>
-    </div>
-    <div>
-      <Button
-        gradientDuoTone="purpleToBlue"
-        className="flex items-center"
-        onClick={() => setShowCreateModal(true)}
-      >
-        <HiOutlinePlus className="mr-2 h-5 w-5" />
-        New User
-      </Button>
-    </div>
-  </div>
+              <div className="flex p-4 bg-gradient-to-br from-green-50 to-green-100 dark:from-gray-700 dark:to-gray-800 rounded-lg shadow-sm">
+                <div className="flex-1">
+                  <h3 className="text-gray-600 dark:text-gray-300 text-sm font-medium uppercase tracking-wider">
+                    Active Users
+                  </h3>
+                  <p className="text-2xl font-bold text-green-600 dark:text-green-400 mt-2">
+                    {totalActiveUsers}
+                  </p>
+                </div>
+                <div className="flex items-center justify-center">
+                  <div className="bg-green-500 text-white p-3 rounded-lg shadow-lg">
+                    <FaCheckCircle size={24} />
+                  </div>
+                </div>
+              </div>
 
-  {/* Enhanced Filter Section */}
-  <div className="space-y-4">
-    {/* Search */}
-    <div className="w-full">
-      <TextInput
-        type="text"
-        placeholder="Search by name, email or phone"
-        value={searchTerm}
-        onChange={handleSearch}
-        rightIcon={AiOutlineSearch}
-        className="w-full"
-      />
-    </div>
+              <div className="flex p-4 bg-gradient-to-br from-red-50 to-red-100 dark:from-gray-700 dark:to-gray-800 rounded-lg shadow-sm">
+                <div className="flex-1">
+                  <h3 className="text-gray-600 dark:text-gray-300 text-sm font-medium uppercase tracking-wider">
+                    Inactive Users
+                  </h3>
+                  <p className="text-2xl font-bold text-red-600 dark:text-red-400 mt-2">
+                    {totalInActiveUsers}
+                  </p>
+                </div>
+                <div className="flex items-center justify-center">
+                  <div className="bg-red-500 text-white p-3 rounded-lg shadow-lg">
+                    <FaTimesCircle size={24} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
 
-    {/* Report Generation Controls */}
-    <div className="flex flex-wrap gap-4 items-center pt-3 border-t border-gray-200 dark:border-gray-700">
-      <div className="flex-1 text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center">
-        <HiDocumentReport className="mr-2 text-blue-600" />
-        Generate User Reports
-      </div>
-      
-      <div className="flex flex-wrap gap-3 items-center">
-        <div className="w-48">
-          <ReactSelect
-            placeholder="Filter by role"
-            value={selectedRole}
-            onChange={handleRoleChange}
-            options={roleOptions}
-            isSearchable
-            isClearable
-            className="react-select-container"
-            classNamePrefix="react-select"
-            styles={{
-              control: (baseStyles) => ({
-                ...baseStyles,
-                backgroundColor: "white",
-                borderColor: "#D1D5DB",
-              }),
-              option: (baseStyles, { isFocused }) => ({
-                ...baseStyles,
-                backgroundColor: isFocused ? "#E5E7EB" : "white",
-                color: "black",
-              }),
-            }}
-          />
-        </div>
-        
-        <div className="w-64">
-          <ReactSelect
-            placeholder="Select user for report"
-            value={selectedUserForReport}
-            onChange={(option) => setSelectedUserForReport(option)}
-            options={userSelectOptions}
-            isSearchable
-            isClearable
-            className="react-select-container"
-            classNamePrefix="react-select"
-            styles={{
-              control: (baseStyles) => ({
-                ...baseStyles,
-                backgroundColor: "white",
-                borderColor: "#D1D5DB",
-              }),
-              option: (baseStyles, { isFocused }) => ({
-                ...baseStyles,
-                backgroundColor: isFocused ? "#E5E7EB" : "white",
-                color: "black",
-              }),
-            }}
-          />
-        </div>
-        
-        <Button
-          gradientDuoTone="cyanToBlue"
-          className="flex items-center"
-          onClick={() => {
-            if (selectedUserForReport) {
-              handleDownloadReport();
-            } else if (selectedRole) {
-              handleRoleReport();
-            } else {
-              toast.error(
-                "Please select either a user or a role for report generation"
-              );
-            }
-          }}
-          disabled={isDownloading || (!selectedUserForReport && !selectedRole)}
-        >
-          {isDownloading ? (
-            <>
-              <Spinner className="mr-2" size="sm" />
-              Generating...
-            </>
-          ) : (
-            <>
-              <HiDocumentReport className="mr-2 h-5 w-5" />
-              Generate Report
-            </>
-          )}
-        </Button>
-      </div>
-    </div>
-  </div>
-</div>
+          {/* Action Bar - Improved layout with better hierarchy */}
+          <div className="mb-6 bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-200 dark:border-gray-700 pb-4 mb-4">
+              <div className="flex-1">
+                <h2 className="text-xl font-semibold text-gray-800 dark:text-white flex items-center">
+                  <FaUserTie className="mr-2 text-blue-600" />
+                  User Management
+                </h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  Create, edit and manage user accounts and access permissions
+                </p>
+              </div>
+              <div>
+                <Button
+                  gradientDuoTone="purpleToBlue"
+                  className="flex items-center"
+                  onClick={() => setShowCreateModal(true)}
+                >
+                  <HiOutlinePlus className="mr-2 h-5 w-5" />
+                  New User
+                </Button>
+              </div>
+            </div>
 
-{/* Users Table - Enhanced with better styling */}
-<div className="overflow-hidden bg-white dark:bg-gray-800 rounded-lg shadow-sm">
-  <div className="overflow-x-auto">
-    {filteredUsers.length > 0 ? (
-      <Table
-        hoverable
-        striped
-        className="min-w-full divide-y divide-gray-200"
-      >
-        <Table.Head className="bg-gray-100 dark:bg-gray-700">
-          <Table.HeadCell className="px-6 py-3">Name</Table.HeadCell>
-          <Table.HeadCell className="px-6 py-3">Email</Table.HeadCell>
-          <Table.HeadCell className="px-6 py-3">
-            Phone Number
-          </Table.HeadCell>
-          <Table.HeadCell className="px-6 py-3">Roles</Table.HeadCell>
-          <Table.HeadCell className="px-6 py-3">
-            Status
-          </Table.HeadCell>
-          <Table.HeadCell className="px-6 py-3">
-            Actions
-          </Table.HeadCell>
-        </Table.Head>
-        {displayUsers}
-      </Table>
-    ) : (
-      <div className="flex flex-col items-center justify-center py-12">
-        <HiOutlineExclamationCircle className="w-16 h-16 text-gray-400" />
-        <h2 className="mt-2 text-xl font-semibold text-gray-700 dark:text-white">
-          No Users Found
-        </h2>
-        <p className="text-gray-500 dark:text-gray-400 mt-1">
-          No users match your current search criteria.
-        </p>
-      </div>
-    )}
-  </div>
+            {/* Enhanced Filter Section */}
+            <div className="space-y-4">
+              {/* Search */}
+              <div className="w-full">
+                <TextInput
+                  type="text"
+                  placeholder="Search by name, email or phone"
+                  value={searchTerm}
+                  onChange={handleSearch}
+                  rightIcon={AiOutlineSearch}
+                  className="w-full"
+                />
+              </div>
 
-  {/* Pagination */}
-  {filteredUsers.length > 0 && (
-    <div className="py-4 px-6 bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
-      <ReactPaginate
-        previousLabel={"Previous"}
-        nextLabel={"Next"}
-        pageCount={pageCount}
-        onPageChange={handlePageChange}
-        forcePage={pageNumber}
-        containerClassName="flex justify-center items-center space-x-1"
-        pageClassName="inline-flex"
-        pageLinkClassName="px-3 py-2 leading-tight text-gray-500 bg-white border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
-        previousLinkClassName="px-3 py-2 leading-tight text-gray-500 bg-white border border-gray-300 rounded-l-lg hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
-        nextLinkClassName="px-3 py-2 leading-tight text-gray-500 bg-white border border-gray-300 rounded-r-lg hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
-        activeLinkClassName="!bg-blue-50 !text-blue-600 !border-blue-300 dark:!bg-gray-700 dark:!text-white"
-        disabledLinkClassName="opacity-50 cursor-not-allowed"
-      />
-    </div>
-  )}
-</div>
+              {/* Report Generation Controls */}
+              <div className="flex flex-wrap gap-4 items-center pt-3 border-t border-gray-200 dark:border-gray-700">
+                <div className="flex-1 text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center">
+                  <HiDocumentReport className="mr-2 text-blue-600" />
+                  Generate User Reports
+                </div>
+
+                <div className="flex flex-wrap gap-3 items-center">
+                  <div className="w-48">
+                    <ReactSelect
+                      placeholder="Filter by role"
+                      value={selectedRole}
+                      onChange={handleRoleChange}
+                      options={roleOptions}
+                      isSearchable
+                      isClearable
+                      className="react-select-container"
+                      classNamePrefix="react-select"
+                      styles={{
+                        control: (baseStyles) => ({
+                          ...baseStyles,
+                          backgroundColor: "white",
+                          borderColor: "#D1D5DB",
+                        }),
+                        option: (baseStyles, { isFocused }) => ({
+                          ...baseStyles,
+                          backgroundColor: isFocused ? "#E5E7EB" : "white",
+                          color: "black",
+                        }),
+                      }}
+                    />
+                  </div>
+
+                  <div className="w-64">
+                    <ReactSelect
+                      placeholder="Select user for report"
+                      value={selectedUserForReport}
+                      onChange={(option) => setSelectedUserForReport(option)}
+                      options={userSelectOptions}
+                      isSearchable
+                      isClearable
+                      className="react-select-container"
+                      classNamePrefix="react-select"
+                      styles={{
+                        control: (baseStyles) => ({
+                          ...baseStyles,
+                          backgroundColor: "white",
+                          borderColor: "#D1D5DB",
+                        }),
+                        option: (baseStyles, { isFocused }) => ({
+                          ...baseStyles,
+                          backgroundColor: isFocused ? "#E5E7EB" : "white",
+                          color: "black",
+                        }),
+                      }}
+                    />
+                  </div>
+
+                  <Button
+                    gradientDuoTone="cyanToBlue"
+                    className="flex items-center"
+                    onClick={() => {
+                      if (selectedUserForReport) {
+                        handleDownloadReport();
+                      } else if (selectedRole) {
+                        handleRoleReport();
+                      } else {
+                        toast.error(
+                          "Please select either a user or a role for report generation"
+                        );
+                      }
+                    }}
+                    disabled={
+                      isDownloading || (!selectedUserForReport && !selectedRole)
+                    }
+                  >
+                    {isDownloading ? (
+                      <>
+                        <Spinner className="mr-2" size="sm" />
+                        Generating...
+                      </>
+                    ) : (
+                      <>
+                        <HiDocumentReport className="mr-2 h-5 w-5" />
+                        Generate Report
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Users Table - Enhanced with better styling */}
+          <div className="overflow-hidden bg-white dark:bg-gray-800 rounded-lg shadow-sm">
+            <div className="overflow-x-auto">
+              {filteredUsers.length > 0 ? (
+                <Table
+                  hoverable
+                  striped
+                  className="min-w-full divide-y divide-gray-200"
+                >
+                  <Table.Head className="bg-gray-100 dark:bg-gray-700">
+                    <Table.HeadCell className="px-6 py-3">Name</Table.HeadCell>
+                    <Table.HeadCell className="px-6 py-3">Email</Table.HeadCell>
+                    <Table.HeadCell className="px-6 py-3">
+                      Phone Number
+                    </Table.HeadCell>
+                    <Table.HeadCell className="px-6 py-3">Roles</Table.HeadCell>
+                    <Table.HeadCell className="px-6 py-3">
+                      Status
+                    </Table.HeadCell>
+                    <Table.HeadCell className="px-6 py-3">
+                      Actions
+                    </Table.HeadCell>
+                  </Table.Head>
+                  {displayUsers}
+                </Table>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-12">
+                  <HiOutlineExclamationCircle className="w-16 h-16 text-gray-400" />
+                  <h2 className="mt-2 text-xl font-semibold text-gray-700 dark:text-white">
+                    No Users Found
+                  </h2>
+                  <p className="text-gray-500 dark:text-gray-400 mt-1">
+                    No users match your current search criteria.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Pagination */}
+            {filteredUsers.length > 0 && (
+              <div className="py-4 px-6 bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
+                <ReactPaginate
+                  previousLabel={"Previous"}
+                  nextLabel={"Next"}
+                  pageCount={pageCount}
+                  onPageChange={handlePageChange}
+                  forcePage={pageNumber}
+                  containerClassName="flex justify-center items-center space-x-1"
+                  pageClassName="inline-flex"
+                  pageLinkClassName="px-3 py-2 leading-tight text-gray-500 bg-white border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+                  previousLinkClassName="px-3 py-2 leading-tight text-gray-500 bg-white border border-gray-300 rounded-l-lg hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+                  nextLinkClassName="px-3 py-2 leading-tight text-gray-500 bg-white border border-gray-300 rounded-r-lg hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+                  activeLinkClassName="!bg-blue-50 !text-blue-600 !border-blue-300 dark:!bg-gray-700 dark:!text-white"
+                  disabledLinkClassName="opacity-50 cursor-not-allowed"
+                />
+              </div>
+            )}
+          </div>
 
           {/* Modals */}
           {/* User Details Modal */}
