@@ -40,6 +40,8 @@ public class OrderEventListener {
                     .map(item -> item.getName() + " x" + item.getQuantity())
                     .toArray(String[]::new);
 
+
+
             // Create DeliveryReplication object
             DeliveryReplication deliveryReplication = new DeliveryReplication();
             deliveryReplication.setOrderId(event.getOrderId());
