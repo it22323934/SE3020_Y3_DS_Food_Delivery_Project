@@ -337,7 +337,7 @@ export default function Home() {
           <div className="bg-gradient-to-br from-purple-500 to-indigo-600 rounded-2xl p-8 text-white shadow-xl">
             <div className="flex flex-col h-full justify-between">
               <div>
-                <h2 className="text-2xl font-bold mb-4">Download Our App</h2>
+                <h2 className="text-2xl font-bold mb-4">Download Our Appplication</h2>
                 <p className="mb-6">Order on-the-go, track your delivery in real time, and get exclusive mobile-only offers.</p>
                 <ul className="space-y-2 mb-8">
                   <li className="flex items-center">

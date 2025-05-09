@@ -1,11 +1,5 @@
-package com.foodDelivery.orderService.event;
+package com.foodDelivery.orderService.dto;
 
-import com.foodDelivery.orderService.dto.ContactInfoRequest;
-import com.foodDelivery.orderService.dto.DeliveryAddressRequest;
-import com.foodDelivery.orderService.dto.LocationRequest;
-import com.foodDelivery.orderService.dto.OrderItemRequest;
-import com.foodDelivery.orderService.dto.PromotionDetailsRequest;
-import com.foodDelivery.orderService.model.OrderStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -17,10 +11,7 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class OrderEvent {
-    private String eventId;
-    private String eventType;
-    private String orderId;
+public class OrderCreateRequest {
     private Long userId;
     private String restaurantId;
     private List<OrderItemRequest> items;
@@ -28,7 +19,6 @@ public class OrderEvent {
     private DeliveryAddressRequest deliveryAddress;
     private String deliveryInstructions;
     private String paymentMethod;
-    private OrderStatus status;
     private double subtotal;
     private double taxAmount;
     private double deliveryFee;
@@ -37,5 +27,6 @@ public class OrderEvent {
     private LocationRequest deliveryLocation;
     private LocationRequest restaurantLocation;
     private PromotionDetailsRequest promotion;
-    private long timestamp;
 }
+
+
