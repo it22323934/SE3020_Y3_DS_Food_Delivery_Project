@@ -92,6 +92,7 @@ export default function Checkout() {
   const [paymentProcessing, setPaymentProcessing] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [paymentMessage, setPaymentMessage] = useState("");
+  const [subtotal, setSubtotal] = useState(0);
 
   // Map state
   const [isMapLoaded, setIsMapLoaded] = useState(false);
@@ -577,6 +578,7 @@ export default function Checkout() {
       const data = await response.json();
       console.log("Order created successfully:", data);
       setOrderId(data.id || "unknown");
+      setSubtotal(data.subtotal);
       setOrderSuccess(true);
       clearCart();
     } catch (error) {
@@ -729,7 +731,7 @@ export default function Checkout() {
                 <div className="flex justify-between py-2 border-b border-gray-200 dark:border-gray-700">
                   <span className="font-medium">Total Amount:</span>
                   <span className="text-gray-900 dark:text-white font-bold">
-                    ${formatPrice(cart.total)}
+                    ${formatPrice(subtotal)}
                   </span>
                 </div>
 
