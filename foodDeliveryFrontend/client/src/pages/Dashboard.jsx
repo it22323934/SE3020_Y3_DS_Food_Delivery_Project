@@ -47,7 +47,6 @@ export default function Dashboard() {
       {/** <DashCuisineManagement/> */}
       {tab === "cuisine-management" && <DashCuisineManagement />}
       {/** <DashRestaurant/> */}
-      {tab === "my-restaurant" && <DashMyRestaurant />}
       {/** <DashMenuItemCategoryManagement/> */}
       {tab === "menu-item-category-management" && (
         <DashMenuItemCategoryManagement />

@@ -55,12 +55,10 @@ export default function DashSideBar() {
     }
   };
 
-  // Helper function to check if user has a specific role
   const hasRole = (role) => {
     return currentUser?.roles?.includes(role);
   };
 
-  // Determine the primary role for display
   const getPrimaryRoleLabel = () => {
     if (!currentUser?.roles || currentUser.roles.length === 0) return "User";
 
@@ -80,7 +78,6 @@ export default function DashSideBar() {
           {currentUser &&
             (hasRole("ROLE_ADMIN") || hasRole("ROLE_RESTAURANT_ADMIN")) && (
               <>
-                {/* Dashboard Tab - visible to both admin types */}
                 <Link to="/dashboard?tab=waste-management-dashboard">
                   <Sidebar.Item
                     active={tab === "dash" || !tab}
@@ -103,7 +100,6 @@ export default function DashSideBar() {
                                   </Sidebar.Item>
                                 </Link>
 
-                {/* Items that only the main admin should see */}
                 {hasRole("ROLE_ADMIN") && (
                   <>
                     <Link to="/dashboard?tab=restaurant-management">
@@ -189,7 +185,7 @@ export default function DashSideBar() {
               <Link to="/dashboard?tab=my-restaurant-orders">
                 <Sidebar.Item
                   active={tab === "my-restaurant-orders"}
-                  icon={FaReceipt} // Changed from FaStore to FaReceipt
+                  icon={FaReceipt}
                   labelColor="dark"
                   as="div"
                 >
@@ -219,7 +215,6 @@ export default function DashSideBar() {
             </>
           )}
 
-          {/* Cuisine management for restaurants */}
           {currentUser && hasRole("ROLE_RESTAURANT") && (
             <Link to="/dashboard?tab=cuisine-management">
               <Sidebar.Item
@@ -245,6 +240,31 @@ export default function DashSideBar() {
                 Driver Orders
               </Sidebar.Item>
             </Link>
+          )}
+
+          {currentUser && hasRole("ROLE_CUSTOMER") && (
+            <>
+              <Link to="/dashboard?tab=AllOrders">
+                <Sidebar.Item
+                  active={tab === "AllOrders"}
+                  icon={GiCook}
+                  labelColor="dark"
+                  as="div"
+                >
+                  Orders
+                </Sidebar.Item>
+              </Link>
+              <Link to="/dashboard?tab=Order-Location">
+                <Sidebar.Item
+                  active={tab === "Order-Location"}
+                  icon={GiCook}
+                  labelColor="dark"
+                  as="div"
+                >
+                  Order-Location
+                </Sidebar.Item>
+              </Link>
+            </>
           )}
 
           {/* Driver Order managment */}
@@ -287,6 +307,7 @@ export default function DashSideBar() {
               Profile
             </Sidebar.Item>
           </Link>
+
           <Link to="/dashboard?tab=my-user-restaurant-orders">
             <Sidebar.Item
               active={tab === "my-user-restaurant-orders"}
@@ -297,6 +318,7 @@ export default function DashSideBar() {
               My Orders
             </Sidebar.Item>
           </Link>
+
           <Sidebar.Item
             icon={HiArrowSmRight}
             className="cursor-pointer"
