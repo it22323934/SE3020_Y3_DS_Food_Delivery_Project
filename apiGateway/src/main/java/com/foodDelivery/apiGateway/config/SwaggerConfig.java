@@ -57,6 +57,14 @@ public class SwaggerConfig {
     }
 
     @Bean
+    public GroupedOpenApi paymentApis() {
+        return GroupedOpenApi.builder()
+                .group("payment-service")
+                .pathsToMatch("/api/payments/**")
+                .build();
+    }
+
+    @Bean
     public GroupedOpenApi deliveryApis() {
         return GroupedOpenApi.builder()
                 .group("delivery-service")

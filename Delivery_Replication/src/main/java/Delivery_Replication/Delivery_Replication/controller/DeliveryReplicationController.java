@@ -91,8 +91,8 @@ public class DeliveryReplicationController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public DeliveryReplicationResponse createDelivery(@RequestBody DeliveryReplicationRequest request) {
-        return deliveryReplicationService.createDeliveryReplication(request);
+    public DeliveryReplicationResponse createDelivery(DeliveryReplication deliveryReplication) {
+        return deliveryReplicationService.createDeliveryReplication(deliveryReplication);
     }
 
     @DeleteMapping("/{id}")

@@ -9,11 +9,14 @@ import com.foodDelivery.restaurantService.model.MenuCategory;
 import com.foodDelivery.restaurantService.model.Restaurant;
 import com.foodDelivery.restaurantService.serviceInterfaces.*;
 import com.itextpdf.text.*;
+import com.itextpdf.text.Font;
 import com.itextpdf.text.pdf.*;
 import com.itextpdf.text.pdf.draw.LineSeparator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+
+import java.awt.*;
 import java.io.ByteArrayOutputStream;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
