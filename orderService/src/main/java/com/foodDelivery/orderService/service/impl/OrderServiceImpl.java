@@ -51,8 +51,9 @@ public class OrderServiceImpl implements OrderService {
 
         Order order = orderMapper.toEntity(request);
         order = orderRepository.save(order);
-        
-        // TODO: Publish order created event to Kafka
+
+        // Publish order created event to Kafka
+        kafkaProducerService.sendOrderCreatedEvent(order, request);
         
         log.info("Order created successfully with ID: {}", order.getId());
         return orderMapper.toResponse(order);
@@ -100,7 +101,7 @@ public class OrderServiceImpl implements OrderService {
 
             kafkaProducerService.sendOrderOutForDeliveryEvent(order, orderDetails);
         } else {
-            kafkaProducerService.sendOrderStatusUpdateEvent(order);
+            kafkaProducerService.sendOrderStatusUpdateEvent(order,status);
         }
 
         log.info("Order status updated successfully for order: {}", orderId);
@@ -184,8 +185,9 @@ public class OrderServiceImpl implements OrderService {
         order.setStatus(OrderStatus.CANCELLED);
         order.setUpdatedAt(LocalDateTime.now());
         orderRepository.save(order);
-        
-        // TODO: Publish order cancelled event to Kafka
+
+        // Publish order cancelled event to Kafka
+        kafkaProducerService.sendOrderStatusUpdateEvent(order, OrderStatus.CANCELLED);
         
         log.info("Order cancelled successfully: {}", orderId);
     }

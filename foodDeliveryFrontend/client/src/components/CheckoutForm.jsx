@@ -1,59 +1,85 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button, Alert, Spinner, Card } from 'flowbite-react';
 import { CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { FaCreditCard, FaLock } from 'react-icons/fa';
 import { useSelector } from "react-redux";
 
-//test update
 export default function CheckoutForm({ onSuccess, clientSecret }) {
   const stripe = useStripe();
   const elements = useElements();
   const [error, setError] = useState(null);
   const [processing, setProcessing] = useState(false);
+  const [ready, setReady] = useState(false);
 
-  const { currentUser } = useSelector((state) => state.user);
-  console.log("hello",currentUser.email)
+  const { currentUser } = useSelector((state) => state.user || {});
+  const userEmail = currentUser?.email || '';
+  
+  // Verify stripe and elements are loaded
+  useEffect(() => {
+    if (stripe && elements) {
+      setReady(true);
+      console.log("Stripe components ready");
+    }
+  }, [stripe, elements]);
+
   const handleSubmit = async (event) => {
     event.preventDefault();
 
- const handleSubmit = async (event) => {
-    event.preventDefault();
-
     if (!stripe || !elements) {
+      setError("Payment system not initialized. Please refresh the page.");
       return;
     }
-}
+
     setProcessing(true);
     setError(null);
 
     try {
+      const cardElement = elements.getElement(CardElement);
+      
+      if (!cardElement) {
+        throw new Error("Card element not found");
+      }
+
       const { error: stripeError, paymentIntent } = await stripe.confirmCardPayment(
         clientSecret,
         {
           payment_method: {
-            card: elements.getElement(CardElement),
+            card: cardElement,
             billing_details: {
-              email: currentUser.email, // Replace with actual user email
+              email: userEmail,
             },
           }
         }
       );
 
       if (stripeError) {
+        console.error("Stripe error:", stripeError);
         setError(stripeError.message);
-        setProcessing(false);
         return;
       }
 
       if (paymentIntent.status === 'succeeded') {
         onSuccess(paymentIntent);
+      } else {
+        setError(`Payment status: ${paymentIntent.status}. Please try again.`);
       }
     } catch (err) {
+      console.error("Payment processing error:", err);
       setError(err.message || 'Payment processing failed');
     } finally {
       setProcessing(false);
     }
   };
+
+  // Show a message if components aren't ready yet
+  if (!ready) {
+    return (
+      <div className="text-center py-6">
+        <Spinner size="lg" />
+        <p className="mt-4 text-gray-600">Initializing payment form...</p>
+      </div>
+    );
+  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -70,7 +96,7 @@ export default function CheckoutForm({ onSuccess, clientSecret }) {
             </div>
           </div>
 
-          <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 bg-gray-50 dark:bg-gray-700">
+          <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-6 bg-white dark:bg-gray-800">
             <CardElement
               options={{
                 style: {
@@ -81,6 +107,8 @@ export default function CheckoutForm({ onSuccess, clientSecret }) {
                       color: '#aab7c4',
                     },
                     iconColor: '#f97316',
+                    lineHeight: '1.5',
+                    fontWeight: '400',
                   },
                   invalid: {
                     color: '#9e2146',
@@ -89,6 +117,7 @@ export default function CheckoutForm({ onSuccess, clientSecret }) {
                 },
                 hidePostalCode: true
               }}
+              className="py-4"
             />
           </div>
         </div>

@@ -11,6 +11,8 @@ import {
   Textarea,
   Alert,
   Spinner,
+  Badge,
+  Modal,
 } from "flowbite-react";
 import {
   HiLocationMarker,
@@ -25,29 +27,37 @@ import {
   HiCheck,
   HiClock,
   HiExclamation,
+  HiArrowSmRight,
+  HiOutlineCheckCircle,
+  HiOutlineDocumentText,
+  HiOutlineCreditCard,
+  HiOutlineLocationMarker,
 } from "react-icons/hi";
 import { FaCcVisa, FaCcMastercard, FaCcPaypal } from "react-icons/fa";
 import { orderService } from "../service/orderService";
 import { LoadScript, GoogleMap, Marker, Circle } from "@react-google-maps/api";
 import GooglePlacesAutocomplete from "react-google-places-autocomplete";
+import DeliveryAddressForm from "../components/checkout/DeliveryAddressForm";
 import { restaurantService } from "../service/restaurantService";
+import { Elements } from "@stripe/react-stripe-js";
+import { loadStripe } from "@stripe/stripe-js";
+import CheckoutForm from "../components/CheckoutForm";
+import StripePaymentWrapper from "../components/checkout/StripePaymentWrapper";
+import paymentService from "../service/paymentService";
+import OrderSummary from "../components/checkout/OrderSummary";
+import DeliveryLocationMap from "../components/checkout/DeliveryLocationMap";
+import ContactInfoForm from "../components/checkout/ContactInfoForm";
+import PaymentMethodSelector from "../components/checkout/PaymentMethodSelector";
+
+// Load Stripe outside of component render
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
 export default function Checkout() {
   const navigate = useNavigate();
   const { currentUser } = useSelector((state) => state.user);
   const { cart, clearCart } = useCart();
 
-  const [orderProcessing, setOrderProcessing] = useState(false);
-  const [orderSuccess, setOrderSuccess] = useState(false);
-  const [orderError, setOrderError] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState("card");
-  const [isMapLoaded, setIsMapLoaded] = useState(false);
-  const [locationValue, setLocationValue] = useState(null);
-  const [restaurantLocation, setRestaurantLocation] = useState(null);
-  const [distanceToRestaurant, setDistanceToRestaurant] = useState(null);
-  const [locationError, setLocationError] = useState("");
-  const [restaurantId, setRestaurantId] = useState(null);
-
+  // Form state
   const [formData, setFormData] = useState({
     fullName: currentUser?.fullName || "",
     email: currentUser?.email || "",
@@ -66,8 +76,34 @@ export default function Checkout() {
     },
     deliveryInstructions: "",
   });
-
   const [formErrors, setFormErrors] = useState({});
+
+  // Order processing state
+  const [orderProcessing, setOrderProcessing] = useState(false);
+  const [orderSuccess, setOrderSuccess] = useState(false);
+  const [orderError, setOrderError] = useState("");
+  const [orderId, setOrderId] = useState(null);
+
+  // Payment state
+  const [paymentMethod, setPaymentMethod] = useState("card");
+  const [showPaymentStep, setShowPaymentStep] = useState(false);
+  const [clientSecret, setClientSecret] = useState("");
+  const [paymentError, setPaymentError] = useState("");
+  const [paymentProcessing, setPaymentProcessing] = useState(false);
+  const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const [paymentMessage, setPaymentMessage] = useState("");
+
+  // Map state
+  const [isMapLoaded, setIsMapLoaded] = useState(false);
+  const [locationValue, setLocationValue] = useState(null);
+  const [restaurantLocation, setRestaurantLocation] = useState(null);
+  const [distanceToRestaurant, setDistanceToRestaurant] = useState(null);
+  const [locationError, setLocationError] = useState("");
+  const [restaurantId, setRestaurantId] = useState(null);
+
+  // Checkout flow
+  const [checkoutStep, setCheckoutStep] = useState(0);
+  const [orderData, setOrderData] = useState(null);
 
   // Map configuration
   const mapContainerStyle = {
@@ -114,7 +150,6 @@ export default function Checkout() {
 
         if (response.ok) {
           const restaurant = await response.json();
-
           console.log("Restaurant data:", restaurant);
 
           if (restaurant) {
@@ -123,7 +158,6 @@ export default function Checkout() {
               lng: parseFloat(restaurant.longitude),
               name: restaurant.name,
               address: restaurant.address || restaurant.formattedAddress,
-              // Store the geoJSON location format for potential geospatial queries
               geoLocation: restaurant.location,
             });
           } else {
@@ -139,7 +173,73 @@ export default function Checkout() {
     if (cart.items.length > 0) {
       fetchRestaurantLocation();
     }
-  }, [cart.items, currentUser?.token]); // Use cart.items as the dependency instead of cart.restaurantId
+  }, [cart.items, currentUser?.token]);
+
+  // Custom Stepper Component
+  const CheckoutStepper = ({ currentStep, steps }) => {
+    return (
+      <div className="max-w-5xl mx-auto mb-8">
+        <ol className="flex items-center w-full">
+          {steps.map((step, index) => {
+            const isActive = currentStep === index;
+            const isCompleted = currentStep > index;
+
+            return (
+              <li
+                key={index}
+                className={`flex items-center ${
+                  index !== steps.length - 1 ? "w-full" : ""
+                }`}
+              >
+                <div
+                  className={`flex items-center justify-center w-10 h-10 rounded-full 
+                ${
+                  isActive
+                    ? "bg-blue-600 text-white"
+                    : isCompleted
+                    ? "bg-green-500 text-white"
+                    : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
+                }`}
+                >
+                  {isCompleted ? (
+                    <HiCheck className="w-5 h-5" />
+                  ) : (
+                    <span className="flex items-center justify-center">
+                      {step.icon || index + 1}
+                    </span>
+                  )}
+                </div>
+
+                <div className="ml-2">
+                  <span
+                    className={`text-sm font-medium ${
+                      isActive
+                        ? "text-blue-600 dark:text-blue-400"
+                        : isCompleted
+                        ? "text-green-600 dark:text-green-400"
+                        : "text-gray-500 dark:text-gray-400"
+                    }`}
+                  >
+                    {step.label}
+                  </span>
+                </div>
+
+                {index !== steps.length - 1 && (
+                  <div
+                    className={`flex-1 h-0.5 mx-4 ${
+                      isCompleted
+                        ? "bg-green-500"
+                        : "bg-gray-200 dark:bg-gray-700"
+                    }`}
+                  ></div>
+                )}
+              </li>
+            );
+          })}
+        </ol>
+      </div>
+    );
+  };
 
   // Calculate distance between two points using Haversine formula
   const calculateDistance = (lat1, lng1, lat2, lng2) => {
@@ -195,6 +295,18 @@ export default function Checkout() {
       navigate("/");
     }
   }, [cart.items, navigate, orderSuccess]);
+
+  // Initialize payment intent when shifting to payment step
+  useEffect(() => {
+    if (
+      showPaymentStep &&
+      paymentMethod === "card" &&
+      orderData &&
+      !clientSecret
+    ) {
+      initializePayment();
+    }
+  }, [showPaymentStep, orderData]);
 
   // Handle location selection from Google Places
   const handleLocationSelect = (place) => {
@@ -354,6 +466,30 @@ export default function Checkout() {
     }
   };
 
+  // Initialize payment intent for card payments
+  const initializePayment = async () => {
+    try {
+      setPaymentProcessing(true);
+      const response = await paymentService.createPaymentIntent(
+        {
+          amount: cart.total,
+          orderId: `pending_${Date.now()}`,
+          customerEmail: formData.email || currentUser?.email,
+        },
+        currentUser?.token
+      );
+
+      setClientSecret(response.clientSecret);
+      setPaymentError("");
+    } catch (error) {
+      console.error("Error initializing payment:", error);
+      setPaymentError("Failed to initialize payment. Please try again.");
+    } finally {
+      setPaymentProcessing(false);
+    }
+  };
+
+  // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -361,9 +497,6 @@ export default function Checkout() {
       window.scrollTo(0, 0);
       return;
     }
-
-    setOrderProcessing(true);
-    setOrderError("");
 
     // Create order object
     const order = {
@@ -410,26 +543,41 @@ export default function Checkout() {
       },
       paymentMethod,
       status: "pending",
+      paymentStatus: paymentMethod === "cash" ? "pending" : "awaiting_payment",
     };
+
+    setOrderData(order);
+
+    // If cash payment, create order immediately
+    if (paymentMethod === "cash") {
+      await createOrder(order);
+    }
+    // If card payment, move to payment step
+    else if (paymentMethod === "card") {
+      setShowPaymentStep(true);
+      setCheckoutStep(1);
+    }
+  };
+
+  // Create order in database
+  const createOrder = async (orderData) => {
+    setOrderProcessing(true);
+    setOrderError("");
 
     try {
       const response = await orderService.createOrder(
-        order,
+        orderData,
         currentUser?.token
       );
+
       if (!response.ok) {
-        clearCart();
-        setOrderError("Failed to place order. Please try again.");
         throw new Error("Failed to place order");
       }
+
       const data = await response.json();
       console.log("Order created successfully:", data);
-      // For now, let's simulate success
-      console.log("Order submitted:", order);
-
+      setOrderId(data.id || "unknown");
       setOrderSuccess(true);
-
-      // Clear the cart after successful order
       clearCart();
     } catch (error) {
       console.error("Error placing order:", error);
@@ -439,9 +587,50 @@ export default function Checkout() {
     }
   };
 
-  const formatPrice = (value) => {
-    const numValue = Number(value);
-    return isNaN(numValue) ? "0.00" : numValue.toFixed(2);
+  // Handle successful payment
+  const handlePaymentSuccess = async (paymentIntent) => {
+    try {
+      setPaymentMessage(
+        "Payment processed successfully! Completing your order..."
+      );
+
+      // Verify payment was successful
+      const paymentRecord = await paymentService.confirmPayment(
+        { paymentIntentId: paymentIntent.id },
+        currentUser?.token
+      );
+
+      if (paymentRecord.paymentStatus === "succeeded") {
+        // Update order data with payment information
+        const orderWithPayment = {
+          ...orderData,
+          paymentStatus: "paid",
+          paymentDetails: {
+            paymentIntentId: paymentIntent.id,
+            paymentMethod: "card",
+            paymentAmount: cart.total,
+          },
+        };
+
+        // Create the order after successful payment
+        await createOrder(orderWithPayment);
+
+        // Show success message temporarily
+        setTimeout(() => {
+          setPaymentSuccess(true);
+          setShowPaymentStep(false);
+          setCheckoutStep(2);
+        }, 1500);
+      } else {
+        setPaymentError(
+          "Payment verification failed: " +
+            (paymentRecord.errorMessage || "Unknown error")
+        );
+      }
+    } catch (error) {
+      console.error("Payment confirmation error:", error);
+      setPaymentError("Payment confirmation failed: " + error.message);
+    }
   };
 
   // Get map center based on available data
@@ -465,25 +654,107 @@ export default function Checkout() {
       };
     }
 
-    // Default to a fallback location (e.g., city center)
+    // Default to a fallback location
     return { lat: 6.9271, lng: 79.8612 }; // Colombo, Sri Lanka
+  };
+
+  const formatPrice = (value) => {
+    const numValue = Number(value);
+    return isNaN(numValue) ? "0.00" : numValue.toFixed(2);
   };
 
   // Show order confirmation when successful
   if (orderSuccess) {
     return (
       <div className="container mx-auto my-8 px-4">
-        <Card className="max-w-2xl mx-auto">
-          <div className="text-center py-6">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <HiCheck className="h-8 w-8 text-green-600" />
+        <Card className="max-w-2xl mx-auto border-0 shadow-lg overflow-hidden">
+          <div className="bg-gradient-to-r from-green-500 to-teal-500 text-white p-8 text-center -mx-4 -mt-4">
+            <div className="flex justify-center mb-4">
+              <div className="bg-white rounded-full p-4 shadow-md">
+                <HiCheck className="w-12 h-12 text-green-500" />
+              </div>
             </div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+            <h1 className="text-3xl font-bold mb-2">
               Order Placed Successfully!
             </h1>
-            <p className="text-gray-600 dark:text-gray-400 mb-6">
+            <p className="text-white text-opacity-90 mb-1">
               Thank you for your order. Your food is being prepared!
             </p>
+            {paymentMethod === "card" && (
+              <div className="inline-block bg-white bg-opacity-20 text-sm px-3 py-1 rounded-full mt-1">
+                <div className="flex items-center">
+                  <HiOutlineCheckCircle className="mr-1" />
+                  Payment Completed
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="p-6">
+            <div className="bg-gray-50 dark:bg-gray-800 p-5 rounded-lg mb-5 shadow-inner">
+              <h2 className="font-semibold text-lg mb-3 flex items-center">
+                <HiOutlineDocumentText className="mr-2 text-green-600" />
+                Order Details
+              </h2>
+
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between py-2 border-b border-gray-200 dark:border-gray-700">
+                  <span className="font-medium flex items-center">
+                    <Badge color="purple" className="mr-2">
+                      Order ID
+                    </Badge>
+                  </span>
+                  <span className="text-gray-700 dark:text-gray-300 font-mono">
+                    {orderId || "N/A"}
+                  </span>
+                </div>
+
+                <div className="flex justify-between py-2 border-b border-gray-200 dark:border-gray-700">
+                  <span className="font-medium">Payment Method:</span>
+                  <span className="flex items-center">
+                    {paymentMethod === "card" ? (
+                      <>
+                        <HiCreditCard className="mr-1 text-blue-500" />
+                        Credit/Debit Card
+                      </>
+                    ) : (
+                      <>
+                        <HiCash className="mr-1 text-green-500" />
+                        Cash on Delivery
+                      </>
+                    )}
+                  </span>
+                </div>
+
+                <div className="flex justify-between py-2 border-b border-gray-200 dark:border-gray-700">
+                  <span className="font-medium">Total Amount:</span>
+                  <span className="text-gray-900 dark:text-white font-bold">
+                    ${formatPrice(cart.total)}
+                  </span>
+                </div>
+
+                <div className="flex justify-between py-2 border-b border-gray-200 dark:border-gray-700">
+                  <span className="font-medium">Email:</span>
+                  <span className="text-gray-700 dark:text-gray-300">
+                    {formData.email}
+                  </span>
+                </div>
+
+                <div className="flex justify-between py-2">
+                  <span className="font-medium">Delivery Address:</span>
+                  <span className="text-gray-700 dark:text-gray-300 text-right">
+                    {formData.address.street}, {formData.address.city}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-center p-4 bg-gray-50 dark:bg-gray-800 rounded-lg mb-6">
+              <HiMail className="text-gray-500 mr-2" />
+              <p className="text-gray-600 dark:text-gray-400 text-sm">
+                A confirmation email has been sent with your order details
+              </p>
+            </div>
 
             <div className="flex flex-col sm:flex-row justify-center gap-4 mt-8">
               <Button
@@ -491,15 +762,15 @@ export default function Checkout() {
                 onClick={() => navigate("/restaurants")}
                 className="flex items-center justify-center"
               >
-                <HiChevronLeft className="mr-1" /> Continue Shopping
+                <HiChevronLeft className="mr-1" /> Browse Restaurants
               </Button>
 
               <Button
-                color="blue"
-                onClick={() => navigate("/dashboard?tab=my-restaurant-orders")}
+                gradientDuoTone="greenToBlue"
+                onClick={() => navigate("/dashboard?tab=my-orders")}
                 className="flex items-center justify-center"
               >
-                <HiClock className="mr-1" /> View Orders
+                <HiClock className="mr-1" /> Track Order
               </Button>
             </div>
           </div>
@@ -508,10 +779,60 @@ export default function Checkout() {
     );
   }
 
+  // Show payment processing message
+  if (paymentMessage) {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+        <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-2xl max-w-md w-full mx-4">
+          <div className="flex flex-col items-center text-center">
+            <div className="bg-green-100 rounded-full p-4 mb-4">
+              <HiCheck className="w-10 h-10 text-green-500" />
+            </div>
+
+            <h2 className="text-2xl font-bold mb-3 text-green-700 dark:text-green-400">
+              Payment Successful!
+            </h2>
+
+            <p className="text-gray-700 dark:text-gray-300 mb-4">
+              {paymentMessage}
+            </p>
+
+            <div className="flex items-center justify-center space-x-2 mt-2">
+              <Spinner size="md" color="success" />
+              <span className="text-gray-600 dark:text-gray-400 text-sm">
+                Processing your order...
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto my-8 px-4">
+      <div className="max-w-5xl mx-auto mb-8">
+        <CheckoutStepper
+          currentStep={checkoutStep}
+          steps={[
+            {
+              label: "Delivery Information",
+              icon: <HiOutlineLocationMarker className="w-5 h-5" />,
+            },
+            {
+              label: "Payment",
+              icon: <HiOutlineCreditCard className="w-5 h-5" />,
+            },
+            {
+              label: "Order Complete",
+              icon: <HiOutlineCheckCircle className="w-5 h-5" />,
+            },
+          ]}
+        />
+      </div>
+
       <h1 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">
-        Checkout
+        {showPaymentStep ? "Complete Payment" : "Checkout"}
       </h1>
 
       {orderError && (
@@ -520,523 +841,184 @@ export default function Checkout() {
         </Alert>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Order Details Form */}
-        <div className="lg:col-span-2">
-          <form onSubmit={handleSubmit}>
-            <Card className="mb-6">
-              <h2 className="text-xl font-semibold mb-4 flex items-center">
-                <HiUser className="mr-2 text-blue-600" /> Contact Information
+      {paymentError && (
+        <Alert color="failure" className="mb-6">
+          {paymentError}
+        </Alert>
+      )}
+
+      {/* Payment Step */}
+      {showPaymentStep && (
+        <div className="max-w-3xl mx-auto">
+          <Button
+            color="light"
+            onClick={() => {
+              setShowPaymentStep(false);
+              setCheckoutStep(0);
+              setClientSecret("");
+              setPaymentError("");
+            }}
+            className="mb-4"
+          >
+            <HiChevronLeft className="mr-1" /> Back to Delivery Information
+          </Button>
+
+          <Card className="mb-6">
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-700 p-4 -mx-4 -mt-4 mb-4 border-b border-gray-200 dark:border-gray-700">
+              <h2 className="font-bold text-lg flex items-center">
+                <HiCreditCard className="mr-2 text-blue-600" />
+                Complete Payment
               </h2>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                Your order will be confirmed after successful payment
+              </p>
+            </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div>
-                  <Label htmlFor="fullName" value="Full Name" />
-                  <TextInput
-                    id="fullName"
-                    name="fullName"
-                    value={formData.fullName}
-                    onChange={handleChange}
-                    placeholder="John Doe"
-                    color={formErrors.fullName ? "failure" : undefined}
-                    helperText={formErrors.fullName}
-                    required
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="email" value="Email" />
-                  <TextInput
-                    id="email"
-                    name="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    placeholder="john@example.com"
-                    color={formErrors.email ? "failure" : undefined}
-                    helperText={formErrors.email}
-                    icon={HiMail}
-                    required
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="phone" value="Phone Number" />
-                  <TextInput
-                    id="phone"
-                    name="phone"
-                    value={formData.phone}
-                    onChange={handleChange}
-                    placeholder="(555) 123-4567"
-                    color={formErrors.phone ? "failure" : undefined}
-                    helperText={formErrors.phone}
-                    icon={HiPhone}
-                    required
-                  />
-                </div>
+            {paymentProcessing ? (
+              <div className="flex flex-col items-center justify-center py-8">
+                <Spinner size="lg" />
+                <p className="text-gray-600 dark:text-gray-400 mt-4">
+                  Preparing secure payment form...
+                </p>
               </div>
-            </Card>
-
-            {/* New Delivery Location Card with Google Maps */}
-            <Card className="mb-6">
-              <h2 className="text-xl font-semibold mb-4 flex items-center">
-                <HiLocationMarker className="mr-2 text-blue-600" /> Delivery
-                Location
-              </h2>
-
-              <div className="space-y-4">
-                <LoadScript
-                  googleMapsApiKey="AIzaSyCms2-r4afPJIKiStBZUNuRx_4BdU2p9ps"
-                  libraries={["places"]}
-                  onLoad={() => {
-                    console.log("Google Maps API loaded successfully");
-                    setIsMapLoaded(true);
-                  }}
-                  onError={(error) =>
-                    console.error("Google Maps API loading failed:", error)
-                  }
+            ) : clientSecret ? (
+              <StripePaymentWrapper
+                clientSecret={clientSecret}
+                onSuccess={handlePaymentSuccess}
+              />
+            ) : (
+              <div className="text-center py-6">
+                <p className="text-red-500">
+                  Unable to initialize payment. Please try again.
+                </p>
+                <Button
+                  color="blue"
+                  onClick={initializePayment}
+                  className="mt-4"
                 >
-                  <div className="mb-4">
-                    <Label
-                      htmlFor="location"
-                      value="Search for delivery address"
-                      className="mb-2"
-                    />
-                    <GooglePlacesAutocomplete
-                      apiKey="AIzaSyCms2-r4afPJIKiStBZUNuRx_4BdU2p9ps"
-                      selectProps={{
-                        value: locationValue,
-                        onChange: handleLocationSelect,
-                        placeholder:
-                          formData.deliveryLocation.address ||
-                          "Search for an address...",
-                        styles: {
-                          control: (provided) => ({
-                            ...provided,
-                            padding: "4px",
-                            borderColor: "#D1D5DB",
-                            boxShadow: "none",
-                          }),
-                        },
-                      }}
-                    />
-                  </div>
-
-                  <div className="mt-4 mb-4">
-                    <Label value="Pin Your Delivery Location" />
-                    <p className="text-sm text-gray-500 mb-2">
-                      Click on the map to set your precise delivery location
-                    </p>
-                    {isMapLoaded && (
-                      <GoogleMap
-                        mapContainerStyle={mapContainerStyle}
-                        zoom={14}
-                        center={getMapCenter()}
-                        onClick={handleMapClick}
-                      >
-                        {/* Restaurant marker */}
-                        {restaurantLocation && (
-                          <>
-                            <Marker
-                              position={restaurantLocation}
-                              icon={{
-                                url: "http://maps.google.com/mapfiles/ms/icons/red-dot.png",
-                                labelOrigin: { x: 15, y: -10 },
-                              }}
-                              label={{
-                                text: "Restaurant",
-                                color: "#C53030",
-                                fontWeight: "bold",
-                              }}
-                            />
-                            {/* 20km delivery radius */}
-                            <Circle
-                              center={restaurantLocation}
-                              radius={20000} // 20km in meters
-                              options={{
-                                strokeColor: "#4299E1",
-                                strokeOpacity: 0.8,
-                                strokeWeight: 2,
-                                fillColor: "#4299E1",
-                                fillOpacity: 0.1,
-                              }}
-                            />
-                          </>
-                        )}
-
-                        {/* User's selected delivery location */}
-                        {formData.deliveryLocation.latitude &&
-                          formData.deliveryLocation.longitude && (
-                            <Marker
-                              position={{
-                                lat: parseFloat(
-                                  formData.deliveryLocation.latitude
-                                ),
-                                lng: parseFloat(
-                                  formData.deliveryLocation.longitude
-                                ),
-                              }}
-                              icon={{
-                                url: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png",
-                                labelOrigin: { x: 15, y: -10 },
-                              }}
-                              label={{
-                                text: "Delivery",
-                                color: "#2B6CB0",
-                                fontWeight: "bold",
-                              }}
-                            />
-                          )}
-                      </GoogleMap>
-                    )}
-
-                    {/* Distance information */}
-                    {distanceToRestaurant !== null && (
-                      <div
-                        className={`mt-2 p-2 rounded text-sm ${
-                          distanceToRestaurant > 20
-                            ? "bg-red-50 text-red-700 border border-red-200"
-                            : "bg-green-50 text-green-700 border border-green-200"
-                        }`}
-                      >
-                        <div className="flex items-center">
-                          {distanceToRestaurant > 20 ? (
-                            <HiExclamation className="mr-1 flex-shrink-0" />
-                          ) : (
-                            <HiCheck className="mr-1 flex-shrink-0" />
-                          )}
-                          <span>
-                            Distance to restaurant:{" "}
-                            <strong>
-                              {distanceToRestaurant.toFixed(1)} km
-                            </strong>
-                            {distanceToRestaurant > 20 &&
-                              " (Out of delivery range)"}
-                          </span>
-                        </div>
-                      </div>
-                    )}
-
-                    {formErrors.location && (
-                      <p className="text-sm text-red-500 mt-1">
-                        {formErrors.location}
-                      </p>
-                    )}
-                  </div>
-                </LoadScript>
+                  Retry
+                </Button>
               </div>
-            </Card>
+            )}
+          </Card>
 
-            <Card className="mb-6">
-              <h2 className="text-xl font-semibold mb-4 flex items-center">
-                <HiLocationMarker className="mr-2 text-blue-600" /> Delivery
-                Address
-              </h2>
-
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="street" value="Street Address" />
-                  <TextInput
-                    id="street"
-                    name="address.street"
-                    value={formData.address.street}
-                    onChange={handleChange}
-                    placeholder="123 Main St"
-                    color={formErrors.street ? "failure" : undefined}
-                    helperText={formErrors.street}
-                    required
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <Label htmlFor="city" value="City" />
-                    <TextInput
-                      id="city"
-                      name="address.city"
-                      value={formData.address.city}
-                      onChange={handleChange}
-                      placeholder="New York"
-                      color={formErrors.city ? "failure" : undefined}
-                      helperText={formErrors.city}
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="state" value="State" />
-                    <TextInput
-                      id="state"
-                      name="address.state"
-                      value={formData.address.state}
-                      onChange={handleChange}
-                      placeholder="NY"
-                      color={formErrors.state ? "failure" : undefined}
-                      helperText={formErrors.state}
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="zipCode" value="ZIP Code" />
-                    <TextInput
-                      id="zipCode"
-                      name="address.zipCode"
-                      value={formData.address.zipCode}
-                      onChange={handleChange}
-                      placeholder="10001"
-                      color={formErrors.zipCode ? "failure" : undefined}
-                      helperText={formErrors.zipCode}
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <Label
-                    htmlFor="deliveryInstructions"
-                    value="Delivery Instructions (Optional)"
-                  />
-                  <Textarea
-                    id="deliveryInstructions"
-                    name="deliveryInstructions"
-                    value={formData.deliveryInstructions}
-                    onChange={handleChange}
-                    placeholder="Apartment number, gate code, or special instructions"
-                    rows={3}
-                  />
-                </div>
-              </div>
-            </Card>
-
-            <Card className="mb-6">
-              <h2 className="text-xl font-semibold mb-4 flex items-center">
-                <HiCreditCard className="mr-2 text-blue-600" /> Payment Method
-              </h2>
-
-              <div className="space-y-4">
-                <div className="flex items-center pl-4 border border-gray-200 rounded dark:border-gray-700">
-                  <Radio
-                    id="card-payment"
-                    name="paymentMethod"
-                    value="card"
-                    checked={paymentMethod === "card"}
-                    onChange={() => setPaymentMethod("card")}
-                    className="w-4 h-4"
-                  />
-                  <Label
-                    htmlFor="card-payment"
-                    className="w-full py-4 ml-2 text-sm font-medium text-gray-900 dark:text-gray-300"
-                  >
-                    <div className="flex items-center">
-                      Credit/Debit Card
-                      <div className="ml-auto flex space-x-2">
-                        <FaCcVisa className="text-blue-700 text-2xl" />
-                        <FaCcMastercard className="text-red-600 text-2xl" />
-                      </div>
-                    </div>
-                  </Label>
-                </div>
-
-                <div className="flex items-center pl-4 border border-gray-200 rounded dark:border-gray-700">
-                  <Radio
-                    id="paypal-payment"
-                    name="paymentMethod"
-                    value="paypal"
-                    checked={paymentMethod === "paypal"}
-                    onChange={() => setPaymentMethod("paypal")}
-                  />
-                  <Label
-                    htmlFor="paypal-payment"
-                    className="w-full py-4 ml-2 text-sm font-medium text-gray-900 dark:text-gray-300"
-                  >
-                    <div className="flex items-center">
-                      PayPal
-                      <div className="ml-auto">
-                        <FaCcPaypal className="text-blue-800 text-2xl" />
-                      </div>
-                    </div>
-                  </Label>
-                </div>
-
-                <div className="flex items-center pl-4 border border-gray-200 rounded dark:border-gray-700">
-                  <Radio
-                    id="cash-payment"
-                    name="paymentMethod"
-                    value="cash"
-                    checked={paymentMethod === "cash"}
-                    onChange={() => setPaymentMethod("cash")}
-                  />
-                  <Label
-                    htmlFor="cash-payment"
-                    className="w-full py-4 ml-2 text-sm font-medium text-gray-900 dark:text-gray-300"
-                  >
-                    <div className="flex items-center">
-                      Cash on Delivery
-                      <div className="ml-auto">
-                        <HiCash className="text-green-600 text-2xl" />
-                      </div>
-                    </div>
-                  </Label>
-                </div>
-
-                {paymentMethod === "card" && (
-                  <div className="p-4 border border-gray-200 rounded dark:border-gray-700">
-                    {/* In a real application, you would add credit card form fields here */}
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Card details will be collected on the next screen.
-                    </p>
-                  </div>
-                )}
-              </div>
-            </Card>
-
-            <div className="flex justify-between mt-6">
-              <Button color="light" onClick={() => navigate(-1)}>
-                <HiChevronLeft className="mr-2" /> Back
-              </Button>
-
-              <Button
-                type="submit"
-                color="success"
-                disabled={
-                  orderProcessing ||
-                  (distanceToRestaurant && distanceToRestaurant > 20)
-                }
-                className="px-8"
-              >
-                {orderProcessing ? (
-                  <>
-                    <Spinner size="sm" className="mr-3" />
-                    Processing...
-                  </>
-                ) : (
-                  <>
-                    Place Order
-                    <HiCheck className="ml-2" />
-                  </>
-                )}
-              </Button>
-            </div>
-          </form>
-        </div>
-
-        {/* Order Summary */}
-        <div className="lg:col-span-1">
-          <Card className="sticky top-4">
-            <h2 className="text-xl font-semibold mb-4 flex items-center">
+          {/* Order Summary Preview */}
+          <Card className="mb-6">
+            <h3 className="font-medium text-gray-800 dark:text-white flex items-center mb-3">
               <HiShoppingBag className="mr-2 text-blue-600" /> Order Summary
-            </h2>
+            </h3>
 
-            <div className="divide-y dark:divide-gray-700">
-              {cart.items.map((item, index) => (
-                <div key={index} className="py-3 flex justify-between">
-                  <div>
-                    <div className="font-medium text-gray-800 dark:text-white flex items-center">
-                      <span className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300 text-xs font-semibold px-2 py-0.5 rounded mr-2">
-                        {item.quantity}x
-                      </span>
-                      {item.name}
-                    </div>
-
-                    {item.addOns && item.addOns.length > 0 && (
-                      <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        {item.addOns.map((addon, idx) => (
-                          <span key={idx}>
-                            +{addon.quantity}x {addon.name}
-                            {idx < item.addOns.length - 1 && ", "}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  <div className="text-gray-700 dark:text-gray-300">
-                    ${formatPrice(item.itemTotal)}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="border-t dark:border-gray-700 pt-4 mt-4 space-y-2">
-              <div className="flex justify-between text-gray-600 dark:text-gray-400">
-                <span>Subtotal</span>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between pb-2 border-b border-gray-200 dark:border-gray-700">
+                <span>
+                  {cart.items.length} item{cart.items.length !== 1 ? "s" : ""}
+                </span>
                 <span>${formatPrice(cart.subtotal)}</span>
               </div>
 
               {cart.discountAmount > 0 && (
-                <div className="flex justify-between text-green-600 dark:text-green-400">
-                  <span className="flex items-center">
-                    <HiDocumentText className="mr-1" />
-                    Discount{" "}
-                    {cart.appliedPromotion
-                      ? `(${cart.appliedPromotion.code})`
-                      : ""}
-                  </span>
+                <div className="flex justify-between pb-2 text-green-600 dark:text-green-400">
+                  <span>Discount</span>
                   <span>-${formatPrice(cart.discountAmount)}</span>
                 </div>
               )}
 
-              <div className="flex justify-between text-gray-600 dark:text-gray-400">
-                <span>Tax</span>
-                <span>${formatPrice(cart.taxAmount)}</span>
+              <div className="flex justify-between pb-2">
+                <span>Tax + Delivery</span>
+                <span>
+                  ${formatPrice(cart.taxAmount + (cart.deliveryFee || 0))}
+                </span>
               </div>
 
-              <div className="flex justify-between text-gray-600 dark:text-gray-400">
-                <span>Delivery Fee</span>
-                <span>${formatPrice(cart.deliveryFee || 0)}</span>
-              </div>
-
-              <div className="flex justify-between pt-3 border-t dark:border-gray-700 font-bold text-lg text-gray-900 dark:text-white">
+              <div className="flex justify-between pt-2 font-bold border-t border-gray-200 dark:border-gray-700">
                 <span>Total</span>
                 <span>${formatPrice(cart.total)}</span>
               </div>
             </div>
-
-            {cart.appliedPromotion && (
-              <div className="mt-4 bg-green-50 dark:bg-green-900/20 p-3 rounded-lg border border-green-200 dark:border-green-800">
-                <div className="flex items-center text-green-700 dark:text-green-400">
-                  <HiCheck className="mr-1.5 text-green-500" />
-                  <span className="font-medium">
-                    Promo code{" "}
-                    <span className="font-bold">
-                      {cart.appliedPromotion.code}
-                    </span>{" "}
-                    applied
-                  </span>
-                </div>
-                <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                  {cart.appliedPromotion.description}
-                </div>
-              </div>
-            )}
-
-            {/* Restaurant info */}
-            {restaurantLocation && (
-              <div className="mt-4 bg-gray-50 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700">
-                <h3 className="font-medium text-gray-800 dark:text-white mb-2">
-                  Restaurant Information
-                </h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  {restaurantLocation.name}
-                </p>
-                <p className="text-xs text-gray-500 dark:text-gray-500">
-                  {restaurantLocation.address}
-                </p>
-                <div className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                  Maximum delivery distance: 20 km
-                </div>
-              </div>
-            )}
-
-            <div className="mt-4 text-xs text-gray-500 dark:text-gray-400">
-              <p>
-                By placing your order, you agree to our Terms of Service and
-                Privacy Policy.
-              </p>
-            </div>
           </Card>
         </div>
-      </div>
+      )}
+
+      {/* Delivery Information Step */}
+      {!showPaymentStep && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Order Details Form */}
+          <div className="lg:col-span-2">
+            <form onSubmit={handleSubmit}>
+              <ContactInfoForm
+                formData={formData}
+                formErrors={formErrors}
+                handleChange={handleChange}
+              />
+
+              {/* Delivery Location Card with Google Maps */}
+              <DeliveryLocationMap
+                formData={formData}
+                formErrors={formErrors}
+                locationValue={locationValue}
+                handleLocationSelect={handleLocationSelect}
+                isMapLoaded={isMapLoaded}
+                setIsMapLoaded={setIsMapLoaded}
+                restaurantLocation={restaurantLocation}
+                distanceToRestaurant={distanceToRestaurant}
+                handleMapClick={handleMapClick}
+                getMapCenter={getMapCenter}
+                mapContainerStyle={mapContainerStyle}
+              />
+
+              <DeliveryAddressForm
+                formData={formData}
+                formErrors={formErrors}
+                handleChange={handleChange}
+              />
+
+              <PaymentMethodSelector
+                paymentMethod={paymentMethod}
+                setPaymentMethod={setPaymentMethod}
+              />
+
+              <div className="flex justify-between mt-6">
+                <Button color="light" onClick={() => navigate(-1)}>
+                  <HiChevronLeft className="mr-2" /> Back
+                </Button>
+
+                <Button
+                  type="submit"
+                  color="success"
+                  disabled={
+                    orderProcessing ||
+                    (distanceToRestaurant && distanceToRestaurant > 20)
+                  }
+                  className="px-8"
+                >
+                  {orderProcessing ? (
+                    <>
+                      <Spinner size="sm" className="mr-3" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      {paymentMethod === "card"
+                        ? "Proceed to Payment"
+                        : "Place Order"}
+                      <HiArrowSmRight className="ml-2" />
+                    </>
+                  )}
+                </Button>
+              </div>
+            </form>
+          </div>
+
+          {/* Order Summary */}
+          <div className="lg:col-span-1">
+            <OrderSummary
+              cart={cart}
+              restaurantLocation={restaurantLocation}
+              formatPrice={formatPrice}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -24,6 +24,9 @@ public class KafkaConsumerConfig {
     @Value("${spring.kafka.bootstrap-servers.broker2}")
     private String broker2BootstrapServers;
 
+    @Value("${spring.kafka.bootstrap-servers.broker3}")
+    private String broker3BootstrapServers;
+
     // Keep original consumer factory for user events
     @Bean
     public ConsumerFactory<? super String, ? super Object> consumerFactory() {
@@ -59,6 +62,29 @@ public class KafkaConsumerConfig {
         return new DefaultKafkaConsumerFactory<>(props);
     }
 
+    // New consumer factory for Order events
+    @Bean
+    public ConsumerFactory<String, Object> consumerFactoryBroker3() {
+        Map<String, Object> props = new HashMap<>();
+        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, broker3BootstrapServers);
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, "notification-service-broker3");
+
+        // Configure error handling deserializer
+        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, ErrorHandlingDeserializer.class);
+        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, ErrorHandlingDeserializer.class);
+        props.put(ErrorHandlingDeserializer.KEY_DESERIALIZER_CLASS, StringDeserializer.class);
+        props.put(ErrorHandlingDeserializer.VALUE_DESERIALIZER_CLASS, JsonDeserializer.class);
+
+        // Configure type mappings for the OrderEvent
+        props.put(JsonDeserializer.TRUSTED_PACKAGES, "*");
+        props.put(JsonDeserializer.TYPE_MAPPINGS,
+                "order:com.foodDelivery.orderService.event.OrderEvent");
+        props.put(JsonDeserializer.VALUE_DEFAULT_TYPE, "java.lang.Object");
+        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+
+        return new DefaultKafkaConsumerFactory<>(props);
+    }
+
     // Original container factory for user events
     @Bean
     public ConcurrentKafkaListenerContainerFactory<String, Object> kafkaListenerContainerFactory() {
@@ -74,6 +100,15 @@ public class KafkaConsumerConfig {
         ConcurrentKafkaListenerContainerFactory<String, Object> factory =
                 new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(consumerFactoryBroker2());
+        return factory;
+    }
+
+    // New container factory for order events
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<String, Object> kafkaListenerContainerFactoryBroker3() {
+        ConcurrentKafkaListenerContainerFactory<String, Object> factory =
+                new ConcurrentKafkaListenerContainerFactory<>();
+        factory.setConsumerFactory(consumerFactoryBroker3());
         return factory;
     }
 }

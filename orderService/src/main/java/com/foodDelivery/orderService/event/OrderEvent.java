@@ -5,6 +5,7 @@ import com.foodDelivery.orderService.dto.DeliveryAddressRequest;
 import com.foodDelivery.orderService.dto.LocationRequest;
 import com.foodDelivery.orderService.dto.OrderItemRequest;
 import com.foodDelivery.orderService.dto.PromotionDetailsRequest;
+import com.foodDelivery.orderService.model.OrderStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -27,6 +28,7 @@ public class OrderEvent {
     private DeliveryAddressRequest deliveryAddress;
     private String deliveryInstructions;
     private String paymentMethod;
+    private OrderStatus status;
     private double subtotal;
     private double taxAmount;
     private double deliveryFee;
