@@ -42,6 +42,7 @@ import { ToastContainer, toast } from "react-toastify";
 import "react-circular-progressbar/dist/styles.css";
 import "react-toastify/dist/ReactToastify.css";
 import { authService } from "../service/authService";
+import { sanitizeInput, escapeHtml, sanitizeUrl } from '../utils/sanitize';
 
 export default function DashProfile() {
   const { currentUser, loading } = useSelector((state) => state.user);
@@ -169,7 +170,8 @@ export default function DashProfile() {
   };
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.id]: e.target.value });
+    const sanitizedValue = sanitizeInput(e.target.value);
+    setFormData({ ...formData, [e.target.id]: sanitizedValue });
   };
 
   const resetForm = () => {
@@ -392,7 +394,7 @@ export default function DashProfile() {
 
           <div className="flex-1">
             <h1 className="text-2xl font-bold mb-2">
-              {formData.firstName || "User"} {formData.lastName || ""}
+              {escapeHtml(formData.firstName) || "User"} {escapeHtml(formData.lastName) || ""}
             </h1>
             <div className="flex flex-wrap gap-2 mb-3">
               {currentUser.roles &&
@@ -403,7 +405,7 @@ export default function DashProfile() {
                 ))}
             </div>
             <p className="text-gray-500 mb-2">
-              Username: {formData.username || "Not set"}
+              Username: {escapeHtml(formData.username) || "Not set"}
             </p>
             {currentUser.enabled === false && (
               <Alert color="warning" className="mb-2">

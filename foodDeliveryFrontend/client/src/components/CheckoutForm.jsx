@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import PropTypes from 'prop-types';
 import { Button, Alert, Spinner, Card } from 'flowbite-react';
 import { CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { FaCreditCard, FaLock } from 'react-icons/fa';
 import { useSelector } from "react-redux";
 
-export default function CheckoutForm({ onSuccess, clientSecret }) {
+function CheckoutForm({ onSuccess, clientSecret }) {
   const stripe = useStripe();
   const elements = useElements();
   const [error, setError] = useState(null);
@@ -158,3 +159,10 @@ export default function CheckoutForm({ onSuccess, clientSecret }) {
     </form>
   );
 }
+
+CheckoutForm.propTypes = {
+  onSuccess: PropTypes.func.isRequired,
+  clientSecret: PropTypes.string.isRequired,
+};
+
+export default CheckoutForm;

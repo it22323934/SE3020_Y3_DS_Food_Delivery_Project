@@ -13,6 +13,15 @@ import {
   Avatar,
 } from "flowbite-react";
 import {
+  sanitizeInput,
+  sanitizeEmail,
+  sanitizePhone,
+  sanitizeObject,
+  sanitizeCoordinates,
+  validateAndSanitizeImageUrl,
+  sanitizeOutput,
+} from "../utils/sanitize";
+import {
   HiOutlinePencilAlt,
   HiOutlinePhotograph,
   HiOutlineClock,
@@ -183,7 +192,7 @@ export default function DashMyRestaurant() {
         toast.error("Failed to fetch restaurant details");
       }
     } catch (error) {
-      toast.error(`Error: ${error.message}`);
+      toast.error(`Error: ${sanitizeInput(error.message)}`);
     } finally {
       setLoading(false);
     }
@@ -213,10 +222,33 @@ export default function DashMyRestaurant() {
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
+    let sanitizedValue;
+
+    if (type === "checkbox") {
+      sanitizedValue = checked;
+    } else {
+      switch (name) {
+        case "email":
+          sanitizedValue = sanitizeEmail(value);
+          break;
+        case "phoneNumber":
+          sanitizedValue = sanitizePhone(value);
+          break;
+        case "name":
+        case "description":
+        case "address":
+          sanitizedValue = sanitizeInput(value);
+          break;
+        default:
+          sanitizedValue = value;
+      }
+    }
+
     setFormData({
       ...formData,
-      [name]: type === "checkbox" ? checked : value,
+      [name]: sanitizedValue,
     });
+
     if (formErrors[name]) {
       setFormErrors({
         ...formErrors,
@@ -227,7 +259,7 @@ export default function DashMyRestaurant() {
 
   const handleCuisineChange = (selectedOptions) => {
     const cuisineIds = selectedOptions
-      ? selectedOptions.map((option) => option.value)
+      ? selectedOptions.map((option) => sanitizeInput(String(option.value)))
       : [];
     setFormData({
       ...formData,
@@ -235,23 +267,50 @@ export default function DashMyRestaurant() {
     });
   };
 
+  const validateImageFile = (file) => {
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    
+    if (file.size > maxSize) {
+      return { isValid: false, error: "File size should be less than 5MB" };
+    }
+    
+    if (!allowedTypes.includes(file.type.toLowerCase())) {
+      return { isValid: false, error: "Please select a valid image file (JPEG, PNG, GIF, or WebP)" };
+    }
+    
+    return { isValid: true, error: null };
+  };
+
   const handleRestaurantImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      const maxSize = 5 * 1024 * 1024; // 5MB
-      if (file.size > maxSize) {
-        setRestaurantImageError("File size should be less than 5MB");
+      const validation = validateImageFile(file);
+      
+      if (!validation.isValid) {
+        setRestaurantImageError(validation.error);
         return;
       }
-      if (!file.type.startsWith("image/")) {
-        setRestaurantImageError("Please select an image file");
-        return;
-      }
+      
       setRestaurantImage(file);
       setRestaurantImageError(null);
+      
       const reader = new FileReader();
-      reader.onload = () => {
-        setRestaurantImagePreview(reader.result);
+      reader.onload = (event) => {
+        // Validate the data URL
+        const dataUrl = event.target.result;
+        if (dataUrl.startsWith('data:image/')) {
+          setRestaurantImagePreview(dataUrl);
+        } else {
+          setRestaurantImageError("Invalid image format");
+          setRestaurantImage(null);
+          setRestaurantImagePreview(null);
+        }
+      };
+      reader.onerror = () => {
+        setRestaurantImageError("Error reading file");
+        setRestaurantImage(null);
+        setRestaurantImagePreview(null);
       };
       reader.readAsDataURL(file);
     }
@@ -260,20 +319,32 @@ export default function DashMyRestaurant() {
   const handleBannerImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      const maxSize = 5 * 1024 * 1024; // 5MB
-      if (file.size > maxSize) {
-        setBannerImageError("File size should be less than 5MB");
+      const validation = validateImageFile(file);
+      
+      if (!validation.isValid) {
+        setBannerImageError(validation.error);
         return;
       }
-      if (!file.type.startsWith("image/")) {
-        setBannerImageError("Please select an image file");
-        return;
-      }
+      
       setBannerImage(file);
       setBannerImageError(null);
+      
       const reader = new FileReader();
-      reader.onload = () => {
-        setBannerImagePreview(reader.result);
+      reader.onload = (event) => {
+        // Validate the data URL
+        const dataUrl = event.target.result;
+        if (dataUrl.startsWith('data:image/')) {
+          setBannerImagePreview(dataUrl);
+        } else {
+          setBannerImageError("Invalid image format");
+          setBannerImage(null);
+          setBannerImagePreview(null);
+        }
+      };
+      reader.onerror = () => {
+        setBannerImageError("Error reading file");
+        setBannerImage(null);
+        setBannerImagePreview(null);
       };
       reader.readAsDataURL(file);
     }
@@ -292,10 +363,25 @@ export default function DashMyRestaurant() {
   }, [bannerImage]);
 
   const uploadRestaurantImage = async () => {
+    if (!restaurantImage) return;
+
+    // Re-validate the file before upload
+    const validation = validateImageFile(restaurantImage);
+    if (!validation.isValid) {
+      setRestaurantImageError(validation.error);
+      return;
+    }
+
     setRestaurantImageUploading(true);
     const storage = getStorage(app);
-    const fileName = new Date().getTime() + restaurantImage.name;
-    const storageRef = ref(storage, `restaurantImages/${fileName}`);
+    
+    // Generate a safe filename using timestamp and hash
+    const fileExtension = restaurantImage.name.split('.').pop().toLowerCase();
+    const timestamp = new Date().getTime();
+    const randomString = Math.random().toString(36).substring(2, 15);
+    const safeFileName = `${timestamp}-${randomString}.${fileExtension}`;
+    
+    const storageRef = ref(storage, `restaurantImages/${safeFileName}`);
     const uploadTask = uploadBytesResumable(storageRef, restaurantImage);
 
     uploadTask.on(
@@ -306,27 +392,52 @@ export default function DashMyRestaurant() {
         setRestaurantImageProgress(Math.round(progress));
       },
       (error) => {
-        setRestaurantImageError("Error uploading image: " + error.message);
+        setRestaurantImageError(sanitizeInput("Error uploading image: " + error.message));
         setRestaurantImageUploading(false);
       },
       () => {
         getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
+          // Validate the download URL before setting it
+          const sanitizedUrl = validateAndSanitizeImageUrl(downloadURL);
+          if (!sanitizedUrl) {
+            setRestaurantImageError("Invalid image URL received from server");
+            return;
+          }
+          
           setFormData((prev) => ({
             ...prev,
-            restaurantImageUrl: downloadURL,
+            restaurantImageUrl: sanitizedUrl,
           }));
           setRestaurantImageUploading(false);
           toast.success("Restaurant image uploaded successfully");
+        }).catch((error) => {
+          setRestaurantImageError(sanitizeInput("Error getting download URL: " + error.message));
+          setRestaurantImageUploading(false);
         });
       }
     );
   };
 
   const uploadBannerImage = async () => {
+    if (!bannerImage) return;
+
+    // Re-validate the file before upload
+    const validation = validateImageFile(bannerImage);
+    if (!validation.isValid) {
+      setBannerImageError(validation.error);
+      return;
+    }
+
     setBannerImageUploading(true);
     const storage = getStorage(app);
-    const fileName = new Date().getTime() + bannerImage.name;
-    const storageRef = ref(storage, `restaurantBanners/${fileName}`);
+    
+    // Generate a safe filename using timestamp and hash
+    const fileExtension = bannerImage.name.split('.').pop().toLowerCase();
+    const timestamp = new Date().getTime();
+    const randomString = Math.random().toString(36).substring(2, 15);
+    const safeFileName = `${timestamp}-${randomString}.${fileExtension}`;
+    
+    const storageRef = ref(storage, `restaurantBanners/${safeFileName}`);
     const uploadTask = uploadBytesResumable(storageRef, bannerImage);
 
     uploadTask.on(
@@ -337,17 +448,27 @@ export default function DashMyRestaurant() {
         setBannerImageProgress(Math.round(progress));
       },
       (error) => {
-        setBannerImageError("Error uploading banner: " + error.message);
+        setBannerImageError(sanitizeInput("Error uploading banner: " + error.message));
         setBannerImageUploading(false);
       },
       () => {
         getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
+          // Validate the download URL before setting it
+          const sanitizedUrl = validateAndSanitizeImageUrl(downloadURL);
+          if (!sanitizedUrl) {
+            setBannerImageError("Invalid image URL received from server");
+            return;
+          }
+          
           setFormData((prev) => ({
             ...prev,
-            bannerImageUrl: downloadURL,
+            bannerImageUrl: sanitizedUrl,
           }));
           setBannerImageUploading(false);
           toast.success("Banner image uploaded successfully");
+        }).catch((error) => {
+          setBannerImageError(sanitizeInput("Error getting download URL: " + error.message));
+          setBannerImageUploading(false);
         });
       }
     );
@@ -399,9 +520,30 @@ export default function DashMyRestaurant() {
 
     try {
       setSubmitting(true);
+      
+      // Sanitize all data before submission
+      const sanitizedFormData = {
+        name: sanitizeInput(formData.name),
+        description: sanitizeInput(formData.description),
+        address: sanitizeInput(formData.address),
+        phoneNumber: sanitizePhone(formData.phoneNumber),
+        email: sanitizeEmail(formData.email),
+        restaurantImageUrl: validateAndSanitizeImageUrl(formData.restaurantImageUrl),
+        bannerImageUrl: validateAndSanitizeImageUrl(formData.bannerImageUrl),
+        ...sanitizeCoordinates({
+          latitude: formData.latitude,
+          longitude: formData.longitude
+        }),
+        formattedAddress: sanitizeInput(formData.formattedAddress),
+        enabled: Boolean(formData.enabled),
+        cuisineTypeIds: formData.cuisineTypeIds.map(id => 
+          typeof id === 'string' ? sanitizeInput(id) : id
+        ),
+      };
+
       const updateData = {
-        ...formData,
-        openingHours: openingHours,
+        ...sanitizedFormData,
+        openingHours: sanitizeObject(openingHours),
         id: restaurant.id,
       };
 
@@ -416,10 +558,10 @@ export default function DashMyRestaurant() {
         fetchMyRestaurant();
       } else {
         const errorData = await response.json();
-        toast.error(errorData.message || "Failed to update restaurant details");
+        toast.error(sanitizeInput(errorData.message) || "Failed to update restaurant details");
       }
     } catch (error) {
-      toast.error(`Error: ${error.message}`);
+      toast.error(`Error: ${sanitizeInput(error.message)}`);
     } finally {
       setSubmitting(false);
     }
@@ -437,7 +579,7 @@ export default function DashMyRestaurant() {
     return (
       <div className="p-4">
         <Alert color="info" icon={HiInformationCircle}>
-          <span className="font-medium">No restaurant found!</span> You don't
+          <span className="font-medium">No restaurant found!</span> You don&apos;t
           have any restaurants assigned to your account. Please contact the
           system administrator.
         </Alert>
@@ -764,32 +906,44 @@ export default function DashMyRestaurant() {
               </div>
             ) : restaurantAdmins.length > 0 ? (
               <div className="space-y-3">
-                {restaurantAdmins.map((admin) => (
-                  <div
-                    key={admin.id}
-                    className="flex items-center p-3 bg-gray-50 rounded-lg transition-all hover:bg-gray-100"
-                  >
-                    <div>
-                      <p className="font-medium">
-                        {admin.firstName && admin.lastName
-                          ? `${admin.firstName} ${admin.lastName}`
-                          : admin.username}
-                      </p>
-                      {admin.email && (
-                        <div className="flex items-center text-sm text-gray-500">
-                          <HiMail className="mr-1" />
-                          <span>{admin.email}</span>
-                        </div>
-                      )}
-                      {admin.phoneNumber && (
-                        <div className="flex items-center text-sm text-gray-500">
-                          <HiPhone className="mr-1" />
-                          <span>{admin.phoneNumber}</span>
-                        </div>
-                      )}
+                {restaurantAdmins.map((admin) => {
+                  // Sanitize all admin data
+                  const sanitizedAdmin = {
+                    id: admin.id,
+                    firstName: sanitizeInput(admin.firstName),
+                    lastName: sanitizeInput(admin.lastName),
+                    username: sanitizeInput(admin.username),
+                    email: sanitizeEmail(admin.email),
+                    phoneNumber: sanitizePhone(admin.phoneNumber),
+                  };
+                  
+                  return (
+                    <div
+                      key={sanitizedAdmin.id}
+                      className="flex items-center p-3 bg-gray-50 rounded-lg transition-all hover:bg-gray-100"
+                    >
+                      <div>
+                        <p className="font-medium">
+                          {sanitizedAdmin.firstName && sanitizedAdmin.lastName
+                            ? `${sanitizedAdmin.firstName} ${sanitizedAdmin.lastName}`
+                            : sanitizedAdmin.username}
+                        </p>
+                        {sanitizedAdmin.email && (
+                          <div className="flex items-center text-sm text-gray-500">
+                            <HiMail className="mr-1" />
+                            <span>{sanitizedAdmin.email}</span>
+                          </div>
+                        )}
+                        {sanitizedAdmin.phoneNumber && (
+                          <div className="flex items-center text-sm text-gray-500">
+                            <HiPhone className="mr-1" />
+                            <span>{sanitizedAdmin.phoneNumber}</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <div className="text-center py-6 px-4 bg-gray-50 rounded-lg">
@@ -849,21 +1003,29 @@ export default function DashMyRestaurant() {
                   className="mb-2 block text-sm font-medium"
                 />
                 <div className="flex flex-wrap gap-2 mt-2 bg-gray-50 p-3 rounded-lg">
-                  {selectedCuisines.map((cuisine) => (
-                    <span
-                      key={cuisine.value}
-                      className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full flex items-center"
-                    >
-                      {cuisine.icon && (
-                        <img
-                          src={cuisine.icon}
-                          alt={cuisine.label}
-                          className="w-4 h-4 mr-1 rounded-full"
-                        />
-                      )}
-                      {cuisine.label}
-                    </span>
-                  ))}
+                  {selectedCuisines.map((cuisine) => {
+                    const sanitizedCuisine = {
+                      value: sanitizeInput(String(cuisine.value)),
+                      label: sanitizeInput(cuisine.label),
+                      icon: validateAndSanitizeImageUrl(cuisine.icon)
+                    };
+                    
+                    return (
+                      <span
+                        key={sanitizedCuisine.value}
+                        className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full flex items-center"
+                      >
+                        {sanitizedCuisine.icon && (
+                          <img
+                            src={sanitizedCuisine.icon}
+                            alt={sanitizedCuisine.label}
+                            className="w-4 h-4 mr-1 rounded-full"
+                          />
+                        )}
+                        {sanitizedCuisine.label}
+                      </span>
+                    );
+                  })}
                 </div>
               </>
             ) : (
@@ -925,7 +1087,7 @@ export default function DashMyRestaurant() {
 
               <div className="text-center text-sm text-gray-500 mt-2">
                 <p>
-                  Reports are generated based on your restaurant's current data
+                  Reports are generated based on your restaurant&apos;s current data
                   and performance metrics.
                 </p>
               </div>

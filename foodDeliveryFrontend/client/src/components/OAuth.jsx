@@ -8,6 +8,7 @@ import { signInSuccess } from "../redux/user/userSlice";
 import { useNavigate } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
 import { authService } from "../service/authService";
+import { sanitizeInput, escapeHtml } from "../utils/sanitize";
 export default function OAuth() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -17,21 +18,34 @@ export default function OAuth() {
     provider.setCustomParameters({ prompt: "select_account" });
     try {
       const resultFromGoogle = await signInWithPopup(auth, provider);
+      
+      // Sanitize user data from Google
       let userData = {
-        email: resultFromGoogle.user.email,
-        name: resultFromGoogle.user.displayName,
-        googlePhotoURL: resultFromGoogle.user.photoURL,
+        email: sanitizeInput(resultFromGoogle.user.email),
+        name: sanitizeInput(resultFromGoogle.user.displayName),
+        googlePhotoURL: sanitizeInput(resultFromGoogle.user.photoURL),
       };
+
       const res = await authService.google(userData);
       const data = await res.json();
+
       if (res.ok) {
-        dispatch(signInSuccess(data));
+        // Sanitize user data before dispatching to Redux store
+        const sanitizedData = {
+          ...data,
+          email: escapeHtml(data.email),
+          username: escapeHtml(data.username),
+          name: escapeHtml(data.name),
+          photoURL: sanitizeInput(data.photoURL),
+        };
+        dispatch(signInSuccess(sanitizedData));
         navigate("/");
       } else {
-        toast.error(data.message);
+        toast.error(escapeHtml(data.message));
       }
     } catch (error) {
-      console.log(error);
+      console.error("Google OAuth Error:", error);
+      toast.error("An error occurred during Google sign-in");
     }
   };
 
