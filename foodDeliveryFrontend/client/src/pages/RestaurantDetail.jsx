@@ -11,6 +11,7 @@ import {
   Tooltip,
   Alert,
 } from "flowbite-react";
+import { sanitizeInput, escapeHtml, sanitizeUrl } from "../utils/sanitize";
 import {
   FaArrowLeft,
   FaStar,
@@ -55,10 +56,10 @@ export default function RestaurantDetail() {
       try {
         setLoading(true);
 
-        // Fetch restaurant details
+        // Fetch restaurant details with sanitized id
         const restaurantResponse =
           await publicRestaurantService.getRestaurantById(
-            id,
+            sanitizeInput(id),
             currentUser?.token
           );
 
@@ -67,26 +68,44 @@ export default function RestaurantDetail() {
         }
 
         const restaurantData = await restaurantResponse.json();
-        setRestaurantData(restaurantData);
+        
+        // Sanitize restaurant data
+        const sanitizedRestaurantData = {
+          ...restaurantData,
+          name: escapeHtml(restaurantData.name),
+          description: escapeHtml(restaurantData.description),
+          address: escapeHtml(restaurantData.address),
+          phoneNumber: escapeHtml(restaurantData.phoneNumber),
+          bannerImageUrl: sanitizeUrl(restaurantData.bannerImageUrl),
+          coverImageUrl: sanitizeUrl(restaurantData.coverImageUrl),
+          cuisineTypes: restaurantData.cuisineTypes?.map(cuisine => ({
+            ...cuisine,
+            name: escapeHtml(cuisine.name)
+          }))
+        };
 
-        // Set restaurant in cart context
-        setRestaurant(restaurantData);
+        setRestaurantData(sanitizedRestaurantData);
+        
+        // Set sanitized restaurant data in cart context
+        setRestaurant(sanitizedRestaurantData);
 
-        // Fetch menu categories
+        // Fetch menu categories with sanitized id
         const categoriesResponse =
           await publicRestaurantService.getCategoriesByRestaurantId(
-            id,
+            sanitizeInput(id),
             currentUser?.token
           );
 
         if (categoriesResponse.ok) {
           const categoriesData = await categoriesResponse.json();
-          // Sort categories by display order
-          setCategories(
-            categoriesData.sort(
-              (a, b) => (a.displayOrder || 0) - (b.displayOrder || 0)
-            )
-          );
+          // Sanitize and sort categories data
+          const sanitizedCategories = categoriesData.map(category => ({
+            ...category,
+            name: escapeHtml(category.name),
+            description: escapeHtml(category.description)
+          })).sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
+          
+          setCategories(sanitizedCategories);
         } else {
           throw new Error("Failed to fetch menu categories");
         }
@@ -168,8 +187,8 @@ export default function RestaurantDetail() {
         className="h-64 md:h-80 bg-cover bg-center flex items-end relative"
         style={{
           backgroundImage: `url(${
-            restaurant.coverImageUrl ||
-            restaurant.bannerImageUrl ||
+            sanitizeUrl(restaurant.coverImageUrl) ||
+            sanitizeUrl(restaurant.bannerImageUrl) ||
             "https://via.placeholder.com/1200x400?text=Restaurant+Cover"
           })`,
         }}
@@ -349,14 +368,14 @@ export default function RestaurantDetail() {
                     >
                       <div className="flex justify-between items-center mb-1">
                         <span className="font-bold text-orange-600 dark:text-orange-400">
-                          {promo.code}
+                          {escapeHtml(promo.code)}
                         </span>
                         <Badge color="warning" className="ml-2">
-                          {promo.discount}% OFF
+                          {escapeHtml(String(promo.discount))}% OFF
                         </Badge>
                       </div>
                       <p className="text-gray-600 dark:text-gray-400 text-sm">
-                        {promo.description}
+                        {escapeHtml(promo.description)}
                       </p>
                       {promo.minOrderAmount > 0 && (
                         <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
@@ -629,8 +648,8 @@ function MenuItemsByCategorySection({
               <div className="w-32 h-32 flex-shrink-0 relative">
                 {item.imageUrl ? (
                   <img
-                    src={item.imageUrl}
-                    alt={item.name}
+                    src={sanitizeUrl(item.imageUrl)}
+                    alt={escapeHtml(item.name)}
                     className="w-full h-full object-cover"
                   />
                 ) : (
@@ -648,7 +667,7 @@ function MenuItemsByCategorySection({
               <div className="ml-4 flex-1 flex flex-col">
                 <div className="flex-grow">
                   <h5 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
-                    {item.name}
+                    {escapeHtml(item.name)}
                     {item.spicy && (
                       <Tooltip content="Spicy">
                         <span className="ml-2 text-red-500">🌶️</span>
@@ -658,7 +677,7 @@ function MenuItemsByCategorySection({
 
                   {item.description && (
                     <p className="text-gray-600 dark:text-gray-300 text-sm line-clamp-2">
-                      {item.description}
+                      {escapeHtml(item.description)}
                     </p>
                   )}
 
@@ -745,8 +764,8 @@ function MenuItemsByCategorySection({
                 {selectedItem.imageUrl ? (
                   <div className="relative w-full">
                     <img
-                      src={selectedItem.imageUrl}
-                      alt={selectedItem.name}
+                      src={sanitizeUrl(selectedItem.imageUrl)}
+                      alt={escapeHtml(selectedItem.name)}
                       className="w-full max-h-64 object-cover rounded-lg shadow-md"
                     />
                     {selectedItem.onPromotion && (
@@ -769,14 +788,14 @@ function MenuItemsByCategorySection({
                   {selectedItem.onPromotion ? (
                     <div className="flex items-center">
                       <span className="line-through text-gray-400 text-lg mr-2">
-                        ${selectedItem.price.toFixed(2)}
+                        ${escapeHtml(selectedItem.price.toFixed(2))}
                       </span>
                       <span className="text-red-600 dark:text-red-500">
-                        ${selectedItem.discountedPrice.toFixed(2)}
+                        ${escapeHtml(selectedItem.discountedPrice.toFixed(2))}
                       </span>
                     </div>
                   ) : (
-                    <span>${selectedItem.price.toFixed(2)}</span>
+                    <span>${escapeHtml(selectedItem.price.toFixed(2))}</span>
                   )}
                 </div>
 
@@ -823,9 +842,9 @@ function MenuItemsByCategorySection({
                         className="flex justify-between items-center py-2 px-3 bg-gray-50 dark:bg-gray-700 rounded"
                       >
                         <div>
-                          <p className="font-medium">{addon.name}</p>
+                          <p className="font-medium">{escapeHtml(addon.name)}</p>
                           <p className="text-sm text-gray-500 dark:text-gray-400">
-                            {addon.description}
+                            {escapeHtml(addon.description)}
                           </p>
                         </div>
                         <div className="text-right">

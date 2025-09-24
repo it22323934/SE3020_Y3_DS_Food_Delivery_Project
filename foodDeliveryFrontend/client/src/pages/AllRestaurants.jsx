@@ -28,6 +28,7 @@ import {
 } from "react-icons/fa";
 import { publicRestaurantService } from "../service/public/publicService";
 import { useSelector } from "react-redux";
+import { sanitizeInput, escapeHtml, sanitizeUrl } from "../utils/sanitize";
 
 export default function AllRestaurants() {
   const [restaurants, setRestaurants] = useState([]);
@@ -655,7 +656,7 @@ export default function AllRestaurants() {
                       <div className="w-full h-48 overflow-hidden relative">
                         <img
                           src={
-                            restaurant.restaurantImageUrl ||
+                            sanitizeUrl(restaurant.restaurantImageUrl) ||
                             "https://via.placeholder.com/300x200?text=No+Image"
                           }
                           alt={restaurant.name}
@@ -688,7 +689,7 @@ export default function AllRestaurants() {
                       <div className="p-4 flex-grow flex flex-col">
                         <div className="flex justify-between items-start mb-2">
                           <h5 className="text-xl font-bold tracking-tight text-gray-900 dark:text-white line-clamp-1">
-                            {restaurant.name}
+                            {escapeHtml(restaurant.name)}
                           </h5>
                           <div className="flex items-center bg-yellow-50 dark:bg-gray-700 px-2 py-1 rounded text-sm">
                             <FaStar className="text-yellow-400 dark:text-yellow-300 mr-1" />
@@ -711,7 +712,7 @@ export default function AllRestaurants() {
                                 className="px-2 py-1"
                                 size="xs"
                               >
-                                {cuisine.name}
+                                {escapeHtml(cuisine.name)}
                               </Badge>
                             ))}
                           {isLoggedIn &&
@@ -731,7 +732,7 @@ export default function AllRestaurants() {
                         {/* Description */}
                         {restaurant.description && (
                           <p className="mt-1 mb-3 text-gray-600 dark:text-gray-300 text-sm line-clamp-2 flex-grow">
-                            {restaurant.description}
+                            {escapeHtml(restaurant.description)}
                           </p>
                         )}
 
@@ -741,7 +742,7 @@ export default function AllRestaurants() {
                             <div className="flex items-center text-sm text-gray-500 dark:text-gray-400 mb-1">
                               <FaMapMarkerAlt className="mr-1 flex-shrink-0" />
                               <span className="truncate">
-                                {restaurant.address}
+                                {escapeHtml(restaurant.address)}
                               </span>
                             </div>
                           )}
@@ -750,7 +751,7 @@ export default function AllRestaurants() {
                           <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
                             <FaClock className="mr-1 flex-shrink-0" />
                             <span>
-                              {restaurant.deliveryTime || "30-45"} min delivery
+                              {escapeHtml(restaurant.deliveryTime) || "30-45"} min delivery
                               time
                             </span>
                           </div>

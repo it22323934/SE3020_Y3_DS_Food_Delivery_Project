@@ -12,6 +12,7 @@ import {
 } from "flowbite-react";
 import { useSelector } from "react-redux";
 import { MdDeliveryDining } from "react-icons/md";
+import { sanitizeInput, escapeHtml } from '../utils/sanitize';
 
 export default function ContactUs() {
   const [errorMessage, setErrorMessage] = useState("");
@@ -27,7 +28,8 @@ export default function ContactUs() {
     message: "",
   });
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.id]: e.target.value.trim() });
+    const sanitizedValue = sanitizeInput(e.target.value.trim());
+    setFormData({ ...formData, [e.target.id]: sanitizedValue });
   };
   const handleSubmit = async (e) => {
     e.preventDefault();

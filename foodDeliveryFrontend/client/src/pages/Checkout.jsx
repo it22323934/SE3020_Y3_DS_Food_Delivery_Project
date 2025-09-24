@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 import { useSelector } from "react-redux";
+import { sanitizeInput, sanitizeObject, sanitizeEmail, sanitizePhone, sanitizeCoordinates } from "../utils/sanitize";
 import {
   Button,
   Card,
@@ -319,31 +320,33 @@ export default function Checkout() {
         if (status === "OK" && results[0]) {
           const lat = results[0].geometry.location.lat();
           const lng = results[0].geometry.location.lng();
+          const coordinates = sanitizeCoordinates({ lat, lng });
+          const sanitizedAddress = sanitizeInput(place.label);
 
           // Update delivery location
           setFormData({
             ...formData,
             deliveryLocation: {
               ...formData.deliveryLocation,
-              latitude: lat,
-              longitude: lng,
-              address: place.label,
-              formattedAddress: place.label,
+              latitude: coordinates.lat,
+              longitude: coordinates.lng,
+              address: sanitizedAddress,
+              formattedAddress: sanitizedAddress,
             },
             // Also update address fields based on the selected place
             address: {
               ...formData.address,
-              street: extractAddressComponent(
+              street: sanitizeInput(extractAddressComponent(
                 results[0],
                 "route",
                 "street_number"
-              ),
-              city: extractAddressComponent(results[0], "locality"),
-              state: extractAddressComponent(
+              )),
+              city: sanitizeInput(extractAddressComponent(results[0], "locality")),
+              state: sanitizeInput(extractAddressComponent(
                 results[0],
                 "administrative_area_level_1"
-              ),
-              zipCode: extractAddressComponent(results[0], "postal_code"),
+              )),
+              zipCode: sanitizeInput(extractAddressComponent(results[0], "postal_code")),
             },
           });
         }
@@ -372,43 +375,45 @@ export default function Checkout() {
   const handleMapClick = (event) => {
     const lat = event.latLng.lat();
     const lng = event.latLng.lng();
+    const coordinates = sanitizeCoordinates({ lat, lng });
 
     // Update coordinates immediately
     setFormData({
       ...formData,
       deliveryLocation: {
         ...formData.deliveryLocation,
-        latitude: lat,
-        longitude: lng,
+        latitude: coordinates.lat,
+        longitude: coordinates.lng,
       },
     });
 
     // Only attempt reverse geocoding if map is loaded
     if (isMapLoaded) {
       const geocoder = new window.google.maps.Geocoder();
-      geocoder.geocode({ location: { lat, lng } }, (results, status) => {
+      geocoder.geocode({ location: { lat: coordinates.lat, lng: coordinates.lng } }, (results, status) => {
         if (status === "OK" && results[0]) {
+          const sanitizedAddress = sanitizeInput(results[0].formatted_address);
           setFormData({
             ...formData,
             deliveryLocation: {
-              latitude: lat,
-              longitude: lng,
-              address: results[0].formatted_address,
-              formattedAddress: results[0].formatted_address,
+              latitude: coordinates.lat,
+              longitude: coordinates.lng,
+              address: sanitizedAddress,
+              formattedAddress: sanitizedAddress,
             },
             // Update address fields based on the geocoded result
             address: {
-              street: extractAddressComponent(
+              street: sanitizeInput(extractAddressComponent(
                 results[0],
                 "route",
                 "street_number"
-              ),
-              city: extractAddressComponent(results[0], "locality"),
-              state: extractAddressComponent(
+              )),
+              city: sanitizeInput(extractAddressComponent(results[0], "locality")),
+              state: sanitizeInput(extractAddressComponent(
                 results[0],
                 "administrative_area_level_1"
-              ),
-              zipCode: extractAddressComponent(results[0], "postal_code"),
+              )),
+              zipCode: sanitizeInput(extractAddressComponent(results[0], "postal_code")),
             },
           });
         }
@@ -449,6 +454,16 @@ export default function Checkout() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    let sanitizedValue = value;
+
+    // Apply appropriate sanitization based on field type
+    if (name === "email" || name === "contactInfo.email") {
+      sanitizedValue = sanitizeEmail(value);
+    } else if (name === "phone" || name === "contactInfo.phone") {
+      sanitizedValue = sanitizePhone(value);
+    } else {
+      sanitizedValue = sanitizeInput(value);
+    }
 
     if (name.includes(".")) {
       const [parent, child] = name.split(".");
@@ -456,13 +471,13 @@ export default function Checkout() {
         ...formData,
         [parent]: {
           ...formData[parent],
-          [child]: value,
+          [child]: sanitizedValue,
         },
       });
     } else {
       setFormData({
         ...formData,
-        [name]: value,
+        [name]: sanitizedValue,
       });
     }
   };
@@ -505,10 +520,13 @@ export default function Checkout() {
       restaurantId: restaurantId,
       items: cart.items.map((item) => ({
         itemId: item.id,
-        name: item.name,
+        name: sanitizeInput(item.name),
         quantity: item.quantity,
         price: item.price,
-        addOns: item.addOns || [],
+        addOns: (item.addOns || []).map(addon => ({
+          ...addon,
+          name: sanitizeInput(addon.name)
+        })),
         itemTotal: item.itemTotal,
       })),
       subtotal: cart.subtotal,
@@ -518,31 +536,49 @@ export default function Checkout() {
       total: cart.total,
       promotion: cart.appliedPromotion
         ? {
-            code: cart.appliedPromotion.code,
+            code: sanitizeInput(cart.appliedPromotion.code),
             discountAmount: cart.discountAmount,
           }
         : null,
-      deliveryAddress: formData.address,
+      deliveryAddress: {
+        street: sanitizeInput(formData.address.street),
+        city: sanitizeInput(formData.address.city),
+        state: sanitizeInput(formData.address.state),
+        zipCode: sanitizeInput(formData.address.zipCode),
+      },
       deliveryLocation: {
-        latitude: formData.deliveryLocation.latitude,
-        longitude: formData.deliveryLocation.longitude,
-        address:
+        latitude: sanitizeCoordinates({
+          latitude: formData.deliveryLocation.latitude,
+          longitude: formData.deliveryLocation.longitude
+        }).latitude,
+        longitude: sanitizeCoordinates({
+          latitude: formData.deliveryLocation.latitude,
+          longitude: formData.deliveryLocation.longitude
+        }).longitude,
+        address: sanitizeInput(
           formData.deliveryLocation.formattedAddress ||
-          formData.deliveryLocation.address,
+          formData.deliveryLocation.address
+        ),
       },
       restaurantLocation: {
-        latitude: restaurantLocation?.lat,
-        longitude: restaurantLocation?.lng,
-        address: restaurantLocation?.address,
-        name: restaurantLocation?.name,
+        latitude: sanitizeCoordinates({
+          lat: restaurantLocation?.lat,
+          lng: restaurantLocation?.lng
+        }).lat,
+        longitude: sanitizeCoordinates({
+          lat: restaurantLocation?.lat,
+          lng: restaurantLocation?.lng
+        }).lng,
+        address: sanitizeInput(restaurantLocation?.address),
+        name: sanitizeInput(restaurantLocation?.name),
       },
-      deliveryInstructions: formData.deliveryInstructions,
+      deliveryInstructions: sanitizeInput(formData.deliveryInstructions),
       contactInfo: {
-        name: formData.fullName,
-        email: formData.email,
-        phone: formData.phone,
+        name: sanitizeInput(formData.fullName),
+        email: sanitizeEmail(formData.email),
+        phone: sanitizePhone(formData.phone),
       },
-      paymentMethod,
+      paymentMethod: sanitizeInput(paymentMethod),
       status: "pending",
       paymentStatus: paymentMethod === "cash" ? "pending" : "awaiting_payment",
     };

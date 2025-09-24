@@ -6,6 +6,7 @@ import CheckoutForm from '../components/CheckoutForm';
 import paymentService from '../service/paymentService';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
+import { sanitizeInput, escapeHtml, sanitizeUrl } from '../utils/sanitize';
 import { FaCheck, FaShoppingCart, FaReceipt, FaArrowLeft, FaEnvelope } from 'react-icons/fa';
 import { MdRestaurant, MdDeliveryDining } from 'react-icons/md';
 import { useSelector } from "react-redux";
