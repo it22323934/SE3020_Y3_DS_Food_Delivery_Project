@@ -1,6 +1,8 @@
 import React from "react";
+import PropTypes from 'prop-types';
 import { Card } from "flowbite-react";
 import { HiShoppingBag, HiDocumentText, HiCheck } from "react-icons/hi";
+import { sanitizeInput } from "../../utils/sanitize";
 
 const OrderSummary = ({ 
   cart, 
@@ -23,14 +25,14 @@ const OrderSummary = ({
                   <span className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300 text-xs font-semibold px-2 py-0.5 rounded mr-2">
                     {item.quantity}x
                   </span>
-                  {item.name}
+                  {sanitizeInput(item.name)}
                 </div>
 
                 {item.addOns && item.addOns.length > 0 && (
                   <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                     {item.addOns.map((addon, idx) => (
                       <span key={idx}>
-                        +{addon.quantity}x {addon.name}
+                        +{addon.quantity}x {sanitizeInput(addon.name)}
                         {idx < item.addOns.length - 1 && ", "}
                       </span>
                     ))}
@@ -91,13 +93,13 @@ const OrderSummary = ({
                 <span className="font-medium">
                   Promo code{" "}
                   <span className="font-bold">
-                    {cart.appliedPromotion.code}
+                    {sanitizeInput(cart.appliedPromotion.code)}
                   </span>{" "}
                   applied
                 </span>
               </div>
               <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                {cart.appliedPromotion.description}
+                {sanitizeInput(cart.appliedPromotion.description)}
               </div>
             </div>
           )}
@@ -109,10 +111,10 @@ const OrderSummary = ({
                 Restaurant Information
               </h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                {restaurantLocation.name}
+                {sanitizeInput(restaurantLocation.name)}
               </p>
               <p className="text-xs text-gray-500 dark:text-gray-500">
-                {restaurantLocation.address}
+                {sanitizeInput(restaurantLocation.address)}
               </p>
               <div className="text-xs text-gray-500 dark:text-gray-500 mt-1">
                 Maximum delivery distance: 20 km
@@ -130,6 +132,42 @@ const OrderSummary = ({
       )}
     </Card>
   );
+};
+
+OrderSummary.propTypes = {
+  cart: PropTypes.shape({
+    items: PropTypes.arrayOf(PropTypes.shape({
+      id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+      name: PropTypes.string,
+      quantity: PropTypes.number,
+      price: PropTypes.number,
+      addOns: PropTypes.arrayOf(PropTypes.shape({
+        name: PropTypes.string,
+        quantity: PropTypes.number,
+      })),
+      itemTotal: PropTypes.number,
+    })),
+    subtotal: PropTypes.number,
+    taxAmount: PropTypes.number,
+    deliveryFee: PropTypes.number,
+    total: PropTypes.number,
+    discountAmount: PropTypes.number,
+    appliedPromotion: PropTypes.shape({
+      code: PropTypes.string,
+      description: PropTypes.string,
+    }),
+  }).isRequired,
+  restaurantLocation: PropTypes.shape({
+    name: PropTypes.string,
+    address: PropTypes.string,
+  }),
+  formatPrice: PropTypes.func.isRequired,
+  compact: PropTypes.bool,
+};
+
+OrderSummary.defaultProps = {
+  restaurantLocation: null,
+  compact: false,
 };
 
 export default OrderSummary;

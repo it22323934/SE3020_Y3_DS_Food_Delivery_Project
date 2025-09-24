@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import PropTypes from 'prop-types';
 import { Elements } from '@stripe/react-stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
 import { Spinner, Alert } from 'flowbite-react';
@@ -78,6 +79,11 @@ const StripePaymentWrapper = ({ clientSecret, onSuccess }) => {
       />
     </Elements>
   );
+};
+
+StripePaymentWrapper.propTypes = {
+  clientSecret: PropTypes.string.isRequired,
+  onSuccess: PropTypes.func.isRequired,
 };
 
 export default StripePaymentWrapper;

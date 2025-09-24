@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
 import { Alert, Button, Label, Spinner, TextInput } from "flowbite-react";
 import { authService } from "../service/authService";
+import { sanitizeInput, escapeHtml } from "../utils/sanitize";
 import OAuth from "../components/OAuth";
 import { MdDeliveryDining } from "react-icons/md";
 
@@ -12,7 +13,9 @@ export default function SignUp() {
   const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.id]: e.target.value.trim() });
+    // Sanitize input and trim whitespace
+    const sanitizedValue = sanitizeInput(e.target.value.trim());
+    setFormData({ ...formData, [e.target.id]: sanitizedValue });
   };
 
   const handleSubmit = async (e) => {
@@ -63,18 +66,30 @@ export default function SignUp() {
     try {
       setLoading(true);
       setErrorMessage(null);
-      const res = await authService.register(formData);
+      // Sanitize form data before submission
+      const sanitizedFormData = {
+        username: sanitizeInput(formData.username),
+        email: sanitizeInput(formData.email),
+        password: formData.password, // Don't sanitize password
+        firstName: sanitizeInput(formData.firstName),
+        lastName: sanitizeInput(formData.lastName),
+        phoneNumber: sanitizeInput(formData.phoneNumber)
+      };
+
+      const res = await authService.register(sanitizedFormData);
       const data = await res.json();
+      
       if (res.status === 400) {
-        toast.error(data.message || "Bad Request");
+        toast.error(escapeHtml(data.message) || "Bad Request");
         setLoading(false);
         return;
       }
+      
       setLoading(false);
       toast.success("Sign Up Successful! Please check your email to verify your account.");
       setFormData({});
     } catch (error) {
-      setErrorMessage("Something went wrong. Please try again later");
+      setErrorMessage(escapeHtml(error.message) || "Something went wrong. Please try again later");
       setLoading(false);
     }
   };
@@ -112,6 +127,10 @@ export default function SignUp() {
                     value={formData.username || ""}
                     onChange={handleChange}
                     className="dark:bg-gray-700 dark:border-gray-600"
+                    maxLength={50}
+                    pattern="^[a-zA-Z0-9_-]{3,50}$"
+                    title="Username must be 3-50 characters and can only contain letters, numbers, underscores, and hyphens"
+                    required
                   />
                 </div>
                 
@@ -124,6 +143,9 @@ export default function SignUp() {
                     value={formData.email || ""}
                     onChange={handleChange}
                     className="dark:bg-gray-700 dark:border-gray-600"
+                    maxLength={100}
+                    pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$"
+                    required
                   />
                 </div>
                 
@@ -136,6 +158,9 @@ export default function SignUp() {
                     value={formData.password || ""}
                     onChange={handleChange}
                     className="dark:bg-gray-700 dark:border-gray-600"
+                    minLength={8}
+                    maxLength={20}
+                    required
                   />
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                     Must be 8-20 characters and not contain personal information
@@ -166,6 +191,10 @@ export default function SignUp() {
                     value={formData.firstName || ""}
                     onChange={handleChange}
                     className="dark:bg-gray-700 dark:border-gray-600"
+                    maxLength={50}
+                    pattern="^[a-zA-Z\s-]{2,50}$"
+                    title="First name must be 2-50 characters and can only contain letters, spaces, and hyphens"
+                    required
                   />
                 </div>
                 
@@ -178,6 +207,10 @@ export default function SignUp() {
                     value={formData.lastName || ""}
                     onChange={handleChange}
                     className="dark:bg-gray-700 dark:border-gray-600"
+                    maxLength={50}
+                    pattern="^[a-zA-Z\s-]{2,50}$"
+                    title="Last name must be 2-50 characters and can only contain letters, spaces, and hyphens"
+                    required
                   />
                 </div>
                 
@@ -190,6 +223,10 @@ export default function SignUp() {
                     value={formData.phoneNumber || ""}
                     onChange={handleChange}
                     className="dark:bg-gray-700 dark:border-gray-600"
+                    pattern="^\d{10}$"
+                    title="Please enter a valid 10-digit phone number"
+                    maxLength={10}
+                    required
                   />
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Please enter a 10-digit phone number</p>
                 </div>
@@ -226,7 +263,7 @@ export default function SignUp() {
           
           {errorMessage && (
             <Alert color="failure" className="mt-5">
-              {errorMessage}
+              {escapeHtml(errorMessage)}
             </Alert>
           )}
         </div>

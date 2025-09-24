@@ -1,8 +1,20 @@
 import React from "react";
 import { Card, TextInput, Label, Textarea } from "flowbite-react";
 import { HiLocationMarker } from "react-icons/hi";
+import { sanitizeInput } from "../../utils/sanitize";
 
 const DeliveryAddressForm = ({ formData, formErrors, handleChange }) => {
+  // Wrap handleChange to sanitize inputs
+  const handleSanitizedChange = (e) => {
+    const sanitizedEvent = {
+      ...e,
+      target: {
+        ...e.target,
+        value: sanitizeInput(e.target.value)
+      }
+    };
+    handleChange(sanitizedEvent);
+  };
   return (
     <Card className="mb-6">
       <h2 className="text-xl font-semibold mb-4 flex items-center">
@@ -16,7 +28,7 @@ const DeliveryAddressForm = ({ formData, formErrors, handleChange }) => {
             id="street"
             name="address.street"
             value={formData.address.street}
-            onChange={handleChange}
+            onChange={handleSanitizedChange}
             placeholder="123 Main St"
             color={formErrors.street ? "failure" : undefined}
             helperText={formErrors.street}
@@ -31,7 +43,7 @@ const DeliveryAddressForm = ({ formData, formErrors, handleChange }) => {
               id="city"
               name="address.city"
               value={formData.address.city}
-              onChange={handleChange}
+              onChange={handleSanitizedChange}
               placeholder="New York"
               color={formErrors.city ? "failure" : undefined}
               helperText={formErrors.city}
@@ -45,7 +57,7 @@ const DeliveryAddressForm = ({ formData, formErrors, handleChange }) => {
               id="state"
               name="address.state"
               value={formData.address.state}
-              onChange={handleChange}
+              onChange={handleSanitizedChange}
               placeholder="NY"
               color={formErrors.state ? "failure" : undefined}
               helperText={formErrors.state}
@@ -59,7 +71,7 @@ const DeliveryAddressForm = ({ formData, formErrors, handleChange }) => {
               id="zipCode"
               name="address.zipCode"
               value={formData.address.zipCode}
-              onChange={handleChange}
+              onChange={handleSanitizedChange}
               placeholder="10001"
               color={formErrors.zipCode ? "failure" : undefined}
               helperText={formErrors.zipCode}
@@ -77,7 +89,7 @@ const DeliveryAddressForm = ({ formData, formErrors, handleChange }) => {
             id="deliveryInstructions"
             name="deliveryInstructions"
             value={formData.deliveryInstructions}
-            onChange={handleChange}
+            onChange={handleSanitizedChange}
             placeholder="Apartment number, gate code, or special instructions"
             rows={3}
           />

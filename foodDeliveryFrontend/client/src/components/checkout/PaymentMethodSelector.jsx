@@ -1,4 +1,5 @@
 import React from "react";
+import PropTypes from 'prop-types';
 import { Card, Radio, Label } from "flowbite-react";
 import { HiCreditCard } from "react-icons/hi";
 import { FaCcVisa, FaCcMastercard } from "react-icons/fa";
@@ -53,6 +54,15 @@ const PaymentMethodSelector = ({ paymentMethod, setPaymentMethod }) => {
       </div>
     </Card>
   );
+};
+
+PaymentMethodSelector.propTypes = {
+  paymentMethod: PropTypes.string,
+  setPaymentMethod: PropTypes.func.isRequired,
+};
+
+PaymentMethodSelector.defaultProps = {
+  paymentMethod: '',
 };
 
 export default PaymentMethodSelector;
