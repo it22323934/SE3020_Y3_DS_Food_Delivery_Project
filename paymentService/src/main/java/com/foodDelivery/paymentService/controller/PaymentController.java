@@ -2,17 +2,12 @@ package com.foodDelivery.paymentService.controller;
 
 
 import com.foodDelivery.paymentService.dto.*;
-import com.foodDelivery.paymentService.dto.PaymentDetails;
 import com.foodDelivery.paymentService.serviceImpl.PaymentServiceImpl;
 import com.stripe.exception.StripeException;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -97,8 +92,10 @@ public class PaymentController {
             PaymentResponse response = paymentService.confirmPayment(request, token);
             return ResponseEntity.ok(response);
         } catch (StripeException e) {
-            logger.error("Stripe error in confirmation: ", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+          //  logger.error("Stripe error in confirmation: ", e);    // ❌ Verbose stack trace
+           logger.error("Stripe confirmation failed: {}", e.getMessage()); // ✅ Concise
+
+          return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of(
                             "error", "Stripe error",
                             "message", e.getMessage(),
@@ -107,10 +104,12 @@ public class PaymentController {
         } catch (Exception e) {
             logger.error("Payment confirmation failed: ", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of(
+                    /* .body(Map.of(
                             "error", "Payment processing failed",
                             "message", e.getMessage(),
-                            "cause", e.getCause() != null ? e.getCause().getMessage() : null
+                            "cause", e.getCause() != null ? e.getCause().getMessage() : null //overly Detailed Error response
+*/
+                     .body(Map.of("error", "Payment processing failed" // ✅ Security best practice
                     ));
         }
     }
