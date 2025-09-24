@@ -7,6 +7,7 @@ import {
   signInStart,
   signInFailure,
 } from "../redux/user/userSlice";
+import { sanitizeInput } from "../utils/sanitize";
 import { ToastContainer, toast } from "react-toastify";
 import OAuth from "../components/OAuth";
 import { authService } from "../service/authService";
@@ -20,43 +21,59 @@ export default function SignIn() {
   const { error: errorMessage } = useSelector((state) => state.user);
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.id]: e.target.value });
+    // Sanitize input before updating state
+    const sanitizedValue = sanitizeInput(e.target.value);
+    setFormData({ ...formData, [e.target.id]: sanitizedValue });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    if (!formData.email || !formData.password) {
+    
+    // Sanitize form data before submission
+    const sanitizedEmail = sanitizeInput(formData.email);
+    const sanitizedPassword = sanitizeInput(formData.password);
+    
+    if (!sanitizedEmail || !sanitizedPassword) {
       toast.error("Please fill in all fields");
       setLoading(false);
       return;
     }
+    
     try {
       dispatch(signInStart());
-      const res = await authService.login(formData.email, formData.password);
+      const res = await authService.login(sanitizedEmail, sanitizedPassword);
       const data = await res.json();
+      
       if (res.status === 500) {
-        toast.error(data.message || "Internal server error");
+        toast.error(sanitizeInput(data.message) || "Internal server error");
         setLoading(false);
         return;
       }
       if (res.status === 401) {
-        toast.error(data.message || "Invalid credentials");
+        toast.error(sanitizeInput(data.message) || "Invalid credentials");
         setLoading(false);
         return;
       }
       if(res.status === 403){
-        toast.error(data.message || "Please verify your email first");
+        toast.error(sanitizeInput(data.message) || "Please verify your email first");
         setLoading(false);
         return;
       }
       if (res.ok) {
-        dispatch(signInSuccess(data));
+        // Sanitize user data before dispatching to Redux store
+        const sanitizedData = {
+          ...data,
+          email: sanitizeInput(data.email),
+          username: sanitizeInput(data.username),
+          // Add other fields that need sanitization
+        };
+        dispatch(signInSuccess(sanitizedData));
         setFormData({});
         navigate("/");
       }
     } catch (error) {
-      dispatch(signInFailure(error.message));
+      dispatch(signInFailure(sanitizeInput(error.message)));
     }
   };
 
@@ -89,6 +106,9 @@ export default function SignIn() {
                 value={formData.email || ""}
                 onChange={handleChange}
                 className="dark:bg-gray-700 dark:border-gray-600"
+                maxLength={100}
+                pattern="[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+                required
               />
             </div>
             <div>
@@ -100,6 +120,8 @@ export default function SignIn() {
                 value={formData.password || ""}
                 onChange={handleChange}
                 className="dark:bg-gray-700 dark:border-gray-600"
+                maxLength={128}
+                required
               />
             </div>
             <div className="flex justify-end">
@@ -127,7 +149,7 @@ export default function SignIn() {
             <OAuth />
           </form>
           <div className="flex gap-2 text-sm mt-5 text-gray-700 dark:text-gray-300">
-            <span>Don't have an account?</span>
+            <span>Don&apos;t have an account?</span>
             <Link to="/sign-up" className="text-orange-500 dark:text-orange-400 hover:underline">
               Sign Up
             </Link>

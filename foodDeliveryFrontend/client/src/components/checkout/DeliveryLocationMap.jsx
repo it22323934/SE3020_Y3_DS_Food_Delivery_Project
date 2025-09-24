@@ -1,8 +1,10 @@
 import React from "react";
+import PropTypes from 'prop-types';
 import { Card, Label } from "flowbite-react";
 import { HiLocationMarker, HiCheck, HiExclamation } from "react-icons/hi";
 import { LoadScript, GoogleMap, Marker, Circle } from "@react-google-maps/api";
 import GooglePlacesAutocomplete from "react-google-places-autocomplete";
+import { sanitizeInput, sanitizeCoordinates } from "../../utils/sanitize";
 
 const DeliveryLocationMap = ({
   formData,
@@ -47,7 +49,7 @@ const DeliveryLocationMap = ({
                 value: locationValue,
                 onChange: handleLocationSelect,
                 placeholder:
-                  formData.deliveryLocation.address || "Search for an address...",
+                  sanitizeInput(formData.deliveryLocation.address) || "Search for an address...",
                 styles: {
                   control: (provided) => ({
                     ...provided,
@@ -107,8 +109,8 @@ const DeliveryLocationMap = ({
                   formData.deliveryLocation.longitude && (
                     <Marker
                       position={{
-                        lat: parseFloat(formData.deliveryLocation.latitude),
-                        lng: parseFloat(formData.deliveryLocation.longitude),
+                        lat: parseFloat(sanitizeCoordinates(formData.deliveryLocation.latitude)),
+                        lng: parseFloat(sanitizeCoordinates(formData.deliveryLocation.longitude)),
                       }}
                       icon={{
                         url: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png",
@@ -156,6 +158,47 @@ const DeliveryLocationMap = ({
       </div>
     </Card>
   );
+};
+
+DeliveryLocationMap.propTypes = {
+  formData: PropTypes.shape({
+    deliveryLocation: PropTypes.shape({
+      address: PropTypes.string,
+      latitude: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+      longitude: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    }).isRequired,
+  }).isRequired,
+  formErrors: PropTypes.shape({
+    location: PropTypes.string,
+  }),
+  locationValue: PropTypes.shape({
+    label: PropTypes.string,
+    value: PropTypes.shape({
+      description: PropTypes.string,
+      place_id: PropTypes.string,
+    }),
+  }),
+  handleLocationSelect: PropTypes.func.isRequired,
+  isMapLoaded: PropTypes.bool.isRequired,
+  setIsMapLoaded: PropTypes.func.isRequired,
+  restaurantLocation: PropTypes.shape({
+    lat: PropTypes.number.isRequired,
+    lng: PropTypes.number.isRequired,
+  }),
+  distanceToRestaurant: PropTypes.number,
+  handleMapClick: PropTypes.func.isRequired,
+  getMapCenter: PropTypes.func.isRequired,
+  mapContainerStyle: PropTypes.shape({
+    width: PropTypes.string,
+    height: PropTypes.string,
+  }).isRequired,
+};
+
+DeliveryLocationMap.defaultProps = {
+  formErrors: {},
+  locationValue: null,
+  restaurantLocation: null,
+  distanceToRestaurant: null,
 };
 
 export default DeliveryLocationMap;
