@@ -1,6 +1,8 @@
 import React from "react";
+import PropTypes from 'prop-types';
 import { Card, TextInput, Label } from "flowbite-react";
 import { HiUser, HiMail, HiPhone } from "react-icons/hi";
+import { sanitizeInput } from "../../utils/sanitize";
 
 const ContactInfoForm = ({ formData, formErrors, handleChange }) => {
   return (
@@ -15,7 +17,7 @@ const ContactInfoForm = ({ formData, formErrors, handleChange }) => {
           <TextInput
             id="fullName"
             name="fullName"
-            value={formData.fullName}
+            value={sanitizeInput(formData.fullName)}
             onChange={handleChange}
             placeholder="John Doe"
             color={formErrors.fullName ? "failure" : undefined}
@@ -30,7 +32,7 @@ const ContactInfoForm = ({ formData, formErrors, handleChange }) => {
             id="email"
             name="email"
             type="email"
-            value={formData.email}
+            value={sanitizeInput(formData.email)}
             onChange={handleChange}
             placeholder="john@example.com"
             color={formErrors.email ? "failure" : undefined}
@@ -45,7 +47,7 @@ const ContactInfoForm = ({ formData, formErrors, handleChange }) => {
           <TextInput
             id="phone"
             name="phone"
-            value={formData.phone}
+            value={sanitizeInput(formData.phone)}
             onChange={handleChange}
             placeholder="(555) 123-4567"
             color={formErrors.phone ? "failure" : undefined}
@@ -57,6 +59,24 @@ const ContactInfoForm = ({ formData, formErrors, handleChange }) => {
       </div>
     </Card>
   );
+};
+
+ContactInfoForm.propTypes = {
+  formData: PropTypes.shape({
+    fullName: PropTypes.string,
+    email: PropTypes.string,
+    phone: PropTypes.string,
+  }).isRequired,
+  formErrors: PropTypes.shape({
+    fullName: PropTypes.string,
+    email: PropTypes.string,
+    phone: PropTypes.string,
+  }),
+  handleChange: PropTypes.func.isRequired,
+};
+
+ContactInfoForm.defaultProps = {
+  formErrors: {},
 };
 
 export default ContactInfoForm;

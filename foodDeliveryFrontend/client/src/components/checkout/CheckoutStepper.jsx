@@ -1,4 +1,5 @@
 import React from "react";
+import PropTypes from 'prop-types';
 import { HiCheck } from "react-icons/hi";
 
 const CheckoutStepper = ({ currentStep, steps }) => {
@@ -64,6 +65,14 @@ const CheckoutStepper = ({ currentStep, steps }) => {
       </ol>
     </div>
   );
+};
+
+CheckoutStepper.propTypes = {
+  currentStep: PropTypes.number.isRequired,
+  steps: PropTypes.arrayOf(PropTypes.shape({
+    label: PropTypes.string.isRequired,
+    icon: PropTypes.node,
+  })).isRequired,
 };
 
 export default CheckoutStepper;
