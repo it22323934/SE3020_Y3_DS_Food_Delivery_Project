@@ -55,7 +55,7 @@ public class RestaurantController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'RESTAURANT_ADMIN')")
+    @PreAuthorize("@restaurantAuthorizationService.canModifyRestaurant(#id, authentication)")
     @CircuitBreaker(name = RESTAURANT_SERVICE, fallbackMethod = "updateRestaurantFallback")
     public ResponseEntity<?> updateRestaurant(
             @PathVariable String id,
@@ -78,6 +78,7 @@ public class RestaurantController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("@restaurantAuthorizationService.canDeleteRestaurant(#id, authentication)")
     @CircuitBreaker(name = RESTAURANT_SERVICE, fallbackMethod = "deleteRestaurantFallback")
     public ResponseEntity<?> deleteRestaurant(
             @PathVariable String id,
