@@ -115,8 +115,23 @@ public class UserController {
     }
 
     @GetMapping("/user/{userId}")
+    @PreAuthorize("hasRole('ADMIN') or #userId == authentication.principal.id")
     public ResponseEntity<UserProfileResponse> getUserById(@PathVariable String userId) {
         log.info("Fetching user with ID: {}", userId);
+
+        // Additional authorization check: users can only access their own profile unless they're admin
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        boolean isAdmin = authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+
+        if (!isAdmin) {
+            // Verify the authenticated user is requesting their own data
+            return userService.getUserProfile(authentication.getName())
+                    .filter(profile -> profile.getId().equals(Long.valueOf(userId)))
+                    .map(ResponseEntity::ok)
+                    .orElse(ResponseEntity.status(HttpStatus.FORBIDDEN).build());
+        }
+
         try {
             UserProfileResponse user = userService.getUserById(Long.valueOf(userId));
             return ResponseEntity.ok(user);
