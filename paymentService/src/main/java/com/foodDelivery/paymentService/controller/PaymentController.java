@@ -9,6 +9,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -44,8 +47,10 @@ public class PaymentController {
     }
     /**
      * Get all payments for a specific user (by email).
+     * Authorization: Users can only view their own payments, admins can view all
      */
     @GetMapping("/user/{email}")
+    @PreAuthorize("@paymentAuthorizationService.canAccessUserPayments(#email, authentication)")
     public ResponseEntity<List<PaymentDetails>> getUserPayments(@PathVariable String email) {
         List<PaymentDetails> payments = paymentService.getPaymentsByUser(email);
         return ResponseEntity.ok(payments);
@@ -55,6 +60,7 @@ public class PaymentController {
      * Get all payments (Admin-only).
      */
     @GetMapping("/admin/all")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<PaymentDetails>> getAllPayments() {
         List<PaymentDetails> payments = paymentService.getAllPayments();
         return ResponseEntity.ok(payments);
@@ -62,8 +68,10 @@ public class PaymentController {
 
     /**
      * Get payment details by order ID.
+     * Authorization: Users can only view their own payment, admins can view all
      */
     @GetMapping("/{orderId}")
+    @PreAuthorize("@paymentAuthorizationService.canAccessPaymentByOrderId(#orderId, authentication)")
     public ResponseEntity<PaymentDetails> getPaymentByOrderId(@PathVariable String orderId) {
         PaymentDetails payment = paymentService.getPaymentByOrderId(orderId);
         if (payment != null) {
@@ -119,6 +127,7 @@ public class PaymentController {
      * Get failed payments (Admin-only)
      */
     @GetMapping("/admin/failed")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<PaymentDetails>> getFailedPayments() {
         List<PaymentDetails> payments = paymentService.getFailedPayments();
         return ResponseEntity.ok(payments);
