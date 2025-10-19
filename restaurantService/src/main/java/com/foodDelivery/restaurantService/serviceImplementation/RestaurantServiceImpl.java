@@ -636,4 +636,21 @@ public class RestaurantServiceImpl implements RestaurantService {
                 .map(RestaurantTypeMapper::mapToResponse)
                 .collect(Collectors.toList());
     }
+
+    /**
+     * Get user ID from authentication token.
+     * SECURITY: Used for authorization checks to prevent horizontal privilege escalation.
+     *
+     * @param token Authorization token (Bearer token)
+     * @return User ID extracted from token
+     */
+    @Override
+    public Long getUserIdFromToken(String token) {
+        try {
+            return userServiceClient.getUserIdFromToken(token);
+        } catch (Exception e) {
+            log.error("Failed to retrieve user ID from token: {}", e.getMessage());
+            throw new BusinessValidationException("Failed to validate user authorization");
+        }
+    }
 }
