@@ -33,17 +33,53 @@ public class PaymentController {
 
     private static final Logger logger = LoggerFactory.getLogger(PaymentController.class);
 
+    /**
+     * Process payment for an order.
+     * SECURITY: Requires authentication - users can only process payments for their own orders
+     * Fixed: Added authentication and authorization checks
+     */
     @PostMapping
-    public ResponseEntity<PaymentResponse> processPayment(@RequestBody PaymentRequest paymentRequest) {
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<PaymentResponse> processPayment(
+            @RequestBody PaymentRequest paymentRequest,
+            @RequestHeader("Authorization") String authHeader) {
         try {
-            PaymentResponse response = paymentService.processPayment(paymentRequest);
+            // Validate authentication token
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                logger.warn("Payment processing attempted without valid authentication");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(createErrorResponse(paymentRequest.getOrderId(), "Authentication required"));
+            }
+
+            // Get authenticated user
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String authenticatedUser = authentication.getName();
+
+            logger.info("Processing payment for order {} by user {}",
+                paymentRequest.getOrderId(), authenticatedUser);
+
+            // Verify user owns the order before processing payment
+            // This will be validated in the service layer
+            PaymentResponse response = paymentService.processPayment(paymentRequest, authenticatedUser);
             return ResponseEntity.ok(response);
+        } catch (SecurityException e) {
+            logger.error("Unauthorized payment attempt for order {}: {}",
+                paymentRequest.getOrderId(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(createErrorResponse(paymentRequest.getOrderId(), "Not authorized to process this payment"));
         } catch (Exception e) {
-            PaymentResponse errorResponse = new PaymentResponse();
-            errorResponse.setOrderId(paymentRequest.getOrderId());
-            errorResponse.setPaymentStatus("failed");
-            return ResponseEntity.badRequest().body(errorResponse);
+            logger.error("Payment processing failed for order {}: {}",
+                paymentRequest.getOrderId(), e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(createErrorResponse(paymentRequest.getOrderId(), "Payment processing failed"));
         }
+    }
+
+    private PaymentResponse createErrorResponse(String orderId, String message) {
+        PaymentResponse errorResponse = new PaymentResponse();
+        errorResponse.setOrderId(orderId);
+        errorResponse.setPaymentStatus("failed");
+        return errorResponse;
     }
     /**
      * Get all payments for a specific user (by email).
@@ -80,30 +116,72 @@ public class PaymentController {
         return ResponseEntity.notFound().build();
     }
 
+    /**
+     * Create payment intent for Stripe payment.
+     * SECURITY: Requires authentication to prevent anonymous users from creating payment intents
+     * Fixed: Added authentication requirement
+     */
     @PostMapping("/create-payment-intent")
-    public ResponseEntity<?> createPaymentIntent(@RequestBody PaymentIntentRequest request) {
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<?> createPaymentIntent(
+            @RequestBody PaymentIntentRequest request,
+            @RequestHeader("Authorization") String authHeader) {
         try {
-            Map<String, Object> response = paymentService.createPaymentIntent(request);
+            // Validate authentication
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String authenticatedUser = authentication.getName();
+
+            logger.info("Creating payment intent for user: {}", authenticatedUser);
+
+            // Pass authenticated user to service for validation
+            Map<String, Object> response = paymentService.createPaymentIntent(request, authenticatedUser);
             return ResponseEntity.ok(response);
+        } catch (SecurityException e) {
+            logger.error("Unauthorized payment intent creation: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "Not authorized to create payment intent"));
         } catch (StripeException e) {
+            logger.error("Stripe error creating payment intent: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Error creating payment intent: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to create payment intent"));
         }
     }
 
+    /**
+     * Confirm payment after Stripe processing.
+     * SECURITY: Requires authentication and validates user owns the payment
+     * Fixed: Made authentication required (not optional)
+     */
     @PostMapping("/confirm")
-    public ResponseEntity<?> confirmPayment(@RequestBody ConfirmPaymentRequest request,
-                                            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<?> confirmPayment(
+            @RequestBody ConfirmPaymentRequest request,
+            @RequestHeader("Authorization") String authHeader) {
         try {
-            // Better token validation
+            // Validate authentication token
             if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                logger.warn("Payment confirmation attempted without valid authentication");
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                         .body(Map.of("error", "Authentication required"));
             }
 
+            // Get authenticated user
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String authenticatedUser = authentication.getName();
+
+            logger.info("Confirming payment by user: {}", authenticatedUser);
+
             String token = authHeader.substring(7);
-            PaymentResponse response = paymentService.confirmPayment(request, token);
+            PaymentResponse response = paymentService.confirmPayment(request, token, authenticatedUser);
             return ResponseEntity.ok(response);
+        } catch (SecurityException e) {
+            logger.error("Unauthorized payment confirmation: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "Not authorized to confirm this payment"));
         } catch (StripeException e) {
             logger.error("Stripe error in confirmation: ", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
