@@ -55,7 +55,7 @@ public class RestaurantController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'RESTAURANT_ADMIN')")
+    @PreAuthorize("@restaurantAuthorizationService.canModifyRestaurant(#id, authentication)")
     @CircuitBreaker(name = RESTAURANT_SERVICE, fallbackMethod = "updateRestaurantFallback")
     public ResponseEntity<?> updateRestaurant(
             @PathVariable String id,
@@ -78,6 +78,7 @@ public class RestaurantController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("@restaurantAuthorizationService.canDeleteRestaurant(#id, authentication)")
     @CircuitBreaker(name = RESTAURANT_SERVICE, fallbackMethod = "deleteRestaurantFallback")
     public ResponseEntity<?> deleteRestaurant(
             @PathVariable String id,
@@ -127,12 +128,47 @@ public class RestaurantController {
                 .body(Collections.emptyList());
     }
 
+    /**
+     * Get restaurants by user ID.
+     * SECURITY FIX: Added authorization check to prevent horizontal privilege escalation
+     * Restaurant admins can only query their own restaurants, not other users' restaurants
+     */
     @GetMapping("/by-user/{userId}")
     @PreAuthorize("hasAnyRole('ADMIN', 'RESTAURANT_ADMIN')")
     @CircuitBreaker(name = RESTAURANT_SERVICE, fallbackMethod = "getRestaurantsByUserIdFallback")
     public ResponseEntity<List<RestaurantResponse>> getRestaurantsByUserId(
-            @PathVariable String userId) {
+            @PathVariable String userId,
+            @RequestHeader("Authorization") String token) {
         log.info("Fetching restaurants for user ID: {}", userId);
+
+        // SECURITY: Verify authorization - non-admin users can only query their own restaurants
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        boolean isAdmin = authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+
+        if (!isAdmin) {
+            // For RESTAURANT_ADMIN, verify they are querying their own restaurants
+            try {
+                Long authenticatedUserId = restaurantService.getUserIdFromToken(token);
+                if (authenticatedUserId == null) {
+                    log.error("Failed to retrieve user ID from token");
+                    return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                            .body(Collections.emptyList());
+                }
+
+                if (!String.valueOf(authenticatedUserId).equals(userId)) {
+                    log.warn("User {} attempted to access restaurants for user {} without authorization",
+                            authenticatedUserId, userId);
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                            .body(Collections.emptyList());
+                }
+            } catch (Exception e) {
+                log.error("Error verifying user authorization: {}", e.getMessage());
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body(Collections.emptyList());
+            }
+        }
+
         List<Restaurant> restaurants = restaurantService.getRestaurantsByAdminId(userId);
         List<RestaurantResponse> responses = restaurants.stream()
                 .map(RestaurantTypeMapper::mapToResponse)
@@ -142,7 +178,7 @@ public class RestaurantController {
     }
 
     public ResponseEntity<List<RestaurantResponse>> getRestaurantsByUserIdFallback(
-            String userId, Exception e) {
+            String userId, String token, Exception e) {
         log.error("Circuit breaker fallback: Failed to get restaurants for user {}", userId, e);
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
                 .body(Collections.emptyList());

@@ -114,11 +114,40 @@ public class UserController {
         return ResponseEntity.ok(users);
     }
 
+    /**
+     * Get user by ID.
+     * SECURITY FIX: Removed ineffective @PreAuthorize annotation that compared userId with authentication.principal.id
+     * The annotation was always failing because authentication.principal is a String (username), not an object with .id
+     * Authorization is now properly handled by manual checks in the method body
+     */
     @GetMapping("/user/{userId}")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<UserProfileResponse> getUserById(@PathVariable String userId) {
         log.info("Fetching user with ID: {}", userId);
+
+        // Authorization check: users can only access their own profile unless they're admin
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        boolean isAdmin = authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+
+        if (!isAdmin) {
+            // Verify the authenticated user is requesting their own data
+            return userService.getUserProfile(authentication.getName())
+                    .filter(profile -> profile.getId().equals(Long.valueOf(userId)))
+                    .map(profile -> {
+                        log.info("User {} successfully accessed their own profile", authentication.getName());
+                        return ResponseEntity.ok(profile);
+                    })
+                    .orElseGet(() -> {
+                        log.warn("User {} attempted to access user ID {} without authorization",
+                                authentication.getName(), userId);
+                        return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+                    });
+        }
+
         try {
             UserProfileResponse user = userService.getUserById(Long.valueOf(userId));
+            log.info("Admin user {} accessed profile for user ID {}", authentication.getName(), userId);
             return ResponseEntity.ok(user);
         } catch (IllegalArgumentException e) {
             log.error("Invalid user ID specified: {}", e.getMessage());
@@ -187,18 +216,53 @@ public class UserController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
+    /**
+     * Get user ID from token.
+     * SECURITY FIX: Added authentication requirement and username validation
+     * This endpoint is used by other microservices for authorization checks
+     */
     @GetMapping("/getUserId")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Long> getUserId(@RequestHeader(HttpHeaders.AUTHORIZATION) String token) {
         try {
+            // Validate token format
+            if (token == null || !token.startsWith("Bearer ")) {
+                log.warn("Invalid token format in getUserId request");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
+            }
+
             String jwt = token.substring(7);
+
+            // Validate JWT token
+            if (!jwtUtils.validateJwtToken(jwt)) {
+                log.warn("Invalid JWT token in getUserId request");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
+            }
+
             String username = jwtUtils.getUserNameFromJwtToken(jwt);
-            log.info("Getting user ID for username: {}", username);
+
+            // SECURITY: Verify the token username matches the authenticated user
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String authenticatedUsername = authentication.getName();
+
+            if (!authenticatedUsername.equals(username)) {
+                log.warn("Token username {} does not match authenticated user {}",
+                        username, authenticatedUsername);
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(null);
+            }
+
+            log.info("Getting user ID for authenticated username: {}", username);
 
             // Find user by username using the userService
             return userService.findIdByUsername(username)
-                    .map(ResponseEntity::ok)
-                    .orElse(ResponseEntity.status(HttpStatus.NOT_FOUND)
-                            .body(null));
+                    .map(userId -> {
+                        log.info("Successfully retrieved user ID for username: {}", username);
+                        return ResponseEntity.ok(userId);
+                    })
+                    .orElseGet(() -> {
+                        log.error("User not found for username: {}", username);
+                        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+                    });
         } catch (Exception e) {
             log.error("Error retrieving user ID: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);

@@ -185,11 +185,24 @@ public class MenuItemServiceImpl implements MenuItemService {
         MenuItem existingMenuItem = menuItemRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Menu item not found with id: " + id));
 
-        // Validate restaurant exists
+        // SECURITY FIX: Verify user owns the EXISTING menu item's restaurant
+        Restaurant existingRestaurant = restaurantRepository.findById(existingMenuItem.getRestaurantId())
+                .orElseThrow(() -> new ResourceNotFoundException("Existing menu item's restaurant not found"));
+
+        validateUserPermission(existingRestaurant, token);
+        log.info("User verified as owner of existing menu item's restaurant: {}", existingMenuItem.getRestaurantId());
+
+        // Validate new restaurant exists (if changing restaurants, which shouldn't be allowed)
+        if (!existingMenuItem.getRestaurantId().equals(request.getRestaurantId())) {
+            log.error("Attempt to change menu item {} from restaurant {} to {}",
+                    id, existingMenuItem.getRestaurantId(), request.getRestaurantId());
+            throw new BusinessValidationException("Cannot change menu item to a different restaurant");
+        }
+
         Restaurant restaurant = restaurantRepository.findById(request.getRestaurantId())
                 .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found with id: " + request.getRestaurantId()));
 
-        validateUserPermission(restaurant, token);
+        // Note: No need to validate permission again since we already did above
 
         // Validate category exists
         MenuCategory newCategory = menuCategoryRepository.findById(request.getCategoryId())
@@ -301,10 +314,21 @@ public class MenuItemServiceImpl implements MenuItemService {
 
     @Override
     @Transactional
-    public void deleteMenuItem(String id) {
+    /**
+     * Delete a menu item.
+     * SECURITY FIX: Added authorization check to verify user owns the restaurant
+     */
+    public void deleteMenuItem(String id, String token) {
         // Validate menu item exists
         MenuItem menuItem = menuItemRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Menu item not found with id: " + id));
+
+        // SECURITY FIX: Verify user owns the restaurant before allowing deletion
+        Restaurant restaurant = restaurantRepository.findById(menuItem.getRestaurantId())
+                .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found"));
+
+        validateUserPermission(restaurant, token);
+        log.info("User verified as owner of menu item's restaurant: {}", menuItem.getRestaurantId());
 
         // Find the category that contains this menu item
         MenuCategory category = menuCategoryRepository.findById(menuItem.getCategoryId())
@@ -322,7 +346,7 @@ public class MenuItemServiceImpl implements MenuItemService {
         // Delete the menu item
         menuItemRepository.deleteById(id);
 
-        log.info("Menu item deleted: {}", id);
+        log.info("Menu item deleted: {} by authorized user", id);
     }
 
     @Override

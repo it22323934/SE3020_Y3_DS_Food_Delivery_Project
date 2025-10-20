@@ -15,4 +15,13 @@ public interface RestaurantService {
     List<RestaurantResponse> getNearbyRestaurants(double latitude, double longitude, double radius);
     Restaurant addAdminToRestaurant(String restaurantId, String adminId, String token);
     Restaurant removeAdminFromRestaurant(String restaurantId, String adminId, String userId, String token);
+
+    /**
+     * Get user ID from authentication token.
+     * Used for authorization checks.
+     *
+     * @param token Authorization token (Bearer token)
+     * @return User ID
+     */
+    Long getUserIdFromToken(String token);
 }

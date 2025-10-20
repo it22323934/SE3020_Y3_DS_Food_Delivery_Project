@@ -1,6 +1,7 @@
 package com.foodDelivery.orderService.service.impl;
 
 import com.foodDelivery.orderService.client.RestaurantServiceClient;
+import com.foodDelivery.orderService.client.UserServiceClient;
 import com.foodDelivery.orderService.dto.*;
 import com.foodDelivery.orderService.exception.BusinessValidationException;
 import com.foodDelivery.orderService.exception.OrderNotFoundException;
@@ -15,6 +16,8 @@ import com.foodDelivery.orderService.service.KafkaProducerService;
 import com.foodDelivery.orderService.service.OrderService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,6 +32,7 @@ public class OrderServiceImpl implements OrderService {
 
     private final OrderRepository orderRepository;
     private final RestaurantServiceClient restaurantServiceClient;
+    private final UserServiceClient userServiceClient;
     private final OrderMapper orderMapper;
     private final KafkaProducerService kafkaProducerService;
 
@@ -61,11 +65,50 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Transactional
+    /**
+     * Update order status.
+     * SECURITY FIX: Added restaurant ownership verification
+     */
     public OrderResponse updateOrderStatus(String orderId, OrderStatus status, String token) {
         log.info("Updating order status: {} for order: {}", status, orderId);
 
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new OrderNotFoundException("Order not found: " + orderId));
+
+        // SECURITY FIX: Verify user is admin of the restaurant that owns this order
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String currentUsername = authentication.getName();
+
+        // Check if user is ADMIN (system admin can update any order)
+        boolean isSystemAdmin = authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+
+        if (!isSystemAdmin) {
+            // For RESTAURANT_ADMIN, verify they own the restaurant
+            try {
+                // Fetch restaurant details to check admin ownership
+                com.foodDelivery.orderService.dto.restaurant.RestaurantResponse restaurant =
+                    restaurantServiceClient.getRestaurantById(order.getRestaurantId(), token);
+
+                // Get user ID from user service
+                Long userId = userServiceClient.getUserIdFromToken(token);
+
+                boolean isRestaurantAdmin = restaurant.getAdminIds().contains(String.valueOf(userId));
+
+                if (!isRestaurantAdmin) {
+                    log.warn("User {} attempted to update order {} for restaurant {} without permission",
+                            currentUsername, orderId, order.getRestaurantId());
+                    throw new SecurityException("You don't have permission to update orders for this restaurant");
+                }
+
+                log.info("User {} verified as admin of restaurant {}", currentUsername, order.getRestaurantId());
+            } catch (SecurityException e) {
+                throw e;
+            } catch (Exception e) {
+                log.error("Failed to verify restaurant ownership: {}", e.getMessage());
+                throw new BusinessValidationException("Failed to verify restaurant ownership");
+            }
+        }
 
         validateStatusTransition(order.getStatus(), status);
 

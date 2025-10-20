@@ -11,7 +11,7 @@ public interface MenuItemService {
     List<MenuItemResponse> getMenuItemsByRestaurantId(String restaurantId);
     List<MenuItemResponse> getMenuItemsByCategoryId(String categoryId);
     MenuItemResponse updateMenuItem(String id, MenuItemCreateRequest request, String token);
-    void deleteMenuItem(String id);
+    void deleteMenuItem(String id, String token);
     List<MenuItemResponse> getAvailableMenuItemsByRestaurantId(String restaurantId);
     List<MenuItemResponse> getAvailableMenuItemsByCategoryId(String categoryId);
 }

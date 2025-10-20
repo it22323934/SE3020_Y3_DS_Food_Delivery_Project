@@ -124,11 +124,17 @@ public class MenuItemController {
                 .body(Collections.emptyList());
     }
 
+    /**
+     * Delete menu item.
+     * SECURITY: Fixed - Added authorization token to verify ownership
+     */
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'RESTAURANT_ADMIN')")
     @CircuitBreaker(name = MENU_ITEM_SERVICE, fallbackMethod = "deleteMenuItemFallback")
-    public ResponseEntity<?> deleteMenuItem(@PathVariable String id) {
-        menuItemService.deleteMenuItem(id);
+    public ResponseEntity<?> deleteMenuItem(
+            @PathVariable String id,
+            @RequestHeader("Authorization") String token) {
+        menuItemService.deleteMenuItem(id, token);
         return ResponseEntity.noContent().build();
     }
 
