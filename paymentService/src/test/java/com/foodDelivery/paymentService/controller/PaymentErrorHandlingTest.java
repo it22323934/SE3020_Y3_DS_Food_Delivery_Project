@@ -68,7 +68,7 @@ class PaymentErrorHandlingTest {
         request.setAmount(100.0);
 
         when(paymentService.createPaymentIntent(any(PaymentIntentRequest.class)))
-                .thenThrow(new StripeException("Card declined"));
+                .thenThrow(new RuntimeException("Card declined"));
 
         // When & Then
         mockMvc.perform(post("/api/payments/create-payment-intent")
@@ -130,7 +130,7 @@ class PaymentErrorHandlingTest {
         request.setPaymentIntentId("pi_test_123");
 
         when(paymentService.confirmPayment(any(ConfirmPaymentRequest.class), anyString()))
-                .thenThrow(new StripeException("Payment intent not found"));
+                .thenThrow(new RuntimeException("Payment intent not found"));
 
         // When & Then
         mockMvc.perform(post("/api/payments/confirm")
