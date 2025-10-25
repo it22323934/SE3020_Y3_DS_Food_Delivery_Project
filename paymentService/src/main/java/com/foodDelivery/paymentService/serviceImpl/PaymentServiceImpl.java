@@ -1,5 +1,6 @@
 package com.foodDelivery.paymentService.serviceImpl;
 
+import com.foodDelivery.paymentService.config.SecureLogger;
 import com.foodDelivery.paymentService.dto.*;
 import com.foodDelivery.paymentService.dto.PaymentResponse;
 import com.foodDelivery.paymentService.dto.PaymentDetails;
@@ -50,6 +51,7 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     public PaymentResponse processPayment(PaymentRequest paymentRequest) {
+        SecureLogger.logPaymentOperation("PROCESS_PAYMENT", paymentRequest.getOrderId(), paymentRequest.getCustomerEmail(), Map.of("amount", paymentRequest.getAmount()));
         PaymentResponse response = new PaymentResponse();
         response.setOrderId(paymentRequest.getOrderId());
 
@@ -65,18 +67,21 @@ public class PaymentServiceImpl implements PaymentService {
 
             response.setPaymentStatus(charge.getStatus());
             response.setStripePaymentId(charge.getId());
+            
+            SecureLogger.logPaymentProcessing("PAYMENT_SUCCESS", paymentRequest.getOrderId(), charge.getStatus(), "Payment processed successfully");
 
         } catch (StripeException e) {
             // Save failed payment with error details
             savePaymentRecord(paymentRequest, null, "failed");
+            SecureLogger.logError("Stripe payment failed for order: {}", e, paymentRequest.getOrderId());
 
             response.setPaymentStatus("failed");
-            response.setErrorMessage(e.getUserMessage() != null ?
-                    e.getUserMessage() : "Payment processing failed");
+            response.setErrorMessage("Payment processing failed");
 
         } catch (IllegalArgumentException e) {
+            SecureLogger.logError("Payment validation failed for order: {}", e, paymentRequest.getOrderId());
             response.setPaymentStatus("failed");
-            response.setErrorMessage(e.getMessage());
+            response.setErrorMessage("Invalid payment request");
         }
 
         return response;
@@ -130,6 +135,7 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     public List<PaymentDetails> getPaymentsByUser(String customerEmail) {
+        SecureLogger.logInfo("Fetching payments for user: {}", customerEmail);
         if (customerEmail == null || customerEmail.isEmpty()) {
             throw new IllegalArgumentException("Customer email is required");
         }
@@ -142,6 +148,7 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     public List<PaymentDetails> getAllPayments() {
+        SecureLogger.logInfo("Admin fetching all payments");
         return paymentRepository.findAllByOrderByPaymentDateDesc()
                 .stream()
                 .map(this::mapToPaymentDetails)
@@ -150,6 +157,7 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     public PaymentDetails getPaymentByOrderId(String orderId) {
+        SecureLogger.logInfo("Fetching payment for order: {}", orderId);
         if (orderId == null || orderId.isEmpty()) {
             throw new IllegalArgumentException("Order ID is required");
         }
@@ -196,26 +204,16 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     public Map<String, Object> createPaymentIntent(PaymentIntentRequest request) throws StripeException {
-        System.out.println("Received amount: " + request.getAmount()); // Verify backend amount
-
-
-
-        // Debug logging
-        System.out.println("Creating payment intent for amount: $" + request.getAmount());
+        SecureLogger.logPaymentOperation("CREATE_PAYMENT_INTENT", request.getOrderId(), request.getCustomerEmail(), Map.of("amount", request.getAmount()));
 
         if (request.getAmount() <= 0) {
             throw new IllegalArgumentException("Amount must be positive");
         }
 
-        double roundedAmount = Math.round(request.getAmount() * 100) / 100.0;
-
         Map<String, Object> params = new HashMap<>();
-        params.put("amount", (int)Math.round(request.getAmount() * 100)); // Proper rounding
-        params.put("currency", "usd"); // Convert to cents
-        System.out.println("Converted to cents: " + params.get("amount")); // Debug
+        params.put("amount", (int)Math.round(request.getAmount() * 100)); // Convert to cents
         params.put("currency", "usd");
         params.put("payment_method_types", List.of("card"));
-
 
         // Add metadata for later reference
         Map<String, String> metadata = new HashMap<>();
@@ -227,6 +225,7 @@ public class PaymentServiceImpl implements PaymentService {
         params.put("capture_method", "automatic");
 
         PaymentIntent intent = PaymentIntent.create(params);
+        SecureLogger.logStripeOperation("CREATE_INTENT", "PaymentIntent.create", "POST", 200);
 
         Map<String, Object> response = new HashMap<>();
         response.put("clientSecret", intent.getClientSecret());
@@ -236,13 +235,14 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     public PaymentResponse confirmPayment(ConfirmPaymentRequest request, String token) throws StripeException {
+        SecureLogger.logPaymentOperation("CONFIRM_PAYMENT", request.getPaymentIntentId(), "N/A", Map.of("intentId", request.getPaymentIntentId()));
         try {
             // Initialize Stripe with API key
             Stripe.apiKey = stripeSecretKey;
 
             // 1. Retrieve payment intent
             PaymentIntent intent = PaymentIntent.retrieve(request.getPaymentIntentId());
-            logger.info("Retrieved payment intent: {}", intent);
+            SecureLogger.logInfo("Retrieved payment intent: {}", request.getPaymentIntentId());
 
             // 2. Validate metadata exists
             if (intent.getMetadata() == null || intent.getMetadata().isEmpty()) {
@@ -267,8 +267,7 @@ public class PaymentServiceImpl implements PaymentService {
 
             // Save to database
             Payment savedPayment = paymentRepository.save(payment);
-            logger.info("Saved payment record with ID: {}", savedPayment.getId());
-
+            SecureLogger.logDatabaseOperation("SAVE_PAYMENT", "payments", orderId);
 
             // 4. Return response
             PaymentResponse response = new PaymentResponse();
@@ -278,12 +277,11 @@ public class PaymentServiceImpl implements PaymentService {
             response.setCustomerEmail(customerEmail);
             response.setAmount(payment.getAmount());
 
-             //Send Kafka event for successful payments
-
+            SecureLogger.logPaymentProcessing("PAYMENT_CONFIRMED", orderId, "succeeded", "Payment confirmed successfully");
 
             return response;
         } catch (Exception e) {
-            logger.error("Error in confirmPayment: ", e);
+            SecureLogger.logError("Error in confirmPayment: {}", e, request.getPaymentIntentId());
             throw new RuntimeException("Payment processing error", e);
         }
     }}
