@@ -1,8 +1,6 @@
-package com.foodDelivery.paymentService.exception;
+package com.foodDelivery.orderService.exception;
 
-import com.foodDelivery.paymentService.config.SecureLogger;
-import com.foodDelivery.paymentService.dto.ErrorResponse;
-import com.stripe.exception.StripeException;
+import com.foodDelivery.orderService.dto.ErrorResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataAccessException;
@@ -28,7 +26,7 @@ import jakarta.validation.ConstraintViolationException;
 import java.util.stream.Collectors;
 
 /**
- * Global exception handler to provide secure error responses for payment service.
+ * Global exception handler to provide secure error responses.
  * This prevents exposure of sensitive technical details to clients.
  */
 @Slf4j
@@ -39,16 +37,16 @@ public class GlobalExceptionHandler {
     private String activeProfile;
 
     /**
-     * Handle payment-specific exceptions
+     * Handle business validation exceptions
      */
-    @ExceptionHandler(PaymentException.class)
-    public ResponseEntity<ErrorResponse> handlePaymentException(
-            PaymentException ex, 
+    @ExceptionHandler(BusinessValidationException.class)
+    public ResponseEntity<ErrorResponse> handleBusinessValidationException(
+            BusinessValidationException ex, 
             HttpServletRequest request) {
         
-        SecureLogger.logWarn("Payment error: {} - Path: {}", ex.getMessage(), request.getRequestURI());
+        log.warn("Business validation error: {} - Path: {}", ex.getMessage(), request.getRequestURI());
         
-        ErrorResponse errorResponse = ErrorResponse.createPaymentError(
+        ErrorResponse errorResponse = ErrorResponse.createValidationError(
                 ex.getMessage(), 
                 request.getRequestURI()
         );
@@ -57,32 +55,45 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * Handle Stripe API exceptions
+     * Handle order not found exceptions
      */
-    @ExceptionHandler(StripeException.class)
-    public ResponseEntity<ErrorResponse> handleStripeException(
-            StripeException ex, 
+    @ExceptionHandler(OrderNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleOrderNotFoundException(
+            OrderNotFoundException ex, 
             HttpServletRequest request) {
         
-        SecureLogger.logError("Stripe API error - Path: {}", ex, request.getRequestURI());
+        log.warn("Order not found: {} - Path: {}", ex.getMessage(), request.getRequestURI());
         
-        // Return generic error to client, log details internally
-        ErrorResponse errorResponse = ErrorResponse.createPaymentProcessingError(request.getRequestURI());
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        ErrorResponse errorResponse = ErrorResponse.createNotFoundError(request.getRequestURI());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
     }
 
     /**
-     * Handle business validation exceptions
+     * Handle restaurant not found exceptions
      */
-    @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<ErrorResponse> handleIllegalArgumentException(
-            IllegalArgumentException ex, 
+    @ExceptionHandler(RestaurantNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleRestaurantNotFoundException(
+            RestaurantNotFoundException ex, 
             HttpServletRequest request) {
         
-        SecureLogger.logWarn("Validation error: {} - Path: {}", ex.getMessage(), request.getRequestURI());
+        log.warn("Restaurant not found: {} - Path: {}", ex.getMessage(), request.getRequestURI());
+        
+        ErrorResponse errorResponse = ErrorResponse.createNotFoundError(request.getRequestURI());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+    }
+
+    /**
+     * Handle illegal state exceptions (business logic violations)
+     */
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<ErrorResponse> handleIllegalStateException(
+            IllegalStateException ex, 
+            HttpServletRequest request) {
+        
+        log.warn("Illegal state error: {} - Path: {}", ex.getMessage(), request.getRequestURI());
         
         ErrorResponse errorResponse = ErrorResponse.createValidationError(
-                ex.getMessage(), 
+                "Invalid operation. Please check your request and try again.",
                 request.getRequestURI()
         );
         
@@ -103,7 +114,7 @@ public class GlobalExceptionHandler {
                 .map(FieldError::getDefaultMessage)
                 .collect(Collectors.joining(", "));
         
-        SecureLogger.logWarn("Validation error: {} - Path: {}", errorMessage, request.getRequestURI());
+        log.warn("Validation error: {} - Path: {}", errorMessage, request.getRequestURI());
         
         ErrorResponse errorResponse = ErrorResponse.createValidationError(
                 "Validation failed: " + errorMessage,
@@ -126,7 +137,7 @@ public class GlobalExceptionHandler {
                 .map(ConstraintViolation::getMessage)
                 .collect(Collectors.joining(", "));
         
-        SecureLogger.logWarn("Constraint violation: {} - Path: {}", errorMessage, request.getRequestURI());
+        log.warn("Constraint violation: {} - Path: {}", errorMessage, request.getRequestURI());
         
         ErrorResponse errorResponse = ErrorResponse.createValidationError(
                 "Validation failed: " + errorMessage,
@@ -144,7 +155,7 @@ public class GlobalExceptionHandler {
             AuthenticationException ex, 
             HttpServletRequest request) {
         
-        SecureLogger.logWarn("Authentication error: {} - Path: {}", ex.getMessage(), request.getRequestURI());
+        log.warn("Authentication error: {} - Path: {}", ex.getMessage(), request.getRequestURI());
         
         ErrorResponse errorResponse = ErrorResponse.createUnauthorizedError(request.getRequestURI());
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
@@ -158,7 +169,7 @@ public class GlobalExceptionHandler {
             AccessDeniedException ex, 
             HttpServletRequest request) {
         
-        SecureLogger.logWarn("Access denied: {} - Path: {}", ex.getMessage(), request.getRequestURI());
+        log.warn("Access denied: {} - Path: {}", ex.getMessage(), request.getRequestURI());
         
         ErrorResponse errorResponse = ErrorResponse.builder()
                 .message("You do not have permission to access this resource.")
@@ -180,7 +191,7 @@ public class GlobalExceptionHandler {
             HttpServletRequest request) {
         
         // Log the full exception for internal debugging
-        SecureLogger.logError("Database access error - Path: {}", ex, request.getRequestURI());
+        log.error("Database access error - Path: {}", request.getRequestURI(), ex);
         
         // Return generic error to client
         ErrorResponse errorResponse = ErrorResponse.createGenericError(
@@ -199,7 +210,7 @@ public class GlobalExceptionHandler {
             HttpMessageNotReadableException ex, 
             HttpServletRequest request) {
         
-        SecureLogger.logWarn("Malformed request body - Path: {}", request.getRequestURI());
+        log.warn("Malformed request body - Path: {}", request.getRequestURI());
         
         ErrorResponse errorResponse = ErrorResponse.createValidationError(
                 "Invalid request format. Please check your request body.",
@@ -217,7 +228,7 @@ public class GlobalExceptionHandler {
             HttpRequestMethodNotSupportedException ex, 
             HttpServletRequest request) {
         
-        SecureLogger.logWarn("Method not supported: {} - Path: {}", ex.getMethod(), request.getRequestURI());
+        log.warn("Method not supported: {} - Path: {}", ex.getMethod(), request.getRequestURI());
         
         ErrorResponse errorResponse = ErrorResponse.builder()
                 .message("The requested method is not supported for this resource.")
@@ -238,7 +249,7 @@ public class GlobalExceptionHandler {
             MissingServletRequestParameterException ex, 
             HttpServletRequest request) {
         
-        SecureLogger.logWarn("Missing parameter: {} - Path: {}", ex.getParameterName(), request.getRequestURI());
+        log.warn("Missing parameter: {} - Path: {}", ex.getParameterName(), request.getRequestURI());
         
         ErrorResponse errorResponse = ErrorResponse.createValidationError(
                 "Required parameter '" + ex.getParameterName() + "' is missing.",
@@ -256,7 +267,7 @@ public class GlobalExceptionHandler {
             MethodArgumentTypeMismatchException ex, 
             HttpServletRequest request) {
         
-        SecureLogger.logWarn("Type mismatch for parameter: {} - Path: {}", ex.getName(), request.getRequestURI());
+        log.warn("Type mismatch for parameter: {} - Path: {}", ex.getName(), request.getRequestURI());
         
         ErrorResponse errorResponse = ErrorResponse.createValidationError(
                 "Invalid parameter type for '" + ex.getName() + "'.",
@@ -274,7 +285,7 @@ public class GlobalExceptionHandler {
             NoHandlerFoundException ex, 
             HttpServletRequest request) {
         
-        SecureLogger.logWarn("No handler found: {} - Path: {}", ex.getRequestURL(), request.getRequestURI());
+        log.warn("No handler found: {} - Path: {}", ex.getRequestURL(), request.getRequestURI());
         
         ErrorResponse errorResponse = ErrorResponse.createNotFoundError(request.getRequestURI());
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
@@ -289,7 +300,7 @@ public class GlobalExceptionHandler {
             HttpServletRequest request) {
         
         // Log the full exception for internal debugging
-        SecureLogger.logError("Unexpected error occurred - Path: {}", ex, request.getRequestURI());
+        log.error("Unexpected error occurred - Path: {}", request.getRequestURI(), ex);
         
         // Return generic error to client
         ErrorResponse errorResponse = ErrorResponse.createGenericError(

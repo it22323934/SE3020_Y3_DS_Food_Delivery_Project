@@ -1,5 +1,6 @@
 package com.foodDelivery.orderService.controller;
 
+import com.foodDelivery.orderService.config.SecureLogger;
 import com.foodDelivery.orderService.dto.OrderCreateRequest;
 import com.foodDelivery.orderService.dto.OrderResponse;
 import com.foodDelivery.orderService.exception.BusinessValidationException;
@@ -16,6 +17,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -34,8 +36,9 @@ public class OrderController {
     @Retry(name = ORDER_SERVICE)
     public ResponseEntity<?> createOrder(
             @RequestBody OrderCreateRequest request,
-            @RequestHeader("Authorization") String token) {
-        log.info("Creating new order for user: {}", request.getUserId());
+            @RequestHeader("Authorization") String token,
+            HttpServletRequest httpRequest) {
+        SecureLogger.logInfo("Creating new order for user: {}", request.getUserId());
         OrderResponse response = orderService.createOrder(request, token);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
@@ -46,8 +49,9 @@ public class OrderController {
     public ResponseEntity<?> updateOrderStatus(
             @PathVariable String orderId,
             @RequestParam OrderStatus status,
-            @RequestHeader("Authorization") String token) {
-        log.info("Updating order status to {} for order: {}", status, orderId);
+            @RequestHeader("Authorization") String token,
+            HttpServletRequest httpRequest) {
+        SecureLogger.logInfo("Updating order status to {} for order: {}", status, orderId);
         OrderResponse response = orderService.updateOrderStatus(orderId, status, token);
         return ResponseEntity.ok(response);
     }
@@ -57,8 +61,9 @@ public class OrderController {
     @PreAuthorize("@orderAuthorizationService.canAccessOrder(#orderId, authentication)")
     public ResponseEntity<?> getOrderById(
             @PathVariable String orderId,
-            @RequestHeader("Authorization") String token) {
-        log.info("Fetching order details for ID: {}", orderId);
+            @RequestHeader("Authorization") String token,
+            HttpServletRequest httpRequest) {
+        SecureLogger.logInfo("Fetching order details for ID: {}", orderId);
         OrderResponse response = orderService.getOrderById(orderId, token);
         return ResponseEntity.ok(response);
     }
@@ -67,8 +72,9 @@ public class OrderController {
     @CircuitBreaker(name = ORDER_SERVICE, fallbackMethod = "getOrdersByUserIdFallback")
     public ResponseEntity<List<OrderResponse>> getOrdersByUserId(
             @PathVariable Long userId,
-            @RequestHeader("Authorization") String token) {
-        log.info("Fetching orders for user: {}", userId);
+            @RequestHeader("Authorization") String token,
+            HttpServletRequest httpRequest) {
+        SecureLogger.logInfo("Fetching orders for user: {}", userId);
         List<OrderResponse> orders = orderService.getOrdersByUserId(userId, token);
         return ResponseEntity.ok(orders);
     }
@@ -78,8 +84,9 @@ public class OrderController {
     @PreAuthorize("hasAnyRole('RESTAURANT_ADMIN', 'ADMIN')")
     public ResponseEntity<List<OrderResponse>> getOrdersByRestaurantId(
             @PathVariable String restaurantId,
-            @RequestHeader("Authorization") String token) {
-        log.info("Fetching orders for restaurant: {}", restaurantId);
+            @RequestHeader("Authorization") String token,
+            HttpServletRequest httpRequest) {
+        SecureLogger.logInfo("Fetching orders for restaurant: {}", restaurantId);
         List<OrderResponse> orders = orderService.getOrdersByRestaurantId(restaurantId, token);
         return ResponseEntity.ok(orders);
     }
@@ -89,8 +96,9 @@ public class OrderController {
     @PreAuthorize("@orderAuthorizationService.canCancelOrder(#orderId, authentication)")
     public ResponseEntity<?> cancelOrder(
             @PathVariable String orderId,
-            @RequestHeader("Authorization") String token) {
-        log.info("Cancelling order: {}", orderId);
+            @RequestHeader("Authorization") String token,
+            HttpServletRequest httpRequest) {
+        SecureLogger.logInfo("Cancelling order: {}", orderId);
         orderService.cancelOrder(orderId, token);
         return ResponseEntity.noContent().build();
     }
@@ -98,7 +106,7 @@ public class OrderController {
     // Fallback methods with proper error responses
     private ResponseEntity<?> createOrderFallback(
             OrderCreateRequest request, String token, Exception e) {
-        log.error("Circuit breaker fallback: Failed to create order", e);
+        SecureLogger.logError("Circuit breaker fallback: Failed to create order", e);
         if (e instanceof BusinessValidationException) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("error", e.getMessage()));
@@ -109,7 +117,7 @@ public class OrderController {
 
     private ResponseEntity<?> updateOrderStatusFallback(
             String orderId, OrderStatus status, String token, Exception e) {
-        log.error("Circuit breaker fallback: Failed to update order status for order: {}", orderId, e);
+        SecureLogger.logError("Circuit breaker fallback: Failed to update order status for order: {}", e, orderId);
         if (e instanceof BusinessValidationException) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("error", e.getMessage()));
@@ -120,28 +128,28 @@ public class OrderController {
 
     private ResponseEntity<?> getOrderByIdFallback(
             String orderId, String token, Exception e) {
-        log.error("Circuit breaker fallback: Failed to fetch order: {}", orderId, e);
+        SecureLogger.logError("Circuit breaker fallback: Failed to fetch order: {}", e, orderId);
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
                 .body(Map.of("error", "Unable to fetch order at this time"));
     }
 
     private ResponseEntity<List<OrderResponse>> getOrdersByUserIdFallback(
             Long userId, String token, Exception e) {
-        log.error("Circuit breaker fallback: Failed to fetch orders for user: {}", userId, e);
+        SecureLogger.logError("Circuit breaker fallback: Failed to fetch orders for user: {}", e, userId);
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
                 .body(Collections.emptyList());
     }
 
     private ResponseEntity<List<OrderResponse>> getOrdersByRestaurantIdFallback(
             String restaurantId, String token, Exception e) {
-        log.error("Circuit breaker fallback: Failed to fetch orders for restaurant: {}", restaurantId, e);
+        SecureLogger.logError("Circuit breaker fallback: Failed to fetch orders for restaurant: {}", e, restaurantId);
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
                 .body(Collections.emptyList());
     }
 
     private ResponseEntity<?> cancelOrderFallback(
             String orderId, String token, Exception e) {
-        log.error("Circuit breaker fallback: Failed to cancel order: {}", orderId, e);
+        SecureLogger.logError("Circuit breaker fallback: Failed to cancel order: {}", e, orderId);
         if (e instanceof BusinessValidationException) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("error", e.getMessage()));

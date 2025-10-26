@@ -1,6 +1,7 @@
 package com.foodDelivery.orderService.service.impl;
 
 import com.foodDelivery.orderService.client.RestaurantServiceClient;
+import com.foodDelivery.orderService.config.SecureLogger;
 import com.foodDelivery.orderService.dto.*;
 import com.foodDelivery.orderService.exception.BusinessValidationException;
 import com.foodDelivery.orderService.exception.OrderNotFoundException;
@@ -35,7 +36,7 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public OrderResponse createOrder(OrderCreateRequest request, String token) {
-        log.info("Creating order for restaurant: {}", request.getRestaurantId());
+        SecureLogger.logInfo("Creating order for restaurant: {}", request.getRestaurantId());
         
         // Verify restaurant exists and is active
         com.foodDelivery.orderService.dto.restaurant.RestaurantResponse restaurant = restaurantServiceClient.getRestaurantById(
@@ -55,14 +56,14 @@ public class OrderServiceImpl implements OrderService {
         // Publish order created event to Kafka
         kafkaProducerService.sendOrderCreatedEvent(order, request);
         
-        log.info("Order created successfully with ID: {}", order.getId());
+        SecureLogger.logInfo("Order created successfully with ID: {}", order.getId());
         return orderMapper.toResponse(order);
     }
 
     @Override
     @Transactional
     public OrderResponse updateOrderStatus(String orderId, OrderStatus status, String token) {
-        log.info("Updating order status: {} for order: {}", status, orderId);
+        SecureLogger.logInfo("Updating order status: {} for order: {}", status, orderId);
 
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new OrderNotFoundException("Order not found: " + orderId));
@@ -104,7 +105,7 @@ public class OrderServiceImpl implements OrderService {
             kafkaProducerService.sendOrderStatusUpdateEvent(order,status);
         }
 
-        log.info("Order status updated successfully for order: {}", orderId);
+        SecureLogger.logInfo("Order status updated successfully for order: {}", orderId);
         return orderMapper.toResponse(order);
     }
 
@@ -145,7 +146,7 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public OrderResponse getOrderById(String orderId, String token) {
-        log.info("Fetching order details for ID: {}", orderId);
+        SecureLogger.logInfo("Fetching order details for ID: {}", orderId);
         
         return orderRepository.findById(orderId)
                 .map(orderMapper::toResponse)
@@ -154,7 +155,7 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public List<OrderResponse> getOrdersByUserId(Long userId, String token) {
-        log.info("Fetching orders for user: {}", userId);
+        SecureLogger.logInfo("Fetching orders for user: {}", userId);
         
         return orderRepository.findByUserId(userId).stream()
                 .map(orderMapper::toResponse)
@@ -163,7 +164,7 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public List<OrderResponse> getOrdersByRestaurantId(String restaurantId, String token) {
-        log.info("Fetching orders for restaurant: {}", restaurantId);
+        SecureLogger.logInfo("Fetching orders for restaurant: {}", restaurantId);
         
         return orderRepository.findByRestaurantId(restaurantId).stream()
                 .map(orderMapper::toResponse)
@@ -173,7 +174,7 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public void cancelOrder(String orderId, String token) {
-        log.info("Cancelling order: {}", orderId);
+        SecureLogger.logInfo("Cancelling order: {}", orderId);
         
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new OrderNotFoundException("Order not found: " + orderId));
@@ -189,7 +190,7 @@ public class OrderServiceImpl implements OrderService {
         // Publish order cancelled event to Kafka
         kafkaProducerService.sendOrderStatusUpdateEvent(order, OrderStatus.CANCELLED);
         
-        log.info("Order cancelled successfully: {}", orderId);
+        SecureLogger.logInfo("Order cancelled successfully: {}", orderId);
     }
 
     private void validateStatusTransition(OrderStatus currentStatus, OrderStatus newStatus) {
